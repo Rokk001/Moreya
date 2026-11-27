@@ -32,194 +32,229 @@ CHICKENS = 2
 WINDOW = 60.0
 
 
-# Expected content of the skill catalog (data built from the catalog tables).
+# Expected content of the skill catalog (the role groups of the creature roster: paths, tiers, names of the
+# approved name list, first-estimate numbers and the approved rank 1 / 3 / 5 properties), counted once on
+# feature/creature-roster-w4b.
+# (Id, owner key, owner, Path, Tier, Name, Kind, Values, Mana, Cooldown, Duration, Radius, Range, BaseLine,
+#  Rank1, Rank3, Rank5)
 EXPECTED_SKILLS = [
-    ('BLK_A1', 'Group', 'blocker', 'Arms', '1', 'Weapon Training', 'PASSIVE_dmg%', '0.313 0.626 0.939 1.252 1.564', '-', '-', '-', '-', '-', '-'),
-    ('BLK_A2', 'Group', 'blocker', 'Arms', '2', 'Keen Edge', 'PASSIVE_crit', '0.313 0.626 0.939 1.252 1.564', '-', '-', '-', '-', '-', '-'),
-    ('BLK_A3', 'Group', 'blocker', 'Arms', '3', 'Heavy Blow', 'STRIKE', '1.125 1.146 1.167 1.188 1.209', '5 5 5 5 5', '30', '-', '-', '-', '-'),
-    ('BLK_B1', 'Group', 'blocker', 'Bulwark', '1', 'Thick Hide', 'PASSIVE_hp%', '0.746 1.492 2.237 2.983 3.729', '-', '-', '-', '-', '-', '-'),
-    ('BLK_B2', 'Group', 'blocker', 'Bulwark', '2', 'Iron Hide', 'BUFF_SELF_Defense', '0.298 0.597 0.895 1.193 1.492', '7 7 7 7 7', '45', '25', '-', '-', 'DefenseSelf 45 2 15 25 3 3 3'),
-    ('BLK_B3', 'Group', 'blocker', 'Bulwark', '3', 'Shield Wall', 'PASSIVE_avoid', '0.497 0.994 1.492 1.989 2.486', '-', '-', '-', '-', '-', '-'),
-    ('BLK_C1', 'Group', 'blocker', 'War Cries', '1', 'War Roar', 'BUFF_SELF_StrengthChange', '1.01 1.02 1.03 1.04 1.05', '7 7 7 7 7', '55', '20', '-', '-', 'StrengthSelf 55 2 18 20 1.15'),
-    ('BLK_C2', 'Group', 'blocker', 'War Cries', '2', 'Rallying Shout', 'AURA_ALLY_StrengthChange', '1.003 1.007 1.01 1.013 1.017', '5 5 5 5 5', '60', '20', '4', '-', '-'),
-    ('BLK_C3', 'Group', 'blocker', 'War Cries', '3', 'Cleaving Spin', 'WHIRLWIND', '1/1 1/1 1/1 1/1 1/1', '12.5 13 13.5 14 14.5', '14', '-', '-', '2', 'Whirlwind 14 1 2 8 3 3'),
-    ('BLZ_A1', 'Group', 'blitzer', 'Zeal', '1', 'Holy Fervor', 'PASSIVE_dmg%', '0.445 0.89 1.335 1.781 2.226', '-', '-', '-', '-', '-', '-'),
-    ('BLZ_A2', 'Group', 'blitzer', 'Zeal', '2', 'Swift Strikes', 'PASSIVE_cd%', '0.445 0.89 1.335 1.781 2.226', '-', '-', '-', '-', '-', '-'),
-    ('BLZ_A3', 'Group', 'blitzer', 'Zeal', '3', 'Searing Blast', 'EXPLOSION', '0.178 0.208 0.237 0.267 0.297', '5 5.5 6 6.5 7', '40', '-', '-', '-', 'Explosion 40 2 6 12 1 30.75 20.5'),
-    ('BLZ_B1', 'Group', 'blitzer', 'Protection', '1', 'Sacred Armor', 'PASSIVE_hp%', '1.391 2.782 4.173 5.564 6.955', '-', '-', '-', '-', '-', '-'),
-    ('BLZ_B2', 'Group', 'blitzer', 'Protection', '2', 'Bulwark', 'BUFF_SELF_Defense', '0.556 1.113 1.669 2.225 2.782', '35 35 35 35 35', '45', '25', '-', '-', 'DefenseSelf 45 2 15 25 3 3 3'),
-    ('BLZ_B3', 'Group', 'blitzer', 'Protection', '3', 'Resolute', 'PASSIVE_avoid', '0.927 1.855 2.782 3.709 4.636', '-', '-', '-', '-', '-', '-'),
-    ('BLZ_C1', 'Group', 'blitzer', 'Charge', '1', 'Storm Rush', 'BUFF_SELF_SpeedChange', '1.04 1.08 1.12 1.16 1.2', '10 10 10 10 10', '30', '10', '-', '-', 'HasteSelf 30 0 5 10 1.2'),
-    ('BLZ_C2', 'Group', 'blitzer', 'Charge', '2', 'Battle Prayer', 'HEAL_SELF', '6 7.5 9 10.5 12', '10 10 10 10 10', '35', '5', '-', '-', '-'),
-    ('BLZ_C3', 'Group', 'blitzer', 'Charge', '3', 'Commanding Aura', 'AURA_ALLY_StrengthChange', '1.02 1.04 1.06 1.08 1.1', '10 10 10 10 10', '60', '20', '4', '-', '-'),
-    ('FLK_A1', 'Group', 'flanker', 'Shadow', '1', 'Quickstep', 'BUFF_SELF_SpeedChange', '1.04 1.08 1.12 1.16 1.2', '10 10 10 10 10', '30', '10', '-', '-', 'HasteSelf 30 0 5 10 1.2'),
-    ('FLK_A2', 'Group', 'flanker', 'Shadow', '2', 'Shadow Veil', 'INVISIBLE', '20 40 60 80 100', '13 13 13 13 13', '150', '-', '-', '-', 'Invisible 150 0 8 100'),
-    ('FLK_A3', 'Group', 'flanker', 'Shadow', '3', 'Cruel Eye', 'PASSIVE_crit', '1.841 3.682 5.524 7.365 9.206', '-', '-', '-', '-', '-', '-'),
-    ('FLK_B1', 'Group', 'flanker', 'Venom', '1', 'Enfeeble', 'DEBUFF_Weak', '0.991 0.981 0.972 0.963 0.954', '4 4 4 4 4', '55', '20', '-', '6', 'Weak 55 2 6 18 20 0.85'),
-    ('FLK_B2', 'Group', 'flanker', 'Venom', '2', 'Hamstring', 'DEBUFF_Slow', '0.96 0.92 0.88 0.84 0.8', '11 11 11 11 11', '30', '10', '-', '6', 'Slow 30 1 6 5 10 0.8'),
-    ('FLK_B3', 'Group', 'flanker', 'Venom', '3', 'Venom Edge', 'PASSIVE_dmg%', '0.369 0.739 1.108 1.478 1.847', '-', '-', '-', '-', '-', '-'),
-    ('FLK_C1', 'Group', 'flanker', 'Evasion', '1', 'Nimble', 'PASSIVE_avoid', '0.411 0.821 1.232 1.643 2.053', '-', '-', '-', '-', '-', '-'),
-    ('FLK_C2', 'Group', 'flanker', 'Evasion', '2', 'Light Feet', 'PASSIVE_cd%', '0.616 1.232 1.848 2.464 3.08', '-', '-', '-', '-', '-', '-'),
-    ('FLK_C3', 'Group', 'flanker', 'Evasion', '3', 'Lick Wounds', 'HEAL_SELF', '2.464 3.08 3.696 4.312 4.928', '10 10 10 10 10', '35', '5', '-', '-', '-'),
-    ('ARC_A1', 'Group', 'archer', 'Bow', '1', 'Steady Aim', 'PASSIVE_ar%', '0.616 1.232 1.847 2.463 3.079', '-', '-', '-', '-', '-', '-'),
-    ('ARC_A2', 'Group', 'archer', 'Bow', '2', 'Seeking Shot', 'GUIDEDBOLT', '0.092 0.108 0.123 0.139 0.154', '8 7.7 7.4 7.1 6.8', '3', '-', '-', '-', 'GuidedBolt 3 2 7 0 8 ArrowProjectile none 2 0 0 0 0 13 0.25 0 0 0 0 18.11 27.17'),
-    ('ARC_A3', 'Group', 'archer', 'Bow', '3', 'Blast Shot', 'GRENADE', '0.092 0.108 0.123 0.139 0.154', '5 5.5 6 6.5 7', '10', '-', '-', '-', 'Grenade 10 2 6 0 8 Cannonball none 1 0 0 0 0 5 0.1 2 0 0 0 0 6.97 10.46'),
-    ('ARC_B1', 'Group', 'archer', 'Hunter', '1', 'Keen Eye', 'PASSIVE_crit', '0.65 1.301 1.951 2.602 3.252', '-', '-', '-', '-', '-', '-'),
-    ('ARC_B2', 'Group', 'archer', 'Hunter', '2', 'Pinning Shot', 'DEBUFF_Slow', '0.96 0.92 0.88 0.84 0.8', '11 11 11 11 11', '30', '10', '-', '6', 'Slow 30 1 6 5 10 0.8'),
-    ('ARC_B3', 'Group', 'archer', 'Hunter', '3', 'Piercing Arrows', 'PASSIVE_dmg%', '0.65 1.301 1.951 2.602 3.252', '-', '-', '-', '-', '-', '-'),
-    ('ARC_C1', 'Group', 'archer', 'Skirmish', '1', 'Fleetfoot', 'BUFF_SELF_SpeedChange', '1.04 1.08 1.12 1.16 1.2', '10 10 10 10 10', '30', '10', '-', '-', 'HasteSelf 30 0 5 10 1.2'),
-    ('ARC_C2', 'Group', 'archer', 'Skirmish', '2', 'Evasion', 'PASSIVE_avoid', '0.57 1.14 1.71 2.28 2.85', '-', '-', '-', '-', '-', '-'),
-    ('ARC_C3', 'Group', 'archer', 'Skirmish', '3', 'Thick Leather', 'PASSIVE_hp%', '0.855 1.71 2.565 3.42 4.275', '-', '-', '-', '-', '-', '-'),
-    ('CST_A1', 'Group', 'caster', 'Fire', '1', 'Ember Burst', 'EXPLOSION', '0.061 0.071 0.081 0.091 0.102', '5 5.5 6 6.5 7', '40', '-', '-', '-', 'Explosion 40 2 6 12 1 30.75 20.5'),
-    ('CST_A2', 'Group', 'caster', 'Fire', '2', 'Kindled Mind', 'PASSIVE_spell%', '0.152 0.305 0.457 0.609 0.762', '-', '-', '-', '-', '-', '-'),
-    ('CST_A3', 'Group', 'caster', 'Fire', '3', 'Ice Storm', 'HAILSTORM', '0.061 0.071 0.081 0.091 0.102', '23 24 25 26 27', '21', '-', '-', '-', 'HailStorm 21 2 4 8 2 11 3.08 none 2.05'),
-    ('CST_B1', 'Group', 'caster', 'Frost', '1', 'Frost Grip', 'FREEZE', '0.036 0.042 0.049 0.055 0.061', '9 10 11 12 13', '80', '-', '-', '-', 'Freeze 80 2 6 8 28'),
-    ('CST_B2', 'Group', 'caster', 'Frost', '2', 'Hex of Weakness', 'DEBUFF_Weak', '0.998 0.996 0.995 0.993 0.991', '4 4 4 4 4', '55', '20', '-', '6', 'Weak 55 2 6 18 20 0.85'),
-    ('CST_B3', 'Group', 'caster', 'Frost', '3', 'Soul Siphon', 'DRAIN', '1.821 2.124 2.428 2.731 3.035', '9 9 9 9 9', '50', '-', '-', '6', 'Drain 50 2 6 8 25'),
-    ('CST_C1', 'Group', 'caster', 'Healing', '1', 'Mend', 'HEAL_ALLY', '0.83 1.037 1.245 1.452 1.66', '6 7 8 9 10', '12', '1', '-', '6', '-'),
-    ('CST_C2', 'Group', 'caster', 'Healing', '2', 'Greater Mend', 'HEAL_ALLY', '2.075 2.49 2.905 3.32 3.735', '15 17 19 21 23', '35', '1', '-', '6', '-'),
-    ('CST_C3', 'Group', 'caster', 'Healing', '3', 'Healing Circle', 'HEAL_AREA', '0.622 0.726 0.83 0.934 1.037', '20 22 24 26 28', '40', '1', '3', '-', '-'),
-    ('WRK_A1', 'Group', 'worker', 'Delving', '1', 'Strong Picks', 'PASSIVE_dig%', '5 10 15 20 25', '-', '-', '-', '-', '-', '-'),
-    ('WRK_A2', 'Group', 'worker', 'Delving', '2', 'Tunnel Legs', 'PASSIVE_move%', '3 6 9 12 15', '-', '-', '-', '-', '-', '-'),
-    ('WRK_A3', 'Group', 'worker', 'Delving', '3', 'Rock Splitter', 'PASSIVE_crit', '0.735 1.471 2.206 2.941 3.677', '-', '-', '-', '-', '-', '-'),
-    ('WRK_B1', 'Group', 'worker', 'Claiming', '1', 'Quick Claim', 'PASSIVE_claim%', '5 10 15 20 25', '-', '-', '-', '-', '-', '-'),
-    ('WRK_B2', 'Group', 'worker', 'Claiming', '2', 'Deep Pockets', 'PASSIVE_carry%', '10 20 30 40 50', '-', '-', '-', '-', '-', '-'),
-    ('WRK_B3', 'Group', 'worker', 'Claiming', '3', 'Hurry', 'BUFF_SELF_SpeedChange', '1.04 1.08 1.12 1.16 1.2', '10 10 10 10 10', '30', '10', '-', '-', 'HasteSelf 30 0 5 10 1.2'),
-    ('WRK_C1', 'Group', 'worker', 'Survival', '1', 'Blink', 'TELEPORT', '1 1 1 1 1', '24 23 22 21 20', '7', '-', '-', '-', 'Teleport 7 0 8 8 30'),
-    ('WRK_C2', 'Group', 'worker', 'Survival', '2', 'Toughen', 'BUFF_SELF_Defense', '0.221 0.441 0.662 0.882 1.103', '7 7 7 7 7', '45', '25', '-', '-', 'DefenseSelf 45 2 15 25 3 3 3'),
-    ('WRK_C3', 'Group', 'worker', 'Survival', '3', 'Patch Up', 'HEAL_SELF', '2.206 2.758 3.309 3.861 4.412', '10 10 10 10 10', '35', '5', '-', '-', '-'),
-    ('GRN_1', 'Family', 'greenskin', 'Greenskin', '1', 'Thick Skull', 'PASSIVE_hp%', '0.552 1.103 1.655 2.206 2.758', '-', '-', '-', '-', '-', '-'),
-    ('GRN_2', 'Family', 'greenskin', 'Greenskin', '2', 'Brutal Swing', 'PASSIVE_dmg%', '0.552 1.103 1.655 2.206 2.758', '-', '-', '-', '-', '-', '-'),
-    ('GRN_3', 'Family', 'greenskin', 'Greenskin', '3', 'Regrowth', 'HEAL_SELF', '2.206 2.758 3.309 3.861 4.412', '10 10 10 10 10', '35', '5', '-', '-', '-'),
-    ('DWF_1', 'Family', 'dwarf', 'Dwarf', '1', 'Stoneborn', 'PASSIVE_dr%', '1.471 2.941 4.412 5.883 7.353', '-', '-', '-', '-', '-', '-'),
-    ('DWF_2', 'Family', 'dwarf', 'Dwarf', '2', 'Rune Ward', 'BUFF_SELF_Defense', '0.221 0.441 0.662 0.882 1.103', '7 7 7 7 7', '45', '25', '-', '-', 'DefenseSelf 45 2 15 25 3 3 3'),
-    ('DWF_3', 'Family', 'dwarf', 'Dwarf', '3', 'Forge Fury', 'BUFF_SELF_StrengthChange', '1.011 1.022 1.033 1.044 1.055', '7 7 7 7 7', '55', '20', '-', '-', 'StrengthSelf 55 2 18 20 1.15'),
-    ('UND_1', 'Family', 'undead', 'Undead', '1', 'Raise the Fallen', 'RAISEDEAD', '1 1 2 2 3', '6 7 8 9 10', '24', '-', '-', '-', 'RaiseDead 24 2 10 4 3 42 Skeleton'),
-    ('UND_2', 'Family', 'undead', 'Undead', '2', 'Deathless', 'PASSIVE_hp%', '0.552 1.103 1.655 2.206 2.758', '-', '-', '-', '-', '-', '-'),
-    ('UND_3', 'Family', 'undead', 'Undead', '3', 'Bone Legion', 'SKELARMY', '1 1 2 2 3', '8 9 10 11 12', '21', '-', '-', '-', 'SkeletonArmy 21 2 10 3 42 Skeleton'),
-    ('VRM_1', 'Family', 'vermin', 'Vermin', '1', 'Buzzing Spin', 'WHIRLWIND', '1/1 1/1 1/1 1/1 1/1', '12.5 13 13.5 14 14.5', '14', '-', '-', '2', 'Whirlwind 14 1 2 8 3 3'),
-    ('VRM_2', 'Family', 'vermin', 'Vermin', '2', 'Chitin', 'PASSIVE_avoid', '0.368 0.735 1.103 1.471 1.838', '-', '-', '-', '-', '-', '-'),
-    ('VRM_3', 'Family', 'vermin', 'Vermin', '3', 'Frenzy', 'PASSIVE_cd%', '0.552 1.103 1.655 2.206 2.758', '-', '-', '-', '-', '-', '-'),
-    ('TNT_1', 'Family', 'tentacle', 'Tentacle', '1', 'Grasping Coils', 'DEBUFF_Slow', '0.96 0.92 0.88 0.84 0.8', '11 11 11 11 11', '30', '10', '-', '6', 'Slow 30 1 6 5 10 0.8'),
-    ('TNT_2', 'Family', 'tentacle', 'Tentacle', '2', 'Constrict', 'DEBUFF_Weak', '0.989 0.978 0.967 0.956 0.945', '4 4 4 4 4', '55', '20', '-', '6', 'Weak 55 2 6 18 20 0.85'),
-    ('TNT_3', 'Family', 'tentacle', 'Tentacle', '3', 'Deep Hunger', 'DRAIN', '5.515 6.434 7.353 8.273 9.192', '9 9 9 9 9', '50', '-', '-', '6', 'Drain 50 2 6 8 25'),
-    ('DMN_1', 'Family', 'demon', 'Demon', '1', 'Hellfire Burst', 'EXPLOSION', '0.221 0.257 0.294 0.331 0.368', '5 5.5 6 6.5 7', '40', '-', '-', '-', 'Explosion 40 2 6 12 1 30.75 20.5'),
-    ('DMN_2', 'Family', 'demon', 'Demon', '2', 'Infernal Hide', 'PASSIVE_hp%', '0.552 1.103 1.655 2.206 2.758', '-', '-', '-', '-', '-', '-'),
-    ('DMN_3', 'Family', 'demon', 'Demon', '3', 'Brimstone Rage', 'BUFF_SELF_StrengthChange', '1.011 1.022 1.033 1.044 1.055', '7 7 7 7 7', '55', '20', '-', '-', 'StrengthSelf 55 2 18 20 1.15'),
-    ('ELF_1', 'Family', 'elf', 'Elf', '1', 'Elven Grace', 'PASSIVE_dr%', '1.471 2.941 4.412 5.883 7.353', '-', '-', '-', '-', '-', '-'),
-    ('ELF_2', 'Family', 'elf', 'Elf', '2', 'Moonlit Step', 'BUFF_SELF_SpeedChange', '1.04 1.08 1.12 1.16 1.2', '10 10 10 10 10', '30', '10', '-', '-', 'HasteSelf 30 0 5 10 1.2'),
-    ('ELF_3', 'Family', 'elf', 'Elf', '3', 'Eagle Eye', 'PASSIVE_crit', '0.552 1.103 1.655 2.206 2.758', '-', '-', '-', '-', '-', '-'),
-    ('HUM_1', 'Family', 'human', 'Human', '1', 'Discipline', 'PASSIVE_cd%', '0.552 1.103 1.655 2.206 2.758', '-', '-', '-', '-', '-', '-'),
-    ('HUM_2', 'Family', 'human', 'Human', '2', 'Second Wind', 'HEAL_SELF', '2.206 2.758 3.309 3.861 4.412', '10 10 10 10 10', '35', '5', '-', '-', '-'),
-    ('HUM_3', 'Family', 'human', 'Human', '3', 'Valor', 'BUFF_SELF_StrengthChange', '1.011 1.022 1.033 1.044 1.055', '7 7 7 7 7', '55', '20', '-', '-', 'StrengthSelf 55 2 18 20 1.15'),
-    ('ARC_1', 'Family', 'arcane', 'Arcane', '1', 'Arcane Flow', 'PASSIVE_manacost%', '6 12 18 24 30', '-', '-', '-', '-', '-', '-'),
-    ('ARC_2', 'Family', 'arcane', 'Arcane', '2', 'Arcane Ward', 'BUFF_SELF_Defense', '0.221 0.441 0.662 0.882 1.103', '7 7 7 7 7', '45', '25', '-', '-', 'DefenseSelf 45 2 15 25 3 3 3'),
-    ('ARC_3', 'Family', 'arcane', 'Arcane', '3', 'Mind Spark', 'PASSIVE_alldmg%', '0.552 1.103 1.655 2.206 2.758', '-', '-', '-', '-', '-', '-'),
-    ('DRK_1', 'Family', 'dragonkin', 'Dragonkin', '1', 'Hail of Scales', 'HAILSTORM', '0.221 0.257 0.294 0.331 0.368', '22 23 24 25 26', '21', '-', '-', '-', 'HailStorm 21 2 4 8 2 11 3.08 none 2.05'),
-    ('DRK_2', 'Family', 'dragonkin', 'Dragonkin', '2', 'Scaled Hide', 'PASSIVE_hp%', '0.552 1.103 1.655 2.206 2.758', '-', '-', '-', '-', '-', '-'),
-    ('DRK_3', 'Family', 'dragonkin', 'Dragonkin', '3', 'Wing Buffet', 'WHIRLWIND', '1/1 1/1 1/1 1/1 1/1', '12.5 13 13.5 14 14.5', '14', '-', '-', '2', 'Whirlwind 14 1 2 8 3 3'),
-    ('WLD_1', 'Family', 'wild', 'Wild', '1', 'Toxic Cloud', 'GASCLOUD', '0.221 0.257 0.294 0.331 0.368', '20 20 20 20 20', '7', '-', '-', '-', 'GasCloud 7 1 2 4 1.5 2 14.35 CreatureToxicCloud 9.57'),
-    ('WLD_2', 'Family', 'wild', 'Wild', '2', 'Ooze Skin', 'PASSIVE_hp%', '0.552 1.103 1.655 2.206 2.758', '-', '-', '-', '-', '-', '-'),
-    ('WLD_3', 'Family', 'wild', 'Wild', '3', 'Overgrowth', 'HEAL_SELF', '2.206 2.758 3.309 3.861 4.412', '10 10 10 10 10', '35', '5', '-', '-', '-'),
-    ('WKF_1', 'Family', 'workfolk', 'Workfolk', '1', 'Tireless', 'PASSIVE_wake%', '6 12 18 24 30', '-', '-', '-', '-', '-', '-'),
-    ('WKF_2', 'Family', 'workfolk', 'Workfolk', '2', 'Gold Nose', 'PASSIVE_dig%', '5 10 15 20 25', '-', '-', '-', '-', '-', '-'),
-    ('WKF_3', 'Family', 'workfolk', 'Workfolk', '3', 'Steady Hands', 'PASSIVE_claim%', '5 10 15 20 25', '-', '-', '-', '-', '-', '-'),
+    ('TNK_A1', 'Group', 'tank', 'Ironclad', '1', 'Taunt', 'TAUNT', '4 5 6 7 8', '3 3 3 3 3', '20', '-', '3', '4', '-', '-', 'AREA 3', 'LESS_DAMAGE_DEALT 0.8'),
+    ('TNK_A2', 'Group', 'tank', 'Ironclad', '2', 'Fortify', 'PASSIVE_hp%', '0.746 1.492 2.237 2.983 3.729', '-', '-', '-', '-', '-', '-', '-', 'DEFENSE_BOOST 3 10 45 7', 'ALLIES_NEAR 1'),
+    ('TNK_A3', 'Group', 'tank', 'Ironclad', '3', 'Hardened Skin', 'PASSIVE_dr%', '1.471 2.941 4.412 5.883 7.353', '-', '-', '-', '-', '-', '-', '-', 'BLOCK 10', 'REFLECT 0.2'),
+    ('TNK_B1', 'Group', 'tank', 'Evader', '1', 'Sidestep', 'PASSIVE_avoid', '0.497 0.994 1.492 1.989 2.486', '-', '-', '-', '-', '-', '-', '-', 'DODGE_HASTE 1', 'DODGE_AREA'),
+    ('TNK_B2', 'Group', 'tank', 'Evader', '2', 'Quick Recovery', 'PASSIVE_cd%', '0.445 0.89 1.335 1.781 2.226', '-', '-', '-', '-', '-', '-', '-', 'DODGE_COOLDOWN 1', 'DODGE_TAUNT_RESET 3'),
+    ('TNK_B3', 'Group', 'tank', 'Evader', '3', 'Riposte', 'PARRY_COUNTER', '5 7.5 10 12.5 15', '-', '-', '-', '-', '-', '-', '-', 'COUNTER 0.5', 'STUN 2'),
+    ('TNK_C1', 'Group', 'tank', 'Regenerator', '1', 'Recover', 'HEAL_SELF', '6 7.5 9 10.5 12', '10 10 10 10 10', '35', '5', '-', '-', '-', '-', 'MORE_PER_ATTACKER 0.25 3', 'CLEANSE'),
+    ('TNK_C2', 'Group', 'tank', 'Regenerator', '2', 'Vigor', 'PASSIVE_hp%', '0.746 1.492 2.237 2.983 3.729', '-', '-', '-', '-', '-', '-', '-', 'REGEN 0.5', 'SURVIVE_DEADLY 0.1'),
+    ('TNK_C3', 'Group', 'tank', 'Regenerator', '3', 'Lasting Recovery', 'HOT_SELF', '8 10 12 14 16', '10 10 10 10 10', '40', '10', '-', '-', '-', '-', 'LONGER 1.5', 'EXTEND_ON_HIT 1'),
+    ('HLR_A1', 'Group', 'healer', 'Mender', '1', 'Mend', 'HEAL_ALLY', '0.83 1.037 1.245 1.452 1.66', '6 7 8 9 10', '12', '1', '-', '6', '-', '-', 'FASTER_CAST 0.8', 'CLEANSE_ALL'),
+    ('HLR_A2', 'Group', 'healer', 'Mender', '2', 'Swift Mending', 'PASSIVE_cd%', '0.616 1.232 1.848 2.464 3.08', '-', '-', '-', '-', '-', '-', '-', 'FREE_ON_LOW 0.3', 'DOUBLE_CAST_ONCE'),
+    ('HLR_A3', 'Group', 'healer', 'Mender', '3', 'Lifesaver', 'HEAL_INSTANT', '2.075 2.49 2.905 3.32 3.735', '15 17 19 21 23', '35', '-', '-', '6', '-', '-', 'LESS_DAMAGE_TAKEN 0.8 5', 'SURVIVE_DEADLY 5'),
+    ('HLR_B1', 'Group', 'healer', 'Renewer', '1', 'Circle of Renewal', 'HOT_AREA', '0.8 0.9 1.2 1.3 1.4', '20 22 24 26 28', '40', '10', '3', '-', '-', '-', '-', 'CLEANSE'),
+    ('HLR_B2', 'Group', 'healer', 'Renewer', '2', 'Thrift', 'PASSIVE_manacost%', '6 12 18 24 30', '-', '-', '-', '-', '-', '-', '-', 'MANA_REFUND 0.5', 'MANA_REGEN 1.5'),
+    ('HLR_B3', 'Group', 'healer', 'Renewer', '3', 'Deep Renewal', 'HOT_AREA', '1.2 1.4 1.6 1.8 2', '22 24 26 28 30', '45', '15', '3', '-', '-', '-', 'MORE_ON_LOW 1.5 0.35', 'BURST_ON_LOW 1.5 0.2'),
+    ('HLR_C1', 'Group', 'healer', 'Warder', '1', 'Ward', 'SHIELD_ALLY', '1 1.25 1.5 1.75 2', '8 9 10 11 12', '20', '15', '-', '6', '-', '-', 'DEFENSE 1', 'HEAL_ON_BREAK 0.5'),
+    ('HLR_C2', 'Group', 'healer', 'Warder', '2', 'Steadfast Blessing', 'BUFF_ALLY_Defense', '0.298 0.597 0.895 1.193 1.492', '7 7 7 7 7', '45', '25', '-', '6', '-', '-', 'MAGIC', 'ALLIES_NEAR 1'),
+    ('HLR_C3', 'Group', 'healer', 'Warder', '3', 'Group Ward', 'SHIELD_AREA', '0.8 0.9 1.2 1.3 1.4', '20 22 24 26 28', '40', '15', '3', '-', '-', '-', '-', 'REFLECT 0.2'),
+    ('SUP_A1', 'Group', 'supporter', 'Empowerer', '1', 'Aura of Might', 'AURA_ALLY_StrengthChange', '1.02 1.04 1.06 1.08 1.1', '10 10 10 10 10', '60', '20', '4', '-', '-', '-', 'LARGER_RADIUS 1.5', 'HASTE 0.85'),
+    ('SUP_A2', 'Group', 'supporter', 'Empowerer', '2', 'Aura of Iron', 'AURA_ALLY_Defense', '0.298 0.597 0.895 1.193 1.492', '10 10 10 10 10', '60', '20', '4', '-', '-', '-', 'MAGIC', 'CONTROL_IMMUNE'),
+    ('SUP_A3', 'Group', 'supporter', 'Empowerer', '3', 'Quick Hands', 'PASSIVE_cd%', '0.616 1.232 1.848 2.464 3.08', '-', '-', '-', '-', '-', '-', '-', 'AURA_LINGER 5', 'AURA_DOUBLE 10'),
+    ('SUP_B1', 'Group', 'supporter', 'Blighter', '1', 'Enfeeble', 'DEBUFF_Weak', '0.991 0.981 0.972 0.963 0.954', '4 4 4 4 4', '55', '20', '-', '6', 'Weak 55 2 6 18 20 0.85', '-', 'SLOW 0.8', 'SPREAD 2'),
+    ('SUP_B2', 'Group', 'supporter', 'Blighter', '2', 'Withering Curse', 'CURSE_DOT', '4 5 6 7 8', '5 5 5 5 5', '30', '10', '-', '6', '-', '-', 'HEAL_REDUCTION 0.5', 'SPREAD_ON_DEATH 3'),
+    ('SUP_B3', 'Group', 'supporter', 'Blighter', '3', 'Mark of Doom', 'MARK', '1.1 1.125 1.15 1.175 1.2', '6 6 6 6 6', '40', '15', '-', '6', '-', '-', 'FOCUS_TARGET', 'EXTRA_TARGETS 1'),
+    ('SUP_C1', 'Group', 'supporter', 'Binder', '1', 'Hinder', 'DEBUFF_Slow', '0.96 0.92 0.88 0.84 0.75', '11 11 11 11 11', '30', '10', '-', '6', 'Slow 30 1 6 5 10 0.8', '-', 'AREA 2', 'LONGER 1.5'),
+    ('SUP_C2', 'Group', 'supporter', 'Binder', '2', 'Hold Fast', 'HOLD', '2 2.5 3 3.5 4', '8 8 8 8 8', '40', '-', '-', '6', '-', '-', 'LONGER 1.5', 'EXTRA_TARGETS 2 3'),
+    ('SUP_C3', 'Group', 'supporter', 'Binder', '3', 'Repel', 'WHIRLWIND', '1/1 1/1 1/1 1/1 1/1', '12.5 13 13.5 14 14.5', '14', '-', '-', '2', 'Whirlwind 14 1 2 8 3 3', 'AREA 2', 'KNOCK_DOWN 2', 'LARGER_RADIUS 1.5 LOSE_TARGET'),
+    ('WAR_A1', 'Group', 'warrior', 'Slayer', '1', 'Keen Edge', 'PASSIVE_crit', '0.313 0.626 0.939 1.252 1.564', '-', '-', '-', '-', '-', '-', '-', 'STAGGER 1', 'CRIT_DAMAGE 1.5'),
+    ('WAR_A2', 'Group', 'warrior', 'Slayer', '2', 'Brutal Force', 'PASSIVE_dmg%', '0.313 0.626 0.939 1.252 1.564', '-', '-', '-', '-', '-', '-', '-', 'EXECUTE 1.25 0.3', 'ARMOR_PIERCE 0.25'),
+    ('WAR_A3', 'Group', 'warrior', 'Slayer', '3', 'Heavy Blow', 'STRIKE', '1.125 1.146 1.167 1.188 1.209', '5 5 5 5 5', '30', '-', '-', '-', '-', '-', 'STUN 1', 'KNOCK_DOWN 2'),
+    ('WAR_B1', 'Group', 'warrior', 'Reaver', '1', 'Rend', 'BLEED', '4 5 6 7 8', '4 4 4 4 4', '20', '10', '-', '2', '-', '-', 'STACK 3', 'SLOW 0.8'),
+    ('WAR_B2', 'Group', 'warrior', 'Reaver', '2', 'Cruel Cuts', 'PASSIVE_dmg%', '0.313 0.626 0.939 1.252 1.564', '-', '-', '-', '-', '-', '-', '-', 'BONUS_VS_DOT 1.2', 'HEAL_REDUCTION 0.5'),
+    ('WAR_B3', 'Group', 'warrior', 'Reaver', '3', 'Deep Wound', 'BLEED', '8 10 12 14 16', '6 6 6 6 6', '30', '10', '-', '2', '-', '-', 'LONGER 1.5', 'SPREAD_ON_DEATH 3'),
+    ('WAR_C1', 'Group', 'warrior', 'Ravager', '1', 'Cleaving Spin', 'FLURRY', '1/0.6 1/0.65 1/0.7 1/0.75 1/0.8', '12.5 13 13.5 14 14.5', '14', '-', '2', '1', '-', '-', 'PUSH 1', 'DOUBLE_CAST'),
+    ('WAR_C2', 'Group', 'warrior', 'Ravager', '2', 'Momentum', 'PASSIVE_cd%', '0.445 0.89 1.335 1.781 2.226', '-', '-', '-', '-', '-', '-', '-', 'COOLDOWN_PER_HIT 1', 'FREE_AREA_CAST'),
+    ('WAR_C3', 'Group', 'warrior', 'Ravager', '3', 'Great Spin', 'FLURRY', '1/0.8 1/0.85 1/0.9 1/0.95 1/1', '15 16 17 18 19', '20', '-', '3', '1', '-', '-', 'PULL 1', 'BLEED_ON_HIT 4 10'),
+    ('SKR_A1', 'Group', 'skirmisher', 'Assassin', '1', 'Weak Spot', 'PASSIVE_crit', '1.841 3.682 5.524 7.365 9.206', '-', '-', '-', '-', '-', '-', '-', 'CRIT_BEHIND', 'HASTE_ON_CRIT 1.3 3'),
+    ('SKR_A2', 'Group', 'skirmisher', 'Assassin', '2', 'Sprint', 'PASSIVE_move%', '3 6 9 12 15', '-', '-', '-', '-', '-', '-', '-', 'CHASE 1.3', 'DASH 1.5 3'),
+    ('SKR_A3', 'Group', 'skirmisher', 'Assassin', '3', 'Assassinate', 'STRIKE', '1.3 1.35 1.4 1.45 1.5', '5 5 5 5 5', '30', '-', '-', '-', '-', '-', 'BONUS_VS_BACKLINE 1.3', 'RESET_ON_KILL'),
+    ('SKR_B1', 'Group', 'skirmisher', 'Venomist', '1', 'Poisoned Blade', 'POISON', '4 5 6 7 8', '4 4 4 4 4', '20', '10', '-', '2', '-', '-', 'STACK 3', 'HEAL_REDUCTION 0.5'),
+    ('SKR_B2', 'Group', 'skirmisher', 'Venomist', '2', 'Sickening', 'DEBUFF_Weak', '0.991 0.981 0.972 0.963 0.954', '4 4 4 4 4', '55', '20', '-', '6', 'Weak 55 2 6 18 20 0.85', '-', 'SLOW 0.8', 'SPREAD_DOT 2'),
+    ('SKR_B3', 'Group', 'skirmisher', 'Venomist', '3', 'Deadly Venom', 'POISON', '8 10 12 14 16', '6 6 6 6 6', '30', '10', '-', '2', '-', '-', 'LONGER 1.5', 'SPREAD_ON_DEATH 3'),
+    ('SKR_C1', 'Group', 'skirmisher', 'Whirlwind', '1', 'Blade Spin', 'FLURRY', '1/0.5 1/0.55 1/0.6 1/0.65 1/0.7', '10 10 10 10 10', '14', '-', '2', '1', '-', '-', 'FASTER_CAST 0.8', 'DOUBLE_CAST'),
+    ('SKR_C2', 'Group', 'skirmisher', 'Whirlwind', '2', 'Flow', 'PASSIVE_cd%', '0.616 1.232 1.848 2.464 3.08', '-', '-', '-', '-', '-', '-', '-', 'COOLDOWN_PER_HIT 1', 'FREE_AREA_CAST'),
+    ('SKR_C3', 'Group', 'skirmisher', 'Whirlwind', '3', 'Flurry', 'FLURRY', '2/0.4 2/0.45 3/0.45 3/0.5 3/0.55', '12 12 12 12 12', '20', '-', '2', '1', '-', '-', '-', 'CAN_CRIT'),
+    ('MRK_A1', 'Group', 'marksman', 'Sharpshooter', '1', 'Steady Aim', 'PASSIVE_ar%', '0.616 1.232 1.847 2.463 3.079', '-', '-', '-', '-', '-', '-', '-', 'LONGER_RANGE 1.2', 'IGNORE_DODGE 20'),
+    ('MRK_A2', 'Group', 'marksman', 'Sharpshooter', '2', 'Keen Eye', 'PASSIVE_crit', '0.65 1.301 1.951 2.602 3.252', '-', '-', '-', '-', '-', '-', '-', 'SLOW_ON_CRIT 0.8 5', 'PIERCE 2'),
+    ('MRK_A3', 'Group', 'marksman', 'Sharpshooter', '3', 'Seeking Shot', 'GUIDEDBOLT', '0.092 0.108 0.123 0.139 0.154', '8 7.7 7.4 7.1 6.8', '3', '-', '-', '-', 'GuidedBolt 3 2 7 0 8 ArrowProjectile none 2 0 0 0 0 13 0.25 0 0 0 0 18.11 27.17', '-', 'BONUS_VS_FLEEING 1.3', 'EXTRA_TARGETS 1'),
+    ('MRK_B1', 'Group', 'marksman', 'Poisoner', '1', 'Poison Arrow', 'POISON', '4 5 6 7 8', '4 4 4 4 4', '20', '10', '-', '7', '-', '-', 'STACK 3', 'HEAL_REDUCTION 0.5'),
+    ('MRK_B2', 'Group', 'marksman', 'Poisoner', '2', 'Pinning Shot', 'DEBUFF_Slow', '0.96 0.92 0.85 0.82 0.78', '11 11 11 11 11', '30', '10', '-', '6', 'Slow 30 1 6 5 10 0.8', '-', '-', 'HOLD 2'),
+    ('MRK_B3', 'Group', 'marksman', 'Poisoner', '3', 'Piercing Arrows', 'PASSIVE_dmg%', '0.65 1.301 1.951 2.602 4', '-', '-', '-', '-', '-', '-', '-', 'BONUS_VS_SLOWED 1.15 BONUS_VS_DOT 1.15', '-'),
+    ('MRK_C1', 'Group', 'marksman', 'Barrager', '1', 'Blast Shot', 'GRENADE', '0.092 0.108 0.123 0.139 0.154', '5 5.5 6 6.5 7', '10', '-', '-', '-', 'Grenade 10 2 6 0 8 Cannonball none 1 0 0 0 0 5 0.1 2 0 0 0 0 6.97 10.46', '-', 'LARGER_RADIUS 1.5', 'BURNING_GROUND 2 5 1.5'),
+    ('MRK_C2', 'Group', 'marksman', 'Barrager', '2', 'Rapid Reload', 'PASSIVE_cd%', '0.445 0.89 1.335 1.781 2.226', '-', '-', '-', '-', '-', '-', '-', 'COOLDOWN_PER_HIT 1', 'FREE_AREA_CAST'),
+    ('MRK_C3', 'Group', 'marksman', 'Barrager', '3', 'Volley', 'HAILSTORM', '0.061 0.071 0.081 0.091 0.102', '23 24 25 26 27', '21', '-', '-', '-', 'HailStorm 21 2 4 8 2 11 3.08 none 2.05', '-', 'LONGER 1.5', 'SLOW 0.8 3'),
+    ('MAG_A1', 'Group', 'mage', 'Sparkcaller', '1', 'Lightning', 'CHAIN_LIGHTNING', '0.1 0.115 0.13 0.145 0.16', '8 7.7 7.4 7.1 6.8', '6', '-', '-', '-', 'ChainLightning 6 2 7 0 8 none MissileMagic 3 0 0 13 0.25 0 0 0 0 18.11 27.17 0 0', '-', 'JUMP_TARGETS 1 3', 'JUMP_TARGETS 2 3'),
+    ('MAG_A2', 'Group', 'mage', 'Sparkcaller', '2', 'Kindled Mind', 'PASSIVE_spell%', '0.152 0.305 0.457 0.609 0.762', '-', '-', '-', '-', '-', '-', '-', 'BONUS_VS_FROZEN 1.25', 'MANA_DISCOUNT 0.2'),
+    ('MAG_A3', 'Group', 'mage', 'Sparkcaller', '3', 'Frost Grip', 'FREEZE', '0.036 0.042 0.049 0.055 0.061', '9 10 11 12 13', '80', '-', '-', '-', 'Freeze 80 2 6 8 28', '-', 'LONGER 1.5', 'SHATTER 1.25'),
+    ('MAG_B1', 'Group', 'mage', 'Witherer', '1', 'Burning Curse', 'BURN_DOT', '4 5 6 7 8', '5 5 5 5 5', '20', '10', '-', '6', '-', '-', 'STACK 3', 'HEAL_REDUCTION 0.5'),
+    ('MAG_B2', 'Group', 'mage', 'Witherer', '2', 'Soul Siphon', 'DRAIN', '1.821 2.124 2.6 2.9 3.2', '9 9 9 9 9', '50', '-', '-', '6', 'Drain 50 2 6 8 25', '-', '-', 'MANA_DRAIN 0.5'),
+    ('MAG_B3', 'Group', 'mage', 'Witherer', '3', 'Thrifty Casting', 'PASSIVE_manacost%', '6 12 18 24 30', '-', '-', '-', '-', '-', '-', '-', 'MANA_REFUND_ON_KILL 5', 'FREE_ON_DEBUFFED'),
+    ('MAG_C1', 'Group', 'mage', 'Pyromancer', '1', 'Ember Burst', 'EXPLOSION', '0.061 0.071 0.081 0.091 0.102', '5 5.5 6 6.5 7', '40', '-', '-', '-', 'Explosion 40 2 6 12 1 30.75 20.5', 'AREA 1.5', 'LARGER_RADIUS 1.5', 'BURNING_GROUND 2 5 1.5'),
+    ('MAG_C2', 'Group', 'mage', 'Pyromancer', '2', 'Firestorm', 'HAILSTORM', '0.061 0.071 0.081 0.091 0.102', '23 24 25 26 27', '21', '-', '-', '-', 'HailStorm 21 2 4 8 2 11 3.08 none 2.05', '-', 'LONGER 1.5', 'SLOW 0.8'),
+    ('MAG_C3', 'Group', 'mage', 'Pyromancer', '3', 'Death Wail', 'EXPLOSION', '0.061 0.071 0.081 0.091 0.102', '8 8.5 9 9.5 10', '45', '-', '-', '-', 'Explosion 40 2 6 12 1 30.75 20.5', 'AREA 2 WEAKEN 0.85 10', 'FEAR 3', 'LARGER_RADIUS 1.5'),
+    ('WRK_A1', 'Group', 'worker', 'Delving', '1', 'Strong Picks', 'PASSIVE_dig%', '5 10 15 20 25', '-', '-', '-', '-', '-', '-', '-', '-', '-'),
+    ('WRK_A2', 'Group', 'worker', 'Delving', '2', 'Tunnel Legs', 'PASSIVE_move%', '3 6 9 12 15', '-', '-', '-', '-', '-', '-', '-', '-', '-'),
+    ('WRK_A3', 'Group', 'worker', 'Delving', '3', 'Rock Splitter', 'PASSIVE_crit', '0.735 1.471 2.206 2.941 3.677', '-', '-', '-', '-', '-', '-', '-', '-', '-'),
+    ('WRK_B1', 'Group', 'worker', 'Claiming', '1', 'Quick Claim', 'PASSIVE_claim%', '5 10 15 20 25', '-', '-', '-', '-', '-', '-', '-', '-', '-'),
+    ('WRK_B2', 'Group', 'worker', 'Claiming', '2', 'Deep Pockets', 'PASSIVE_carry%', '10 20 30 40 50', '-', '-', '-', '-', '-', '-', '-', '-', '-'),
+    ('WRK_B3', 'Group', 'worker', 'Claiming', '3', 'Hurry', 'BUFF_SELF_SpeedChange', '1.04 1.08 1.12 1.16 1.2', '10 10 10 10 10', '30', '10', '-', '-', 'HasteSelf 30 0 5 10 1.2', '-', '-', '-'),
+    ('WRK_C1', 'Group', 'worker', 'Survival', '1', 'Blink', 'TELEPORT', '1 1 1 1 1', '24 23 22 21 20', '7', '-', '-', '-', 'Teleport 7 0 8 8 30', '-', '-', '-'),
+    ('WRK_C2', 'Group', 'worker', 'Survival', '2', 'Toughen', 'BUFF_SELF_Defense', '0.221 0.441 0.662 0.882 1.103', '7 7 7 7 7', '45', '25', '-', '-', 'DefenseSelf 45 2 15 25 3 3 3', '-', '-', '-'),
+    ('WRK_C3', 'Group', 'worker', 'Survival', '3', 'Patch Up', 'HEAL_SELF', '2.206 2.758 3.309 3.861 4.412', '10 10 10 10 10', '35', '5', '-', '-', '-', '-', '-', '-'),
+    ('GRN_1', 'Family', 'greenskin', 'Greenskin', '1', 'Thick Skull', 'PASSIVE_hp%', '0.552 1.103 1.655 2.206 2.758', '-', '-', '-', '-', '-', '-', '-', '-', '-'),
+    ('GRN_2', 'Family', 'greenskin', 'Greenskin', '2', 'Brutal Swing', 'PASSIVE_dmg%', '0.552 1.103 1.655 2.206 2.758', '-', '-', '-', '-', '-', '-', '-', '-', '-'),
+    ('GRN_3', 'Family', 'greenskin', 'Greenskin', '3', 'Regrowth', 'HEAL_SELF', '2.206 2.758 3.309 3.861 4.412', '10 10 10 10 10', '35', '5', '-', '-', '-', '-', '-', '-'),
+    ('DWF_1', 'Family', 'dwarf', 'Dwarf', '1', 'Stoneborn', 'PASSIVE_dr%', '1.471 2.941 4.412 5.883 7.353', '-', '-', '-', '-', '-', '-', '-', '-', '-'),
+    ('DWF_2', 'Family', 'dwarf', 'Dwarf', '2', 'Rune Ward', 'BUFF_SELF_Defense', '0.221 0.441 0.662 0.882 1.103', '7 7 7 7 7', '45', '25', '-', '-', 'DefenseSelf 45 2 15 25 3 3 3', '-', '-', '-'),
+    ('DWF_3', 'Family', 'dwarf', 'Dwarf', '3', 'Forge Fury', 'BUFF_SELF_StrengthChange', '1.011 1.022 1.033 1.044 1.055', '7 7 7 7 7', '55', '20', '-', '-', 'StrengthSelf 55 2 18 20 1.15', '-', '-', '-'),
+    ('UND_1', 'Family', 'undead', 'Undead', '1', 'Raise the Fallen', 'RAISEDEAD', '1 1 2 2 3', '6 7 8 9 10', '24', '-', '-', '-', 'RaiseDead 24 2 10 4 3 42 Skeleton', '-', '-', '-'),
+    ('UND_2', 'Family', 'undead', 'Undead', '2', 'Deathless', 'PASSIVE_hp%', '0.552 1.103 1.655 2.206 2.758', '-', '-', '-', '-', '-', '-', '-', '-', '-'),
+    ('UND_3', 'Family', 'undead', 'Undead', '3', 'Bone Legion', 'SKELARMY', '1 1 2 2 3', '8 9 10 11 12', '21', '-', '-', '-', 'SkeletonArmy 21 2 10 3 42 Skeleton', '-', '-', '-'),
+    ('VRM_1', 'Family', 'vermin', 'Vermin', '1', 'Buzzing Spin', 'WHIRLWIND', '1/1 1/1 1/1 1/1 1/1', '12.5 13 13.5 14 14.5', '14', '-', '-', '2', 'Whirlwind 14 1 2 8 3 3', '-', '-', '-'),
+    ('VRM_2', 'Family', 'vermin', 'Vermin', '2', 'Chitin', 'PASSIVE_avoid', '0.368 0.735 1.103 1.471 1.838', '-', '-', '-', '-', '-', '-', '-', '-', '-'),
+    ('VRM_3', 'Family', 'vermin', 'Vermin', '3', 'Frenzy', 'PASSIVE_cd%', '0.552 1.103 1.655 2.206 2.758', '-', '-', '-', '-', '-', '-', '-', '-', '-'),
+    ('DMN_1', 'Family', 'demon', 'Demon', '1', 'Hellfire Burst', 'EXPLOSION', '0.221 0.257 0.294 0.331 0.368', '5 5.5 6 6.5 7', '40', '-', '-', '-', 'Explosion 40 2 6 12 1 30.75 20.5', '-', '-', '-'),
+    ('DMN_2', 'Family', 'demon', 'Demon', '2', 'Infernal Hide', 'PASSIVE_hp%', '0.552 1.103 1.655 2.206 2.758', '-', '-', '-', '-', '-', '-', '-', '-', '-'),
+    ('DMN_3', 'Family', 'demon', 'Demon', '3', 'Brimstone Rage', 'BUFF_SELF_StrengthChange', '1.011 1.022 1.033 1.044 1.055', '7 7 7 7 7', '55', '20', '-', '-', 'StrengthSelf 55 2 18 20 1.15', '-', '-', '-'),
+    ('ELF_1', 'Family', 'elf', 'Elf', '1', 'Elven Grace', 'PASSIVE_dr%', '1.471 2.941 4.412 5.883 7.353', '-', '-', '-', '-', '-', '-', '-', '-', '-'),
+    ('ELF_2', 'Family', 'elf', 'Elf', '2', 'Moonlit Step', 'BUFF_SELF_SpeedChange', '1.04 1.08 1.12 1.16 1.2', '10 10 10 10 10', '30', '10', '-', '-', 'HasteSelf 30 0 5 10 1.2', '-', '-', '-'),
+    ('ELF_3', 'Family', 'elf', 'Elf', '3', 'Eagle Eye', 'PASSIVE_crit', '0.552 1.103 1.655 2.206 2.758', '-', '-', '-', '-', '-', '-', '-', '-', '-'),
+    ('HUM_1', 'Family', 'human', 'Human', '1', 'Discipline', 'PASSIVE_cd%', '0.552 1.103 1.655 2.206 2.758', '-', '-', '-', '-', '-', '-', '-', '-', '-'),
+    ('HUM_2', 'Family', 'human', 'Human', '2', 'Second Wind', 'HEAL_SELF', '2.206 2.758 3.309 3.861 4.412', '10 10 10 10 10', '35', '5', '-', '-', '-', '-', '-', '-'),
+    ('HUM_3', 'Family', 'human', 'Human', '3', 'Valor', 'BUFF_SELF_StrengthChange', '1.011 1.022 1.033 1.044 1.055', '7 7 7 7 7', '55', '20', '-', '-', 'StrengthSelf 55 2 18 20 1.15', '-', '-', '-'),
+    ('ARC_1', 'Family', 'arcane', 'Arcane', '1', 'Arcane Flow', 'PASSIVE_manacost%', '6 12 18 24 30', '-', '-', '-', '-', '-', '-', '-', '-', '-'),
+    ('ARC_2', 'Family', 'arcane', 'Arcane', '2', 'Arcane Ward', 'BUFF_SELF_Defense', '0.221 0.441 0.662 0.882 1.103', '7 7 7 7 7', '45', '25', '-', '-', 'DefenseSelf 45 2 15 25 3 3 3', '-', '-', '-'),
+    ('ARC_3', 'Family', 'arcane', 'Arcane', '3', 'Mind Spark', 'PASSIVE_alldmg%', '0.552 1.103 1.655 2.206 2.758', '-', '-', '-', '-', '-', '-', '-', '-', '-'),
+    ('DRK_1', 'Family', 'dragonkin', 'Dragonkin', '1', 'Hail of Scales', 'HAILSTORM', '0.221 0.257 0.294 0.331 0.368', '22 23 24 25 26', '21', '-', '-', '-', 'HailStorm 21 2 4 8 2 11 3.08 none 2.05', '-', '-', '-'),
+    ('DRK_2', 'Family', 'dragonkin', 'Dragonkin', '2', 'Scaled Hide', 'PASSIVE_hp%', '0.552 1.103 1.655 2.206 2.758', '-', '-', '-', '-', '-', '-', '-', '-', '-'),
+    ('DRK_3', 'Family', 'dragonkin', 'Dragonkin', '3', 'Wing Buffet', 'WHIRLWIND', '1/1 1/1 1/1 1/1 1/1', '12.5 13 13.5 14 14.5', '14', '-', '-', '2', 'Whirlwind 14 1 2 8 3 3', '-', '-', '-'),
+    ('WKF_1', 'Family', 'workfolk', 'Workfolk', '1', 'Tireless', 'PASSIVE_wake%', '6 12 18 24 30', '-', '-', '-', '-', '-', '-', '-', '-', '-'),
+    ('WKF_2', 'Family', 'workfolk', 'Workfolk', '2', 'Gold Nose', 'PASSIVE_dig%', '5 10 15 20 25', '-', '-', '-', '-', '-', '-', '-', '-', '-'),
+    ('WKF_3', 'Family', 'workfolk', 'Workfolk', '3', 'Steady Hands', 'PASSIVE_claim%', '5 10 15 20 25', '-', '-', '-', '-', '-', '-', '-', '-', '-'),
+    ('BLD_1', 'Family', 'blood', 'Bloodbound', '1', 'Blood Thrift', 'PASSIVE_manacost%', '6 12 18 24 30', '-', '-', '-', '-', '-', '-', '-', '-', '-'),
+    ('BLD_2', 'Family', 'blood', 'Bloodbound', '2', 'Blood Mending', 'HEAL_SELF', '2.206 2.758 3.309 3.861 4.412', '10 10 10 10 10', '35', '5', '-', '-', '-', '-', '-', '-'),
+    ('BLD_3', 'Family', 'blood', 'Bloodbound', '3', 'Thick Blood', 'PASSIVE_hp%', '0.552 1.103 1.655 2.206 2.758', '-', '-', '-', '-', '-', '-', '-', '-', '-'),
+    ('BST_1', 'Family', 'beast', 'Beastkin', '1', 'Wild Hide', 'PASSIVE_hp%', '0.552 1.103 1.655 2.206 2.758', '-', '-', '-', '-', '-', '-', '-', '-', '-'),
+    ('BST_2', 'Family', 'beast', 'Beastkin', '2', 'Fleet Paws', 'PASSIVE_move%', '3 6 9 12 15', '-', '-', '-', '-', '-', '-', '-', '-', '-'),
+    ('BST_3', 'Family', 'beast', 'Beastkin', '3', 'Feral Strength', 'PASSIVE_dmg%', '0.552 1.103 1.655 2.206 2.758', '-', '-', '-', '-', '-', '-', '-', '-', '-'),
+    ('STN_1', 'Family', 'stone', 'Stonekin', '1', 'Stone Skin', 'PASSIVE_dr%', '1.471 2.941 4.412 5.883 7.353', '-', '-', '-', '-', '-', '-', '-', '-', '-'),
+    ('STN_2', 'Family', 'stone', 'Stonekin', '2', 'Rock Guard', 'BUFF_SELF_Defense', '0.221 0.441 0.662 0.882 1.103', '7 7 7 7 7', '45', '25', '-', '-', 'DefenseSelf 45 2 15 25 3 3 3', '-', '-', '-'),
+    ('STN_3', 'Family', 'stone', 'Stonekin', '3', 'Granite Body', 'PASSIVE_hp%', '0.552 1.103 1.655 2.206 2.758', '-', '-', '-', '-', '-', '-', '-', '-', '-'),
 ]
 
+# (Creature, Name, Kind, Value, Cooldown, Duration, Mana, Radius, Range, BaseLine, Properties)
 EXPECTED_TIER_FOUR = [
-    ('Orc', 'Blood Frenzy', 'BUFF_SELF_StrengthChange', '1.201', '140', '20', '30', '-', '-', '-'),
-    ('Troll', 'Unstoppable Rage', 'BUFF_SELF_StrengthChange', '1.146', '140', '20', '30', '-', '-', '-'),
-    ('PitDemon', 'Infernal Wrath', 'BUFF_SELF_StrengthChange', '1.238', '140', '20', '30', '-', '-', '-'),
-    ('Scarab', 'Carapace Charge', 'BUFF_SELF_StrengthChange', '1.263', '140', '20', '30', '-', '-', '-'),
-    ('Knight', 'Oath of Steel', 'BUFF_SELF_StrengthChange', '1.318', '140', '20', '30', '-', '-', '-'),
-    ('Adventurer', "Hero's Moment", 'BUFF_SELF_StrengthChange', '1.163', '140', '20', '30', '-', '-', '-'),
-    ('Goblin', 'Dirty Tricks', 'BUFF_SELF_StrengthChange', '1.266', '140', '20', '30', '-', '-', '-'),
-    ('Rat', 'Swarm Fury', 'BUFF_SELF_StrengthChange', '1.111', '140', '20', '30', '-', '-', '-'),
-    ('Roach', 'Scuttle Fury', 'BUFF_SELF_StrengthChange', '1.175', '140', '20', '30', '-', '-', '-'),
-    ('Spider', 'Venom Frenzy', 'BUFF_SELF_StrengthChange', '1.095', '140', '20', '30', '-', '-', '-'),
-    ('Wyvern', 'Sky Fury', 'BUFF_SELF_StrengthChange', '1.099', '140', '20', '30', '-', '-', '-'),
-    ('Dwarf1', "Ancestor's Rage", 'BUFF_SELF_StrengthChange', '1.198', '140', '20', '30', '-', '-', '-'),
-    ('Dwarf2', 'Hammer Storm', 'BUFF_SELF_StrengthChange', '1.264', '140', '20', '30', '-', '-', '-'),
-    ('Cultist', 'Dark Ecstasy', 'BUFF_SELF_StrengthChange', '1.261', '140', '20', '30', '-', '-', '-'),
-    ('LavaSpawn', 'Magma Eruption', 'EXPLOSION', '1.244', '120', '1', '38', '-', '-', 'Explosion 40 2 6 12 1 30.75 20.5'),
-    ('Wizard', 'Arcane Cataclysm', 'EXPLOSION', '1.016', '120', '1', '40', '-', '-', 'Explosion 40 2 6 12 1 30.75 20.5'),
-    ('Kreatur', 'Void Burst', 'EXPLOSION', '0.978', '120', '1', '40', '-', '-', 'Explosion 40 2 6 12 1 30.75 20.5'),
-    ('Dragon', 'Dragonfire', 'EXPLOSION', '0.921', '120', '1', '40', '-', '-', 'Explosion 40 2 6 12 1 30.75 20.5'),
-    ('LizardMan', 'Swamp Fire', 'EXPLOSION', '0.118', '120', '1', '40', '-', '-', 'Explosion 40 2 6 12 1 30.75 20.5'),
-    ('Gnome', 'Spark Storm', 'EXPLOSION', '1.076', '120', '1', '40', '-', '-', 'Explosion 40 2 6 12 1 30.75 20.5'),
-    ('Monk', 'Inner Light', 'HEAL_AREA', '32.262', '140', '1', '38', '4', '-', '-'),
-    ('NatureMonster', 'Bloom', 'HEAL_AREA', '21.36', '140', '1', '38', '4', '-', '-'),
-    ('Slime', 'Ooze Mend', 'HEAL_AREA', '60', '140', '1', '40', '4', '-', '-'),
-    ('Defender', 'Unbreakable', 'BUFF_SELF_Defense', '20', '140', '20', '35', '-', '-', '-'),
-    ('RunelordDwarf', 'Runic Bastion', 'BUFF_SELF_Defense', '20', '140', '20', '35', '-', '-', '-'),
-    ('TentacleAlbine', 'Abyssal Shell', 'BUFF_SELF_Defense', '20', '140', '20', '35', '-', '-', '-'),
-    ('TentacleGreen', 'Abyssal Shell', 'BUFF_SELF_Defense', '20', '140', '20', '35', '-', '-', '-'),
-    ('Skeleton', 'Bone Legion Call', 'SKELARMY', '4', '140', '42', '38', '-', '-', 'SkeletonArmy 21 2 10 3 42 Skeleton'),
-    ('Lich', 'Army of the Dead', 'SKELARMY', '4', '140', '42', '40', '-', '-', 'SkeletonArmy 21 2 10 3 42 Skeleton'),
-    ('Elf', 'Arrow Rain', 'HAILSTORM', '0.673', '120', '11', '40', '-', '-', 'HailStorm 21 2 4 8 2 11 3.08 none 2.05'),
-    ('DarkElf', 'Shadow Volley', 'HAILSTORM', '0.723', '120', '11', '40', '-', '-', 'HailStorm 21 2 4 8 2 11 3.08 none 2.05'),
-    ('CaveHornet', 'Hive Storm', 'WHIRLWIND', '4/4', '120', '1', '30', '-', '-', 'Whirlwind 14 1 2 8 3 3'),
-    ('Kobold', 'Gold Rush', 'PASSIVE_dig%', '40', '-', '-', '-', '-', '-', '-'),
-    ('DwarfWorker', 'Mountain Heart', 'PASSIVE_dig%', '40', '-', '-', '-', '-', '-', '-'),
+    ('Kobold', 'Gold Rush', 'PASSIVE_dig%', '40', '-', '-', '-', '-', '-', '-', '-'),
+    ('DwarfWorker', 'Mountain Heart', 'PASSIVE_dig%', '40', '-', '-', '-', '-', '-', '-', '-'),
+    ('Banshee', 'Death Scream', 'EXPLOSION', '1', '120', '1', '40', '-', '-', 'Explosion 40 2 6 12 1 30.75 20.5', 'AREA 3 WEAKEN 0.8 10'),
+    ('Orc', 'Iron Will', 'BUFF_SELF_Defense', '20', '140', '10', '35', '-', '-', '-', '-'),
+    ('Butcher', 'Cleaver', 'STRIKE', '1.5', '120', '-', '30', '-', '-', '-', '-'),
+    ('LizardMan', 'War Drums', 'AURA_ALLY_StrengthChange', '1.2', '140', '20', '35', '5', '-', '-', '-'),
+    ('Goblin', 'Dirty Tricks', 'BUFF_SELF_StrengthChange', '1.266', '140', '20', '30', '-', '-', '-', '-'),
+    ('PitDemon', 'Life Leech', 'DRAIN_HEAL_ALLIES', '8', '120', '-', '30', '4', '2', '-', '-'),
+    ('Witch', 'Curse Fire', 'EXPLOSION', '1', '120', '1', '40', '-', '-', 'Explosion 40 2 6 12 1 30.75 20.5', '-'),
+    ('Ghoul', 'Feeding Frenzy', 'BUFF_SELF_StrengthChange', '1.095', '140', '20', '30', '-', '-', '-', '-'),
+    ('Troll', 'Mossback', 'BUFF_SELF_Defense', '20', '140', '10', '35', '-', '-', '-', '-'),
+    ('Cultist', 'Blood Rite', 'HEAL_INSTANT', '32.262', '140', '-', '38', '-', '6', '-', '-'),
+    ('CaveHornet', 'Hive Storm', 'WHIRLWIND', '4/4', '120', '1', '30', '-', '-', 'Whirlwind 14 1 2 8 3 3', '-'),
+    ('Skeleton', 'Bone Legion Call', 'SKELARMY', '4', '140', '42', '38', '-', '-', 'SkeletonArmy 21 2 10 3 42 Skeleton', '-'),
+    ('Lich', 'Army of the Dead', 'SKELARMY', '4', '140', '42', '40', '-', '-', 'SkeletonArmy 21 2 10 3 42 Skeleton', '-'),
+    ('Vampire', 'Blood Theft', 'DRAIN_HEAL_ALLIES', '10', '120', '-', '38', '5', '6', '-', '-'),
+    ('Priestess', 'Great Renewal', 'HEAL_AREA', '32.262', '140', '1', '38', '4', '-', '-', '-'),
+    ('Adventurer', "Hero's Moment", 'BUFF_SELF_StrengthChange', '1.163', '140', '20', '30', '-', '-', '-', '-'),
+    ('Monk', 'Laying on of Hands', 'HEAL_INSTANT', '32.262', '140', '-', '38', '-', '6', '-', '-'),
+    ('Hunter', 'Hunting Fever', 'BUFF_SELF_StrengthChange', '1.198', '140', '20', '30', '-', '-', '-', '-'),
+    ('Dwarf2', 'Anvil Stand', 'BUFF_SELF_Defense', '20', '140', '10', '35', '-', '-', '-', '-'),
+    ('Knight', 'Oath of Steel', 'BUFF_SELF_Defense', '20', '140', '10', '35', '-', '-', '-', '-'),
+    ('Wizard', 'Arcane Cataclysm', 'EXPLOSION', '1.016', '120', '1', '40', '-', '-', 'Explosion 40 2 6 12 1 30.75 20.5', '-'),
+    ('DarkElf', 'Assassination', 'STRIKE', '1.5', '120', '-', '30', '-', '-', '-', '-'),
+    ('Elf', 'Arrow Rain', 'HAILSTORM', '0.673', '120', '11', '40', '-', '-', 'HailStorm 21 2 4 8 2 11 3.08 none 2.05', '-'),
+    ('RunelordDwarf', 'Rune Circle', 'AURA_ALLY_StrengthChange', '1.2', '140', '20', '35', '5', '-', '-', '-'),
+    ('Paladin', 'Radiant Circle', 'HEAL_AREA', '21.36', '140', '1', '38', '4', '-', '-', '-'),
+    ('Defender', 'Halberd Sweep', 'FLURRY', '2/1', '120', '-', '30', '2', '1', '-', '-'),
+    ('Werewolf', 'Blood Moon', 'BUFF_SELF_StrengthChange', '1.099', '140', '20', '30', '-', '-', '-', '-'),
+    ('Gnoll', 'Spear Hail', 'HAILSTORM', '0.673', '120', '11', '40', '-', '-', 'HailStorm 21 2 4 8 2 11 3.08 none 2.05', '-'),
+    ('Gnome', 'Bomb Hail', 'EXPLOSION', '1.076', '120', '1', '40', '-', '-', 'Explosion 40 2 6 12 1 30.75 20.5', '-'),
+    ('CrystalGolem', 'Crystal Shell', 'BUFF_SELF_Defense', '20', '140', '10', '35', '-', '-', '-', '-'),
+    ('Cyclops', "Giant's Bulwark", 'BUFF_SELF_Defense', '20', '140', '10', '35', '-', '-', '-', '-'),
+    ('Dragon', 'Dragonfire', 'EXPLOSION', '0.921', '120', '1', '40', '-', '-', 'Explosion 40 2 6 12 1 30.75 20.5', '-'),
+    ('Minotaur', 'Bull Charge', 'STRIKE', '1.5', '120', '-', '30', '-', '-', '-', '-'),
 ]
 
+# (Group, Index, Name, Primary, Alternative): one template per path, the deviation path is the next path
 EXPECTED_TEMPLATES = [
-    ('blocker', '1', 'Berserker', 'Arms', 'War Cries'),
-    ('blocker', '2', 'Guardian', 'Bulwark', 'Arms'),
-    ('blocker', '3', 'Warlord', 'War Cries', 'Bulwark'),
-    ('blitzer', '1', 'Crusader', 'Zeal', 'Charge'),
-    ('blitzer', '2', 'Protector', 'Protection', 'Zeal'),
-    ('blitzer', '3', 'Vanguard', 'Charge', 'Protection'),
-    ('flanker', '1', 'Shade', 'Shadow', 'Evasion'),
-    ('flanker', '2', 'Venomist', 'Venom', 'Shadow'),
-    ('flanker', '3', 'Dancer', 'Evasion', 'Venom'),
-    ('archer', '1', 'Marksman', 'Bow', 'Hunter'),
-    ('archer', '2', 'Hunter', 'Hunter', 'Bow'),
-    ('archer', '3', 'Skirmisher', 'Skirmish', 'Bow'),
-    ('caster', '1', 'Destroyer', 'Fire', 'Frost'),
-    ('caster', '2', 'Healer', 'Healing', 'Frost'),
-    ('caster', '3', 'Hexer', 'Frost', 'Fire'),
-    ('worker', '1', 'Digger', 'Delving', 'Survival'),
+    ('tank', '1', 'Ironclad', 'Ironclad', 'Evader'),
+    ('tank', '2', 'Evader', 'Evader', 'Regenerator'),
+    ('tank', '3', 'Regenerator', 'Regenerator', 'Ironclad'),
+    ('healer', '1', 'Mender', 'Mender', 'Renewer'),
+    ('healer', '2', 'Renewer', 'Renewer', 'Warder'),
+    ('healer', '3', 'Warder', 'Warder', 'Mender'),
+    ('supporter', '1', 'Empowerer', 'Empowerer', 'Blighter'),
+    ('supporter', '2', 'Blighter', 'Blighter', 'Binder'),
+    ('supporter', '3', 'Binder', 'Binder', 'Empowerer'),
+    ('warrior', '1', 'Slayer', 'Slayer', 'Reaver'),
+    ('warrior', '2', 'Reaver', 'Reaver', 'Ravager'),
+    ('warrior', '3', 'Ravager', 'Ravager', 'Slayer'),
+    ('skirmisher', '1', 'Assassin', 'Assassin', 'Venomist'),
+    ('skirmisher', '2', 'Venomist', 'Venomist', 'Whirlwind'),
+    ('skirmisher', '3', 'Whirlwind', 'Whirlwind', 'Assassin'),
+    ('marksman', '1', 'Sharpshooter', 'Sharpshooter', 'Poisoner'),
+    ('marksman', '2', 'Poisoner', 'Poisoner', 'Barrager'),
+    ('marksman', '3', 'Barrager', 'Barrager', 'Sharpshooter'),
+    ('mage', '1', 'Sparkcaller', 'Sparkcaller', 'Witherer'),
+    ('mage', '2', 'Witherer', 'Witherer', 'Pyromancer'),
+    ('mage', '3', 'Pyromancer', 'Pyromancer', 'Sparkcaller'),
+    ('worker', '1', 'Digger', 'Delving', 'Claiming'),
     ('worker', '2', 'Claimer', 'Claiming', 'Survival'),
     ('worker', '3', 'Survivor', 'Survival', 'Delving'),
 ]
 
-# Type -> (SkillGroup, SkillFamily, PreSkill, TierFourSkill)
+# Type -> (SkillGroup, SkillFamily, PreSkill, TierFourSkill) of the roster (35 types with a skill tree)
 EXPECTED_TYPES = {
-    'Adventurer': ('flanker', 'human', 'none', 'T4_Adventurer'),
-    'CaveHornet': ('flanker', 'vermin', 'VRM_1', 'T4_CaveHornet'),
-    'Cultist': ('flanker', 'arcane', 'none', 'T4_Cultist'),
-    'DarkElf': ('archer', 'elf', 'ARC_A2', 'T4_DarkElf'),
-    'Defender': ('blocker', 'human', 'none', 'T4_Defender'),
-    'Dragon': ('blitzer', 'dragonkin', 'DRK_1', 'T4_Dragon'),
-    'Dwarf1': ('blocker', 'dwarf', 'none', 'T4_Dwarf1'),
-    'Dwarf2': ('blocker', 'dwarf', 'none', 'T4_Dwarf2'),
+    'Adventurer': ('skirmisher', 'human', 'none', 'T4_Adventurer'),
+    'Banshee': ('mage', 'undead', 'none', 'T4_Banshee'),
+    'Butcher': ('warrior', 'greenskin', 'none', 'T4_Butcher'),
+    'CaveHornet': ('skirmisher', 'vermin', 'VRM_1', 'T4_CaveHornet'),
+    'CrystalGolem': ('tank', 'stone', 'TNK_A1', 'T4_CrystalGolem'),
+    'Cultist': ('healer', 'blood', 'HLR_A1', 'T4_Cultist'),
+    'Cyclops': ('tank', 'stone', 'TNK_A1', 'T4_Cyclops'),
+    'DarkElf': ('skirmisher', 'elf', 'SKR_A1', 'T4_DarkElf'),
+    'Defender': ('warrior', 'human', 'none', 'T4_Defender'),
+    'Dragon': ('warrior', 'dragonkin', 'DRK_1', 'T4_Dragon'),
+    'Dwarf2': ('tank', 'dwarf', 'TNK_A1', 'T4_Dwarf2'),
     'DwarfWorker': ('worker', 'workfolk', 'WRK_C1', 'T4_DwarfWorker'),
-    'Elf': ('archer', 'elf', 'ARC_A3', 'T4_Elf'),
-    'Gnome': ('flanker', 'arcane', 'FLK_A2', 'T4_Gnome'),
-    'Goblin': ('flanker', 'greenskin', 'FLK_A2', 'T4_Goblin'),
-    'Knight': ('blocker', 'human', 'none', 'T4_Knight'),
+    'Elf': ('marksman', 'elf', 'MRK_C1', 'T4_Elf'),
+    'Ghoul': ('skirmisher', 'undead', 'none', 'T4_Ghoul'),
+    'Gnoll': ('marksman', 'beast', 'none', 'T4_Gnoll'),
+    'Gnome': ('marksman', 'arcane', 'MRK_C1', 'T4_Gnome'),
+    'Goblin': ('skirmisher', 'greenskin', 'SKR_A1', 'T4_Goblin'),
+    'Hunter': ('skirmisher', 'human', 'none', 'T4_Hunter'),
+    'Knight': ('tank', 'human', 'TNK_A1', 'T4_Knight'),
     'Kobold': ('worker', 'workfolk', 'WRK_C1', 'T4_Kobold'),
-    'Kreatur': ('caster', 'arcane', 'none', 'T4_Kreatur'),
-    'LavaSpawn': ('blocker', 'demon', 'none', 'T4_LavaSpawn'),
-    'Lich': ('caster', 'undead', 'UND_1', 'T4_Lich'),
-    'LizardMan': ('caster', 'dragonkin', 'none', 'T4_LizardMan'),
-    'Monk': ('blocker', 'human', 'none', 'T4_Monk'),
-    'NatureMonster': ('blocker', 'wild', 'none', 'T4_NatureMonster'),
-    'Orc': ('blocker', 'greenskin', 'none', 'T4_Orc'),
-    'PitDemon': ('blocker', 'demon', 'none', 'T4_PitDemon'),
-    'Rat': ('flanker', 'vermin', 'none', 'T4_Rat'),
-    'Roach': ('flanker', 'vermin', 'none', 'T4_Roach'),
-    'RunelordDwarf': ('blocker', 'dwarf', 'none', 'T4_RunelordDwarf'),
-    'Scarab': ('blocker', 'vermin', 'none', 'T4_Scarab'),
-    'Skeleton': ('blocker', 'undead', 'none', 'T4_Skeleton'),
-    'Slime': ('flanker', 'wild', 'WLD_1', 'T4_Slime'),
-    'Spider': ('flanker', 'vermin', 'none', 'T4_Spider'),
-    'TentacleAlbine': ('blocker', 'tentacle', 'none', 'T4_TentacleAlbine'),
-    'TentacleGreen': ('blocker', 'tentacle', 'none', 'T4_TentacleGreen'),
-    'Troll': ('blocker', 'greenskin', 'none', 'T4_Troll'),
-    'Wizard': ('caster', 'arcane', 'CST_B1', 'T4_Wizard'),
-    'Wyvern': ('flanker', 'dragonkin', 'none', 'T4_Wyvern'),
+    'Lich': ('mage', 'undead', 'UND_1', 'T4_Lich'),
+    'LizardMan': ('supporter', 'dragonkin', 'SUP_A1', 'T4_LizardMan'),
+    'Minotaur': ('warrior', 'beast', 'none', 'T4_Minotaur'),
+    'Monk': ('healer', 'human', 'HLR_A1', 'T4_Monk'),
+    'Orc': ('tank', 'greenskin', 'TNK_A1', 'T4_Orc'),
+    'Paladin': ('tank', 'human', 'TNK_A1', 'T4_Paladin'),
+    'PitDemon': ('tank', 'demon', 'TNK_A1', 'T4_PitDemon'),
+    'Priestess': ('healer', 'human', 'HLR_B1', 'T4_Priestess'),
+    'RunelordDwarf': ('supporter', 'dwarf', 'SUP_A1', 'T4_RunelordDwarf'),
+    'Skeleton': ('warrior', 'undead', 'none', 'T4_Skeleton'),
+    'Troll': ('tank', 'greenskin', 'TNK_A1', 'T4_Troll'),
+    'Vampire': ('healer', 'blood', 'HLR_B1', 'T4_Vampire'),
+    'Werewolf': ('skirmisher', 'beast', 'none', 'T4_Werewolf'),
+    'Witch': ('mage', 'arcane', 'none', 'T4_Witch'),
+    'Wizard': ('mage', 'arcane', 'MAG_A1', 'T4_Wizard'),
 }
 
 
@@ -643,10 +678,11 @@ int main(int argc, char** argv)
 def check_real_probe(output):
     """The loader reads the real config completely and every active skill builds a non-empty skill line of the class
     of its kind; passive skills build none."""
-    assert output[0] == 'counts 90 34 18', output[0]
+    assert output[0] == 'counts %d %d %d' % (SKILL_COUNT, TIER_FOUR_COUNT, TEMPLATE_COUNT), output[0]
     classes = dict(KINDS_WITH_LINE)
     classes.update({'STRIKE': 'Strike', 'AURA_ALLY_StrengthChange': 'AuraAlly', 'HEAL_SELF': 'HealSelf',
                     'HEAL_ALLY': 'HealAlly', 'HEAL_AREA': 'HealArea'})
+    classes.update(ROLE_KIND_CLASSES)
     built = 0
     for entry in output[1:]:
         head, _, line = entry.partition(' : ')
@@ -822,7 +858,8 @@ def check_sources():
     # The loader: creatureSkills.cfg is read by the ConfigManager, the file exists with a documented header
     cfg = text('config/creatureSkills.cfg')
     for key in ('Id', 'Name', 'Kind', 'Group', 'Family', 'Path', 'Tier', 'Values', 'Mana', 'Cooldown', 'Duration',
-                'Radius', 'Range', 'BaseLine', 'Creature', 'Value', 'Index', 'Primary', 'Alternative'):
+                'Radius', 'Range', 'BaseLine', 'Rank1', 'Rank3', 'Rank5', 'Properties', 'Creature', 'Value',
+                'Index', 'Primary', 'Alternative'):
         assert re.search(r'^#\s+' + key + r'\s', cfg, re.M), key
     for block in ('[Skill]', '[TierFour]', '[Template]'):
         assert block in cfg
@@ -903,19 +940,54 @@ REMOVED_LINES = ('HasteSelf', 'Teleport', 'HealSelf', 'Explosion', 'DefenseSelf'
                  'GuidedBolt', 'Grenade')
 # Skill lines that stay in a skill list
 KEPT_LINES = ('Melee', 'MissileLaunch')
-# Kinds whose skill scales a line of the base line table
+# Kinds whose skill scales a line of the base line table (the chain lightning scales the line of a guided bolt)
 KINDS_WITH_LINE = {
     'BUFF_SELF_StrengthChange': 'StrengthSelf', 'BUFF_SELF_SpeedChange': 'HasteSelf', 'BUFF_SELF_Defense': 'DefenseSelf',
     'DEBUFF_Weak': 'Weak', 'DEBUFF_Slow': 'Slow', 'EXPLOSION': 'Explosion', 'HAILSTORM': 'HailStorm',
     'GASCLOUD': 'GasCloud', 'GRENADE': 'Grenade', 'GUIDEDBOLT': 'GuidedBolt', 'WHIRLWIND': 'Whirlwind',
     'FREEZE': 'Freeze', 'INVISIBLE': 'Invisible', 'TELEPORT': 'Teleport', 'DRAIN': 'Drain', 'RAISEDEAD': 'RaiseDead',
-    'SKELARMY': 'SkeletonArmy'}
+    'SKELARMY': 'SkeletonArmy', 'CHAIN_LIGHTNING': 'ChainLightning'}
+# The 18 kinds of the role groups and the class of their skill line (contract of the roster work); without a base line
+# except the chain lightning
+ROLE_KIND_CLASSES = {
+    'TAUNT': 'Taunt', 'PARRY_COUNTER': 'ParryCounter', 'AURA_ALLY_Defense': 'AuraAllyDefense',
+    'BUFF_ALLY_Defense': 'BuffAllyDefense', 'SHIELD_ALLY': 'ShieldAlly', 'SHIELD_AREA': 'ShieldArea',
+    'HEAL_INSTANT': 'HealInstant', 'HOT_AREA': 'HotArea', 'HOT_SELF': 'HotSelf', 'CURSE_DOT': 'CurseDot',
+    'MARK': 'Mark', 'HOLD': 'Hold', 'BLEED': 'Bleed', 'POISON': 'Poison', 'BURN_DOT': 'BurnDot',
+    'DRAIN_HEAL_ALLIES': 'DrainHealAllies', 'CHAIN_LIGHTNING': 'ChainLightning', 'FLURRY': 'Flurry'}
 # Tier four kinds that carry a line of the base line table (and then no range)
 TIER_FOUR_LINES = {'EXPLOSION': 'Explosion', 'HAILSTORM': 'HailStorm', 'SKELARMY': 'SkeletonArmy',
                    'WHIRLWIND': 'Whirlwind'}
-SKILL_GROUPS = ('blocker', 'blitzer', 'flanker', 'archer', 'caster', 'worker')
-SKILL_FAMILIES = ('greenskin', 'dwarf', 'undead', 'vermin', 'tentacle', 'demon', 'elf', 'human', 'arcane', 'dragonkin',
-                  'wild', 'workfolk')
+# Tier four kinds that act on one target within Range, and kinds that act within Radius
+TIER_FOUR_RANGED = ('DRAIN_HEAL_ALLIES', 'HEAL_INSTANT', 'FLURRY')
+TIER_FOUR_AREA = ('HEAL_AREA', 'AURA_ALLY_StrengthChange', 'DRAIN_HEAL_ALLIES', 'FLURRY')
+# The eight skill groups of the roster plan (section 5), each with its three paths in path order (approved names)
+GROUP_PATHS = {
+    'tank': ('Ironclad', 'Evader', 'Regenerator'), 'healer': ('Mender', 'Renewer', 'Warder'),
+    'supporter': ('Empowerer', 'Blighter', 'Binder'), 'warrior': ('Slayer', 'Reaver', 'Ravager'),
+    'skirmisher': ('Assassin', 'Venomist', 'Whirlwind'), 'marksman': ('Sharpshooter', 'Poisoner', 'Barrager'),
+    'mage': ('Sparkcaller', 'Witherer', 'Pyromancer'), 'worker': ('Delving', 'Claiming', 'Survival')}
+SKILL_GROUPS = tuple(GROUP_PATHS)
+# The families of the roster (tentacle and wild removed; blood, beast and stone new) with the name of their path
+FAMILY_PATHS = {
+    'greenskin': 'Greenskin', 'dwarf': 'Dwarf', 'undead': 'Undead', 'vermin': 'Vermin', 'demon': 'Demon', 'elf': 'Elf',
+    'human': 'Human', 'arcane': 'Arcane', 'dragonkin': 'Dragonkin', 'workfolk': 'Workfolk', 'blood': 'Bloodbound',
+    'beast': 'Beastkin', 'stone': 'Stonekin'}
+SKILL_FAMILIES = tuple(FAMILY_PATHS)
+REMOVED_FAMILIES = ('tentacle', 'wild')
+# Counts of the catalog: 8 groups x 9 path skills + 13 families x 3, one tier 4 skill per roster type except the
+# Champion, 3 templates per group
+SKILL_COUNT = 111
+TIER_FOUR_COUNT = 35
+TEMPLATE_COUNT = 24
+# Kinds that heal, shield or protect an ally (the healer role); only the healer group and the tier 4 skills of the
+# healers and of the two hybrids (Paladin, Pit Demon) may have them (roster plan D3, CR4)
+ALLY_HEAL_KINDS = ('HEAL_ALLY', 'HEAL_AREA', 'HEAL_INSTANT', 'HOT_AREA', 'SHIELD_ALLY', 'SHIELD_AREA',
+                   'BUFF_ALLY_Defense', 'DRAIN_HEAL_ALLIES')
+ALLY_HEAL_TIER_FOUR = ('Priestess', 'Vampire', 'Monk', 'Cultist', 'Paladin', 'PitDemon')
+# Types whose creature list keeps a MissileLaunch line: the shooters of the roster (the Dragon its second attack line)
+SHOOTERS = ('Banshee', 'Dragon', 'Elf', 'Gnoll', 'Gnome', 'Lich', 'LizardMan', 'Priestess', 'Vampire', 'Witch',
+            'Wizard')
 
 
 def level_files():
@@ -974,77 +1046,97 @@ def creature_blocks(relative):
 
 
 def check_skill_rows(skills):
-    """Every skill block equals its expected row of the catalog and follows the base line rules of the syntax."""
+    """Every skill block equals its expected row of the catalog and follows the base line rules of the syntax; the
+    groups, paths and families are those of the roster plan and no skill leads into another role (D3, D28)."""
     assert re.search(r'^\s*AuraAllyMinAllies\s+2\s*$', text('config/global.cfg'), re.M)
     assert 'getAuraAllyMinAllies()' in text('source/creatureskill/CreatureSkillTree.cpp')
     assert re.search(r'^\s*SkeletonArmyRadius\s+2\s*$', text('config/global.cfg'), re.M)
     assert 'getSkeletonArmyRadius()' in text('source/creatureskill/CreatureSkillTree.cpp')
-    assert len(skills) == len(EXPECTED_SKILLS) == 90, len(skills)
+    assert len(skills) == len(EXPECTED_SKILLS) == SKILL_COUNT, len(skills)
     for block, row in zip(skills, EXPECTED_SKILLS):
-        (sid, owner_key, owner, path, tier, name, kind, values, mana, cooldown, duration, radius, range_, base) = row
+        (sid, owner_key, owner, path, tier, name, kind, values, mana, cooldown, duration, radius, range_, base,
+         rank1, rank3, rank5) = row
         assert [k for k in ('Group', 'Family') if k in block] == [owner_key], sid
         assert block[owner_key] == owner, sid
         got = (block['Id'], block['Path'], block['Tier'], block['Name'], block['Kind'], block['Values'], block['Mana'],
-               block['Cooldown'], block['Duration'], block['Radius'], block['Range'], block['BaseLine'])
-        assert got == (sid, path, tier, name, kind, values, mana, cooldown, duration, radius, range_, base), (sid, got)
+               block['Cooldown'], block['Duration'], block['Radius'], block['Range'], block['BaseLine'],
+               block['Rank1'], block['Rank3'], block['Rank5'])
+        assert got == (sid, path, tier, name, kind, values, mana, cooldown, duration, radius, range_, base, rank1,
+                       rank3, rank5), (sid, got)
         # Ally auras use the global configured minimum instead of a per-skill key.
         assert set(block) == {'Id', 'Name', 'Kind', owner_key, 'Path', 'Tier', 'Values', 'Mana', 'Cooldown',
-                              'Duration', 'Radius', 'Range', 'BaseLine'}, sid
+                              'Duration', 'Radius', 'Range', 'BaseLine', 'Rank1', 'Rank3', 'Rank5'}, sid
         assert len(values.split()) == 5 and (mana == '-' or len(mana.split()) == 5), sid
         # A line of the base line table exactly for the kinds that scale one, and it is the line of that kind
         if kind in KINDS_WITH_LINE:
             assert base.split()[0] == KINDS_WITH_LINE[kind], sid
         else:
             assert base == '-', sid
-    assert len({b['Id'] for b in skills}) == 90
+        # D28: no skill makes a creature invisible
+        assert kind != 'INVISIBLE' and name != 'Shadow Veil', sid
+        # D3: the taunt only in the tank group, ally heals only in the healer group, nothing of it in a family
+        assert kind != 'TAUNT' or owner == 'tank', sid
+        assert kind not in ALLY_HEAL_KINDS or owner == 'healer', sid
+    assert len({b['Id'] for b in skills}) == SKILL_COUNT
 
-    # Structure: 6 groups with 3 paths of 3 tiers, 12 families with one path of 3 tiers
-    for group in SKILL_GROUPS:
+    # Structure: 8 groups with their 3 named paths of 3 tiers, 13 families with one named path of 3 tiers
+    for group, paths in GROUP_PATHS.items():
         group_skills = [b for b in skills if b.get('Group') == group]
         assert len(group_skills) == 9, group
-        assert len({b['Path'] for b in group_skills}) == 3, group
-        for path in {b['Path'] for b in group_skills}:
-            assert sorted(b['Tier'] for b in group_skills if b['Path'] == path) == ['1', '2', '3'], (group, path)
-    for family in SKILL_FAMILIES:
+        assert tuple(dict.fromkeys(b['Path'] for b in group_skills)) == paths, group
+        for path in paths:
+            assert [b['Tier'] for b in group_skills if b['Path'] == path] == ['1', '2', '3'], (group, path)
+    assert {b['Group'] for b in skills if 'Group' in b} == set(SKILL_GROUPS)
+    for family, path in FAMILY_PATHS.items():
         family_skills = [b for b in skills if b.get('Family') == family]
-        assert sorted(b['Tier'] for b in family_skills) == ['1', '2', '3'], family
-        assert len({b['Path'] for b in family_skills}) == 1, family
+        assert [b['Tier'] for b in family_skills] == ['1', '2', '3'], family
+        assert {b['Path'] for b in family_skills} == {path}, family
+    assert {b['Family'] for b in skills if 'Family' in b} == set(SKILL_FAMILIES)
+    assert not set(REMOVED_FAMILIES) & {b.get('Family') for b in skills}
+    # The taunt is the tier 1 skill of the tank path Ironclad (the pre-skill of every tank, D25)
+    assert [b['Id'] for b in skills if b['Kind'] == 'TAUNT'] == ['TNK_A1']
 
 
-def check_tier_four_rows(tiers):
-    """Every tier four block equals its expected row; lines and radius follow the syntax of the config."""
-    assert len(tiers) == len(EXPECTED_TIER_FOUR) == len(EXPECTED_TYPES) == 34, len(tiers)
+def check_tier_four_rows(tiers, skills):
+    """Every tier four block equals its expected row; lines, range and radius follow the syntax of the config; the 18
+    role kinds are all used; only healers and the two hybrids heal allies with their tier four skill (D3, D16)."""
+    assert len(tiers) == len(EXPECTED_TIER_FOUR) == len(EXPECTED_TYPES) == TIER_FOUR_COUNT, len(tiers)
     for block, row in zip(tiers, EXPECTED_TIER_FOUR):
-        creature, name, kind, value, cooldown, duration, mana, radius, range_, base = row
+        creature, name, kind, value, cooldown, duration, mana, radius, range_, base, properties = row
         got = (block['Creature'], block['Name'], block['Kind'], block['Value'], block['Cooldown'], block['Duration'],
-               block['Mana'], block['Radius'], block['Range'], block['BaseLine'])
+               block['Mana'], block['Radius'], block['Range'], block['BaseLine'], block['Properties'])
         assert got == row, (creature, got)
         assert set(block) == {'Creature', 'Name', 'Kind', 'Value', 'Cooldown', 'Duration', 'Mana', 'Radius', 'Range',
-                              'BaseLine'}, creature
+                              'BaseLine', 'Properties'}, creature
         if kind in TIER_FOUR_LINES:
             # The skeleton army raises its skeletons within Radius 2 of the caster; the other lines have no radius
             assert base.split()[0] == TIER_FOUR_LINES[kind] and range_ == '-' and radius == '-', creature
         else:
-            assert base == '-' and range_ == '-', creature
-            assert (radius == '4') == (kind == 'HEAL_AREA'), creature
+            assert base == '-', creature
+            assert (range_ != '-') == (kind in TIER_FOUR_RANGED), creature
+            assert (radius != '-') == (kind in TIER_FOUR_AREA), creature
+        assert kind not in ALLY_HEAL_KINDS or creature in ALLY_HEAL_TIER_FOUR, creature
+        assert kind != 'TAUNT' and kind != 'INVISIBLE', creature
     assert {b['Creature'] for b in tiers} == set(EXPECTED_TYPES)
+    used = {b['Kind'] for b in skills} | {b['Kind'] for b in tiers}
+    assert set(ROLE_KIND_CLASSES) <= used, sorted(set(ROLE_KIND_CLASSES) - used)
 
 
 def check_template_rows(templates, skills):
-    """Every template block equals its expected row; each group has three templates over its three paths."""
-    assert len(templates) == len(EXPECTED_TEMPLATES) == 18
+    """Every template block equals its expected row; each group has three templates, one per path in path order and
+    named after it (the workers keep their names), the deviation going to the next path (D37, D39)."""
+    assert len(templates) == len(EXPECTED_TEMPLATES) == TEMPLATE_COUNT
     for block, row in zip(templates, EXPECTED_TEMPLATES):
         got = (block['Group'], block['Index'], block['Name'], block['Primary'], block['Alternative'])
         assert got == row, got
         assert set(block) == {'Group', 'Index', 'Name', 'Primary', 'Alternative'}
-    for group in SKILL_GROUPS:
-        group_paths = {b['Path'] for b in skills if b.get('Group') == group}
+    for group, paths in GROUP_PATHS.items():
         group_templates = [t for t in templates if t['Group'] == group]
         assert [t['Index'] for t in group_templates] == ['1', '2', '3'], group
-        for template in group_templates:
-            assert template['Primary'] in group_paths and template['Alternative'] in group_paths, template
-            assert template['Primary'] != template['Alternative'], template
-        assert {t['Primary'] for t in group_templates} == group_paths, group
+        assert [t['Primary'] for t in group_templates] == list(paths), group
+        assert [t['Alternative'] for t in group_templates] == [paths[1], paths[2], paths[0]], group
+        if group != 'worker':
+            assert [t['Name'] for t in group_templates] == list(paths), group
 
 
 def check_type_keys(skills, tiers):
@@ -1092,14 +1184,11 @@ def check_removed_lines():
     creatures = creature_blocks('config/creatures.cfg')
     # The Champion keeps every line it has (Melee and its Explosion), the Explosion line is not removed
     assert sorted(t[0] for t in creatures['Champion'][0][1]) == ['Explosion', 'Melee']
-    # Casters and archers keep their first MissileLaunch, the Dragon its second attack line (a MissileLaunch after
-    # Melee), everything else has none
+    # The shooters keep their first MissileLaunch, the Dragon its second attack line (a MissileLaunch after Melee),
+    # everything else has none
     for name, (group, family, pre, tier_four) in EXPECTED_TYPES.items():
         shots = [t[0] for t in creatures[name][0][1]].count('MissileLaunch')
-        if group in ('caster', 'archer', 'blitzer'):
-            assert shots == 1, name
-        else:
-            assert shots == 0, name
+        assert shots == (1 if name in SHOOTERS else 0), name
 
 
 def check_content():
@@ -1107,7 +1196,7 @@ def check_content():
     removed lines; the expected values are data of this check."""
     blocks = parse_config_blocks('config/creatureSkills.cfg')
     check_skill_rows(blocks['Skill'])
-    check_tier_four_rows(blocks['TierFour'])
+    check_tier_four_rows(blocks['TierFour'], blocks['Skill'])
     check_template_rows(blocks['Template'], blocks['Skill'])
     check_type_keys(blocks['Skill'], blocks['TierFour'])
     check_removed_lines()
