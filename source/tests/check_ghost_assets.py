@@ -46,11 +46,11 @@ def clips(credits):
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     creatures = read('config/creatures.cfg')
-    # Roster change: Witch, Ghoul and Hunter take the fear of Roach, Spider and Dwarf1; the Banshee (successor of the
-    # Rat) is not afraid of ghosts and hunts them in the ghost room instead (as in check_ghost_config.py)
-    scared = ('Witch','Ghoul','CaveHornet','Goblin','Adventurer','Elf','Gnome','Hunter','Dwarf2')
+    # Roster change: Witch, Ghoul and Hunter take the fear of Roach, Spider and Dwarf1; the Banshee takes the fear of
+    # the Rat (D23) and also hunts ghosts in the ghost room, so it needs both clip sets (as in check_ghost_config.py)
+    scared = ('Witch','Ghoul','CaveHornet','Goblin','Adventurer','Elf','Gnome','Hunter','Dwarf2','Banshee')
     hunters = ('PitDemon','Troll','Skeleton','RunelordDwarf','Knight','Defender','Banshee')
-    for creature in scared+hunters:
+    for creature in sorted(set(scared+hunters)):
         block = next(block for block in re.findall(r'\[Creature\](.*?)\[/Creature\]',creatures,re.S)
             if re.search(r'^\s*Name\s+'+creature+r'\s*$',block,re.M))
         mesh = re.search(r'^\s*MeshName\s+(\S+)',block,re.M)[1]
@@ -59,7 +59,7 @@ def clips(credits):
         credited('assets-src/creatures/ghosts/'+skeleton.removesuffix('.skeleton')+'.blend', credits)
         _, chunks = module.chunks(room_file('models/'+skeleton).read_bytes())
         animations = {name:data for kind,name,data in chunks if kind==module.ANIMATION}
-        expected = ('Scared',) if creature in scared else ('Beam','Throw','Empty')
+        expected = (('Scared',) if creature in scared else ())+(('Beam','Throw','Empty') if creature in hunters else ())
         for name in expected:
             assert name in animations, (creature,name)
             data = animations[name]

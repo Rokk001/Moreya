@@ -94,8 +94,8 @@ def main():
             creatures[match[1]] = block
     afraid = {name for name, block in creatures.items() if re.search(r'^\s*AfraidOfGhosts\s+1\s*$',block,re.M)}
     # Roster change (CREATURE-ROSTER W4a): Ghoul, Witch and Hunter take the fear of their predecessors Spider, Roach and
-    # Dwarf1; the Banshee (successor of the Rat) hunts ghosts in her favourite room and is not afraid of them
-    assert afraid == {'Ghoul','Witch','CaveHornet','Goblin','Adventurer','Elf','Gnome','Hunter','Dwarf2'}, afraid
+    # Dwarf1; the Banshee takes the fear of its predecessor the Rat (D23) and still hunts ghosts in her favourite room
+    assert afraid == {'Ghoul','Witch','CaveHornet','Goblin','Adventurer','Elf','Gnome','Hunter','Dwarf2','Banshee'}, afraid
     jobs = {'CaveHornet':('HerbGarden',100,1.5),'Witch':('HerbGarden',150,1),'Ghoul':('Hatchery',150,.5),
         'DarkElf':('AlchemyLab',90,1),'Butcher':('AlchemyLab',80,.5),'Elf':('AlchemyLab',100,1.5),
         'Paladin':('AlchemyLab',90,1),'Adventurer':('AlchemyLab',80,.5),
@@ -109,8 +109,8 @@ def main():
             if len(row:=line.split('#',1)[0].split())==3}
         if 'GhostRoom' in affinities:
             hunters.add(name)
-            # The Banshee needs the ghost room as its required room, which is its favourite room (roster D23/D32);
-            # every other ghost hunter keeps likeness 0 and is not afraid of ghosts
+            # The Banshee needs the ghost room as its required room, which is its favourite room, and is afraid of
+            # ghosts as its predecessor the Rat (roster D23/D32); every other ghost hunter keeps likeness 0 and no fear
             if name == 'Banshee':
                 assert affinities['GhostRoom'][0] == 150
                 assert list(affinities)[0] == 'GhostRoom', affinities
