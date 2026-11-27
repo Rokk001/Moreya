@@ -621,7 +621,8 @@ class World:
     # Role kinds: heals, heals over time and shields are hit points per turn (HEAL_KINDS), the ally defence buff and the
     # defence aura a defence share (DEFENSE_KINDS), damage over time absolute casts without critical hits, MARK a
     # damage share on the target, FLURRY melee blows on every target, CHAIN_LIGHTNING a guided bolt, PARRY_COUNTER a
-    # parry chance against melee blows and DRAIN_HEAL_ALLIES a Drain. TAUNT and HOLD only cost mana in a fight of one
+    # parry chance against melee blows and DRAIN_HEAL_ALLIES a share of the enemy's full health per turn that heals the
+    # caster (drain_share, resolved per opponent in skill_fight). TAUNT and HOLD only cost mana in a fight of one
     # creature against copies that all attack it anyway; the rank properties (Rank3, Rank5) are not modelled.
     def apply(self, name, level, template, base, skills_on):
         ranks, ult = self.allocation(name, level, template, skills_on)
@@ -630,7 +631,7 @@ class World:
         dmgk = hpk = spellk = allk = ark = drk = cdk = markk = 1.0
         crit = avoid = defadd = manacost = parry = 0.0
         enemy_dmgk = 1.0
-        enemy_turnloss = strike_dpt = drain_dpt = heal_pt = 0.0
+        enemy_turnloss = strike_dpt = drain_dpt = heal_pt = drain_share = 0.0
         minhp = self.stat(name, "MinHP")
         dm = multiplier(level, "damage") * (minhp / self.glob["SkillSpellReferenceMinHP"])
         items = [(self.catalog.skills[skill_id], rank) for skill_id, rank in ranks.items()]
@@ -722,10 +723,12 @@ class World:
                 enemy_turnloss += 28 * value / cooldown * sustain
             elif kind in HEAL_KINDS:
                 heal_pt += value / 100 * minhp * multiplier(level, "damage") / cooldown * sustain
-            elif kind in ("DRAIN", "DRAIN_HEAL_ALLIES"):
+            elif kind == "DRAIN":
                 share = value / 100 * base.hp / cooldown * sustain
                 drain_dpt += share
                 heal_pt += share
+            elif kind == "DRAIN_HEAL_ALLIES":
+                drain_share += value / 100 / cooldown * sustain
         dmgk *= markk
         u.hp *= hpk
         u.minimum = tuple(x * dmgk * attack_paid for x in u.minimum)
@@ -746,7 +749,8 @@ class World:
                        for rate, factor in flurries
                        for channel, (low, high) in enumerate(zip(u.minimum, u.maximum)) if high > 0]
         extras = {"avoid": avoid, "parry": parry, "enemy_dmgk": enemy_dmgk, "enemy_turnloss": min(0.6, enemy_turnloss),
-                  "extra_dpt": strike_dpt * critk + drain_dpt, "heal_pt": heal_pt, "casts": casts + dots,
+                  "extra_dpt": strike_dpt * critk + drain_dpt, "heal_pt": heal_pt, "drain_share": drain_share,
+                  "casts": casts + dots,
                   "melee_casts": melee_casts, "shot_rate": shot_rate}
         return u, extras
 
@@ -839,6 +843,11 @@ def skill_fight(roster, crit_multiplier, first, second, count, fights, rng, limi
     b_extras = second[1]
     first_blow = prepare_skill_blow(roster, first[0], second[0], b_extras, crit_multiplier)
     second_blow = prepare_skill_blow(roster, second[0], first[0], a_extras, crit_multiplier)
+    # A drain that heals allies takes its share of the full health of the enemy and heals the caster with it.
+    a_drain = a_extras.get("drain_share", 0.0) * second[0].hp
+    b_drain = b_extras.get("drain_share", 0.0) * first[0].hp
+    a_heal, b_heal = a_extras["heal_pt"] + a_drain, b_extras["heal_pt"] + b_drain
+    a_damage, b_damage = a_extras["extra_dpt"] + a_drain, b_extras["extra_dpt"] + b_drain
     for _ in range(fights):
         a = replace(first[0])
         full_a = a.hp
@@ -847,13 +856,13 @@ def skill_fight(roster, crit_multiplier, first, second, count, fights, rng, limi
         next_a = 0
         clocks = [0] * count
         for turn in range(1, limit + 1):
-            a.hp = min(full_a, a.hp + a_extras["heal_pt"])
+            a.hp = min(full_a, a.hp + a_heal)
             for b in opponents:
-                b.hp = min(full_b, b.hp + b_extras["heal_pt"])
-            opponents[0].hp -= a_extras["extra_dpt"]
+                b.hp = min(full_b, b.hp + b_heal)
+            opponents[0].hp -= a_damage
             cast_hits(a_extras, opponents)
             for b in opponents:
-                a.hp -= b_extras["extra_dpt"]
+                a.hp -= b_damage
                 cast_hits(b_extras, [a])
             if turn >= next_a:
                 if rng.random() >= b_extras["enemy_turnloss"]:
@@ -903,8 +912,9 @@ def world_roles(matrices):
 
 
 # Class means: for the wages 100, 200, 400 the share of the single creature against two of half the wage, all types
-# of the class together, one generator for all cases in the given order, 60 fights per pairing.
-def world_class_means(world, fights=60):
+# of the class together, one generator for all cases in the given order, 60 fights per pairing. The single creatures
+# named in exclude (types the owner lets stand outside the wage rule) do not enter the means.
+def world_class_means(world, fights=60, exclude=()):
     crit_multiplier = world.glob["CritDamageMultiplier"]
     rng = random.Random(31337)
     result = {}
@@ -914,7 +924,8 @@ def world_class_means(world, fights=60):
         for wage in (100, 200, 400):
             row[wage] = round(statistics.mean(
                 skill_fight(world.roster, crit_multiplier, units[a], units[b], 2, fights, rng)[0]
-                for a in world.names if world.wage[a] == wage for b in world.names if world.wage[b] == wage // 2), 3)
+                for a in world.names if world.wage[a] == wage and a not in exclude
+                for b in world.names if world.wage[b] == wage // 2), 3)
         result[(level, template)] = row
     return result
 
