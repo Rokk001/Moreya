@@ -182,6 +182,9 @@ const int32_t DONE_WAIT_TURNS = 1;
 //! \brief The turn of the knock-out itself: upkeepSpots counts it down in the same upkeep as upkeepGames knocks the loser
 //! out, so the lying count starts this much above DuelKoTurns (decision 897: 42 turns lying, exactly 30 s)
 const int32_t KNOCK_OUT_TURN = 1;
+//! \brief The last turns of an arm wrestling or dice game in which the winner plays its winner clip and the loser its
+//! loser clip (3 turns, about 2.1 s of the 8 GameTurns); the winner is drawn when they begin.
+const int32_t GAME_OUTCOME_TURNS = 3;
 //! \brief The floor a knocked-out guest covers in its KnockedOut clip, in tiles at level scale 1, in the frame of the
 //! creature (it looks along -y): from mBehindMin to mBehindMax along +y (behind it) and mHalfWidth to either side. Measured
 //! on all 33 frames of the clip of every model that visits the tavern and is not large (decision 833: the lying body
@@ -1689,6 +1692,13 @@ void RoomTavern::showSpotState(Tile* tile, RoomTavernSpot& spot)
                 if(opponent == nullptr)
                     continue;
 
+                // In the last turns of an arm wrestling or dice game the winner and the loser play their own clips
+                if(game.mOutcome != TavernGameOutcome::open)
+                {
+                    showGameOutcome(game, creature);
+                    break;
+                }
+
                 std::string clip = EntityAnimation::sit_anim;
                 if(game.mKind == TavernGameKind::armWrestling)
                     clip = EntityAnimation::sit_armwrestle_anim;
@@ -2053,22 +2063,58 @@ void RoomTavern::playContestTurn(std::map<RoomTavernSeat, RoomTavernGame>::itera
 {
     RoomTavernGame& game = it->second;
     --game.mTurnsLeft;
+
+    // The last turns begin: the winner is drawn now, and both guests show the result until the game ends
+    if((game.mOutcome == TavernGameOutcome::open) && (game.mTurnsLeft <= GAME_OUTCOME_TURNS))
+    {
+        // The weaker creature wins with 50 percent minus 2.5 points per level of difference, never below 5 percent
+        Creature* lower = game.mCreatureA;
+        Creature* higher = game.mCreatureB;
+        if(lower->getLevel() > higher->getLevel())
+            std::swap(lower, higher);
+
+        const uint32_t levelDifference = higher->getLevel() - lower->getLevel();
+        const double lowerPercent = std::max(getTavernValue("GameUnderdogMinPercent"),
+            getTavernValue("GameUnderdogBasePercent") - getTavernValue("GameUnderdogPerLevel") * levelDifference);
+        Creature* drawnWinner = higher;
+        game.mUnderdogLevels = 0;
+        if(Random::Double(0.0, PERCENT_SCALE) < lowerPercent)
+        {
+            drawnWinner = lower;
+            game.mUnderdogLevels = levelDifference;
+        }
+        game.mOutcome = (drawnWinner == game.mCreatureA) ? TavernGameOutcome::firstWins : TavernGameOutcome::secondWins;
+
+        // Both clips start in the same turn and last the same time, so the two arms meet across the table
+        if(game.mTurnsLeft > 0)
+        {
+            showGameOutcome(game, game.mCreatureA);
+            showGameOutcome(game, game.mCreatureB);
+        }
+    }
+
     if(game.mTurnsLeft > 0)
         return;
 
-    // The weaker creature wins with 50 percent minus 2.5 points per level of difference, never below 5 percent
-    Creature* lower = game.mCreatureA;
-    Creature* higher = game.mCreatureB;
-    if(lower->getLevel() > higher->getLevel())
-        std::swap(lower, higher);
+    Creature* winner = (game.mOutcome == TavernGameOutcome::firstWins) ? game.mCreatureA : game.mCreatureB;
+    concludeGame(it, winner, game.mUnderdogLevels);
+}
 
-    const uint32_t levelDifference = higher->getLevel() - lower->getLevel();
-    const double lowerPercent = std::max(getTavernValue("GameUnderdogMinPercent"),
-        getTavernValue("GameUnderdogBasePercent") - getTavernValue("GameUnderdogPerLevel") * levelDifference);
-    if(Random::Double(0.0, PERCENT_SCALE) < lowerPercent)
-        concludeGame(it, lower, levelDifference);
-    else
-        concludeGame(it, higher, 0);
+void RoomTavern::showGameOutcome(const RoomTavernGame& game, Creature* creature)
+{
+    if((creature == nullptr) || (game.mOutcome == TavernGameOutcome::open))
+        return;
+
+    Creature* opponent = (creature == game.mCreatureA) ? game.mCreatureB : game.mCreatureA;
+    const bool won = (game.mOutcome == TavernGameOutcome::firstWins) ? (creature == game.mCreatureA) :
+        (creature == game.mCreatureB);
+    std::string clip = won ? EntityAnimation::sit_armwrestle_win_anim : EntityAnimation::sit_armwrestle_lose_anim;
+    if(game.mKind == TavernGameKind::dice)
+        clip = won ? EntityAnimation::sit_dice_win_anim : EntityAnimation::sit_dice_lose_anim;
+
+    // The clip plays once over the turns that are left; a skeleton without it goes on with the game clip
+    const double seconds = static_cast<double>(std::max(game.mTurnsLeft, 1)) / ODApplication::turnsPerSecond;
+    creature->setTimedAnimationState(clip, seconds, false, getFacingDirection(*creature, *opponent), false);
 }
 
 //! \brief Plays one turn of a slap duel. One slap (wind-up, slap, reaction) lasts TavernSlapSecondsMin to
@@ -2420,6 +2466,8 @@ void RoomTavern::resumeLoadedGuests()
         game.mSlapsTakenB = saved.mSlapsTakenB;
         game.mTurnIsA = saved.mTurnIsA;
         game.mDuelClock = saved.mDuelClock;
+        game.mOutcome = saved.mOutcome;
+        game.mUnderdogLevels = saved.mUnderdogLevels;
         mGames[game.mSeatA] = game;
         showSpotState(spotA->first.mTable, spotA->second);
         showSpotState(spotB->first.mTable, spotB->second);
@@ -2909,8 +2957,10 @@ void RoomTavern::exportToStream(std::ostream& os) const
     }
 
     // Game <kind> <xA> <yA> <xB> <yB> <creatureA> <creatureB> <turnsLeft> <slapsA> <slapsB> <turn> <seatA> <seatB>
-    // <duelPhase> <duelTurnsLeft> <slapTurns> <slapResult>: one line for every running game (turn: 0 = the first guest
-    // slaps or slaps next, 1 = the second; the last four are the clock of a slap duel, see RoomTavernDuelClock)
+    // <duelPhase> <duelTurnsLeft> <slapTurns> <slapResult> <outcome> <underdogLevels>: one line for every running game
+    // (turn: 0 = the first guest slaps or slaps next, 1 = the second; duelPhase to slapResult are the clock of a slap
+    // duel, see RoomTavernDuelClock; outcome and underdogLevels the drawn result of arm wrestling or dice, see
+    // TavernGameOutcome)
     for(std::map<RoomTavernSeat, RoomTavernGame>::const_iterator it = mGames.begin(); it != mGames.end(); ++it)
     {
         const RoomTavernGame& game = it->second;
@@ -2920,7 +2970,8 @@ void RoomTavern::exportToStream(std::ostream& os) const
            << game.mSlapsTakenA << " " << game.mSlapsTakenB << " " << (game.mTurnIsA ? 0 : 1) << " "
            << game.mSeatA.mIndex << " " << game.mSeatB.mIndex << " "
            << static_cast<uint32_t>(game.mDuelClock.mPhase) << " " << game.mDuelClock.mTurnsLeft << " "
-           << game.mDuelClock.mSlapTurns << " " << static_cast<uint32_t>(game.mDuelClock.mSlapResult) << std::endl;
+           << game.mDuelClock.mSlapTurns << " " << static_cast<uint32_t>(game.mDuelClock.mSlapResult) << " "
+           << static_cast<uint32_t>(game.mOutcome) << " " << game.mUnderdogLevels << std::endl;
     }
 }
 
@@ -3013,7 +3064,7 @@ bool RoomTavern::importFromStream(std::istream& is)
         else if(tag == STREAM_TAG_GAME)
         {
             // The rest of the line: kind xA yA xB yB creatureA creatureB turnsLeft slapsA slapsB turn [seatA seatB
-            // [duelPhase duelTurnsLeft slapTurns slapResult]]
+            // [duelPhase duelTurnsLeft slapTurns slapResult [outcome underdogLevels]]]
             std::string rest;
             std::getline(is, rest);
             std::istringstream line(rest);
@@ -3051,6 +3102,19 @@ bool RoomTavern::importFromStream(std::istream& is)
                 saved.mDuelClock.mTurnsLeft = std::max(duelTurnsLeft, 0);
                 saved.mDuelClock.mSlapTurns = std::max(slapTurns, 0);
                 saved.mDuelClock.mSlapResult = static_cast<TavernSlapResult>(slapResult);
+
+                // The drawn result of arm wrestling or dice; a save made before the outcome clips has none, then the
+                // result is drawn in the next turn of the game
+                uint32_t outcome = 0;
+                uint32_t underdogLevels = 0;
+                if(line >> outcome >> underdogLevels)
+                {
+                    if(outcome > static_cast<uint32_t>(TavernGameOutcome::secondWins))
+                        return false;
+
+                    saved.mOutcome = static_cast<TavernGameOutcome>(outcome);
+                    saved.mUnderdogLevels = underdogLevels;
+                }
             }
 
             saved.mKind = static_cast<TavernGameKind>(kind);

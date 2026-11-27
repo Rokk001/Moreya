@@ -6,7 +6,9 @@ The real functions are cut out of the sources and run against small stubs:
               any order with the [Needs] block, an old creature line without the block, broken blocks, a type without
               thirst stays at 0), exportThirstStateToPacket / importThirstStateFromPacket
   RoomTavern  exportToStream / importFromStream with the helper functions of the stream: TavernPayer, Innkeeper, Counter,
-              Spot (all states, also the short old form) and Game lines (all three kinds, the turn, the slaps taken),
+              Spot (all states, also the short old form) and Game lines (all three kinds, the turn, the slaps taken,
+              the drawn result of arm wrestling or dice and the underdog levels of its winner; a line without the
+              result loads with an open result, a result above 2 is refused),
               a running game and a knocked-out loser keep their remaining turns and seats (places 0 to 7 of the long
               tables), lines in any order, a save without seat data or with the seat format 1 of the tables of one tile
               spreads its furniture again, ends its games and sends its guests to look for a seat, an old
@@ -90,6 +92,8 @@ assert 'mPendingSpots.find(creature->getName())' in add_user and 'mPendingSpots.
 resume = extract(room_cpp, 'void RoomTavern::resumeLoadedGuests(')
 assert 'getGameMap()->getCreature(' in resume and 'CreatureActionUseRoom' in resume
 assert 'mGames[game.mSeatA] = game;' in resume and 'game.mTurnsLeft = saved.mTurnsLeft;' in resume and 'game.mTurnIsA = saved.mTurnIsA;' in resume
+# A loaded game in its last turns keeps its drawn result and shows it again (showSpotState plays the outcome clips)
+assert 'game.mOutcome = saved.mOutcome;' in resume and 'game.mUnderdogLevels = saved.mUnderdogLevels;' in resume
 assert 'game.mSlapsTakenA = saved.mSlapsTakenA;' in resume and 'game.mSlapsTakenB = saved.mSlapsTakenB;' in resume
 # A running slap or pause of a slap duel goes on where it was (decision 856); a running slap starts its clips again for
 # the rest of its time
@@ -350,6 +354,8 @@ static void checkRoomStream()
     RoomTavernGame dice;
     dice.mKind = TavernGameKind::dice; dice.mSeatA = RoomTavernSeat(map.getTile(2, 4), 1); dice.mSeatB = RoomTavernSeat(map.getTile(3, 4), 3);
     dice.mCreatureA = &a; dice.mCreatureB = &b; dice.mTurnsLeft = 5; dice.mTurnIsA = true;
+    // The last turns of the dice game run: the second guest has won, 2 levels below the first
+    dice.mOutcome = TavernGameOutcome::secondWins; dice.mUnderdogLevels = 2;
     room.mGames[dice.mSeatA] = dice;
 
     std::string text = exportRoom(room);
@@ -359,8 +365,8 @@ static void checkRoomStream()
     expect(text.find("Spot 3 2 Bert ko 17 0 1 0 7") != std::string::npos, "a guest keeps its place on the long bench: " + text);
     expect(text.find("Spot 3 2 Bert ko 17 0 1") != std::string::npos, "a lying loser keeps its remaining turns: " + text);
     expect(text.find("Spot 2 2 Anna drinking 3 2 0") != std::string::npos, "a drinking guest keeps its turns and drinks");
-    expect(text.find("Game 2 4 2 5 2 Cleo Dirk 19 2 1 1 0 6 1 3 11 2\n") != std::string::npos, "a running duel keeps the slaps left, hits, whose turn it is, both seats and the running slap: " + text);
-    expect(text.find("Game 1 2 4 3 4 Anna Bert 5 0 0 0 1 3 0 0 0 0\n") != std::string::npos, "a game without a running slap writes an empty duel clock: " + text);
+    expect(text.find("Game 2 4 2 5 2 Cleo Dirk 19 2 1 1 0 6 1 3 11 2 0 0\n") != std::string::npos, "a running duel keeps the slaps left, hits, whose turn it is, both seats and the running slap: " + text);
+    expect(text.find("Game 1 2 4 3 4 Anna Bert 5 0 0 0 1 3 0 0 0 0 2 2\n") != std::string::npos, "a game without a running slap writes an empty duel clock and its drawn result: " + text);
 
     // Load: pending places and games hold every value, the next token of the stream is still there
     GameMap map2(10, 10);
@@ -409,6 +415,8 @@ static void checkRoomStream()
         const RoomTavernPendingGame& h = loaded.mPendingGames[1];
         expect(h.mKind == TavernGameKind::dice && h.mTurnIsA && h.mTurnsLeft == 5 && h.mNameA == "Anna" && h.mNameB == "Bert", "dice game round trip");
         expect(h.mDuelClock.mPhase == TavernDuelPhase::none && h.mDuelClock.mTurnsLeft == 0, "a game without a running slap has an empty clock");
+        expect(h.mOutcome == TavernGameOutcome::secondWins && h.mUnderdogLevels == 2, "the drawn result of the dice game and its underdog levels round trip");
+        expect(g.mOutcome == TavernGameOutcome::open && g.mUnderdogLevels == 0, "a slap duel keeps its result open");
     }
     // A pause after a slap resumes with its remaining time; a duel of a save made before the duel clock starts its next
     // slap in the next turn
@@ -440,6 +448,8 @@ static void checkRoomStream()
     expect(shuffled.mPendingSpots.size() == 1 && shuffled.mPendingSpots["Cleo"].mDrinks == 0 && shuffled.mPendingSpots["Cleo"].mTurnsLeft == 2, "the short Spot form loads");
     expect(shuffled.mPendingSpots["Cleo"].mSeat == RoomTavernSeat(map4.getTile(3, 2), 0), "the short Spot form takes the first seat");
     expect(shuffled.mPendingGames.size() == 1 && shuffled.mPendingGames[0].mKind == TavernGameKind::armWrestling, "arm wrestling game loads");
+    expect(shuffled.mPendingGames.size() == 1 && shuffled.mPendingGames[0].mOutcome == TavernGameOutcome::open,
+           "a game of a save made before the outcome clips loads with an open result");
     std::string tail; shuffledIn >> tail; expect(tail == "Tail", "the token after the lines is put back");
 
     // A save made before tables had seats: furniture spread again, games ended, guests look for a seat
@@ -492,7 +502,8 @@ static void checkRoomStream()
         "RoomData\nTavernPayer 7\n", "RoomData\nGame 9 1 1 2 1 A B 4 0 0 0\n", "RoomData\nSpot 1 1 A sitting 3\n",
         "RoomData\nSpot 1 1 A drinking\n", "RoomData\nCounter 3\n", "RoomData\nGame 0 1 1 2 1 A B\n", "RoomData\nSeatLayout 9\n",
         "RoomData\nSeatLayout 0\n", "RoomData\nSpot 1 1 A drinking 3 0 0 0 10\n", "RoomData\nGame 0 1 1 2 1 A B 4 0 0 0 0 10\n",
-        "RoomData\nGame 2 1 1 2 1 A B 4 0 0 0 0 4 3 5 0 0\n", "RoomData\nGame 2 1 1 2 1 A B 4 0 0 0 0 4 1 5 9 4\n" };
+        "RoomData\nGame 2 1 1 2 1 A B 4 0 0 0 0 4 3 5 0 0\n", "RoomData\nGame 2 1 1 2 1 A B 4 0 0 0 0 4 1 5 9 4\n",
+        "RoomData\nGame 0 1 1 2 1 A B 4 0 0 0 0 4 0 0 0 0 3 0\n" };
     for(unsigned i = 0; i < sizeof(broken) / sizeof(broken[0]); ++i)
     {
         RoomTavern bad(&map7); std::stringstream badIn(broken[i]);

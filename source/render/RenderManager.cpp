@@ -6232,6 +6232,32 @@ void RenderManager::rrSetObjectAnimationState(MovableGameEntity* curAnimatedObje
         {
             anim = EntityAnimation::dice_anim;
         }
+        else if ((anim == EntityAnimation::sit_armwrestle_win_anim) || (anim == EntityAnimation::sit_armwrestle_lose_anim))
+        {
+            // A seated skeleton without its outcome clip goes on with the looped game clip, as before the outcome clips;
+            // a skeleton without the seated clips plays the standing outcome clip
+            if (objectEntity->getSkeleton()->hasAnimation(EntityAnimation::sit_armwrestle_anim))
+            {
+                anim = EntityAnimation::sit_armwrestle_anim;
+                loop = true;
+            }
+            else if (anim == EntityAnimation::sit_armwrestle_win_anim)
+                anim = EntityAnimation::armwrestle_win_anim;
+            else
+                anim = EntityAnimation::armwrestle_lose_anim;
+        }
+        else if ((anim == EntityAnimation::armwrestle_win_anim) || (anim == EntityAnimation::armwrestle_lose_anim))
+        {
+            // Without the standing outcome clip the game clip goes on looped (SitArmWrestle, then ArmWrestle)
+            anim = EntityAnimation::sit_armwrestle_anim;
+            loop = true;
+        }
+        else if ((anim == EntityAnimation::sit_dice_win_anim) || (anim == EntityAnimation::sit_dice_lose_anim))
+        {
+            // Without the outcome clip the dice clip goes on looped (SitDice, then Dice)
+            anim = EntityAnimation::sit_dice_anim;
+            loop = true;
+        }
         else if (anim == EntityAnimation::sit_slapped_anim || anim == EntityAnimation::sit_slumped_anim)
         {
             anim = EntityAnimation::sit_anim;

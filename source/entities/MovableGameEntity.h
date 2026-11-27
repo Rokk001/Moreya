@@ -103,6 +103,20 @@ namespace EntityAnimation
     static const std::string sit_dice_anim = "SitDice";
     //! The seated loser of a slap duel with no free floor around it slumps on its seat (a skeleton without the clip plays Sit)
     static const std::string sit_slumped_anim = "SitSlumped";
+    //! The winner of an arm wrestling game in its last turns (a skeleton without the clip plays SitArmWrestle)
+    static const std::string armwrestle_win_anim = "ArmWrestleWin";
+    //! The loser of an arm wrestling game in its last turns (a skeleton without the clip plays SitArmWrestle)
+    static const std::string armwrestle_lose_anim = "ArmWrestleLose";
+    //! The seated winner of an arm wrestling game in its last turns (a skeleton without the clip plays SitArmWrestle, or
+    //! ArmWrestleWin when it has no seated clips)
+    static const std::string sit_armwrestle_win_anim = "SitArmWrestleWin";
+    //! The seated loser of an arm wrestling game in its last turns (a skeleton without the clip plays SitArmWrestle, or
+    //! ArmWrestleLose when it has no seated clips)
+    static const std::string sit_armwrestle_lose_anim = "SitArmWrestleLose";
+    //! The seated winner of a dice game in its last turns (a skeleton without the clip plays SitDice)
+    static const std::string sit_dice_win_anim = "SitDiceWin";
+    //! The seated loser of a dice game in its last turns (a skeleton without the clip plays SitDice)
+    static const std::string sit_dice_lose_anim = "SitDiceLose";
     //! \brief True for the seated tavern clips (Sit, SitDrink and the others).
     inline bool isSeatClip(const std::string& clip)
     {
