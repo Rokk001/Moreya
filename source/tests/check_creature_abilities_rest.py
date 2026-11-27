@@ -66,19 +66,22 @@ def base_line_of(skill_id):
 abilities = {
     "Whirlwind": ("VRM_1", "Whirlwind 14 1 2 8 3 3"),
     "Teleport": ("WRK_C1", "Teleport 7 0 8 8 30"),
-    "GasCloud": ("WLD_1", "GasCloud 7 1 2 4 1.5 2 14.35 CreatureToxicCloud 9.57"),
     "HailStorm": ("DRK_1", "HailStorm 21 2 4 8 2 11 3.08 none 2.05"),
     "SkeletonArmy": ("UND_3", "SkeletonArmy 21 2 10 3 42 Skeleton"),
-    "GuidedBolt": ("ARC_A2", "GuidedBolt 3 2 7 0 8 ArrowProjectile none 2 0 0 0 0 13 0.25 0 0 0 0 18.11 27.17"),
-    "Grenade": ("ARC_A3", "Grenade 10 2 6 0 8 Cannonball none 1 0 0 0 0 5 0.1 2 0 0 0 0 6.97 10.46"),
+    "GuidedBolt": ("MRK_A3", "GuidedBolt 3 2 7 0 8 ArrowProjectile none 2 0 0 0 0 13 0.25 0 0 0 0 18.11 27.17"),
+    "Grenade": ("MRK_C1", "Grenade 10 2 6 0 8 Cannonball none 1 0 0 0 0 5 0.1 2 0 0 0 0 6.97 10.46"),
     "RaiseDead": ("UND_1", "RaiseDead 24 2 10 4 3 42 Skeleton"),
 }
 for ability, (skill_id, line) in abilities.items():
     assert base_line_of(skill_id) == line, f"{skill_id} scales the {ability} line"
     assert len(line.split()) > 1
 
+# The gas cloud was the tier 1 skill of the wild family, which the creature roster removed: no skill of the trees
+# carries it any more, the GasCloud class stays readable. Its last line (fixed here) still has to fit its particle.
+GAS_CLOUD_LINE = "GasCloud 7 1 2 4 1.5 2 14.35 CreatureToxicCloud 9.57"
+assert not re.search(r"^Kind\s+GASCLOUD\s*$", skill_config, re.M), "no tree skill carries the gas cloud"
 # The dedicated toxic-cloud template uses the existing two-turn effect lifecycle, not a trap effect.
-gas = base_line_of("WLD_1").split()
+gas = GAS_CLOUD_LINE.split()
 assert float(gas[5]) == 1.5 and float(gas[6]) == 2, "the ability radius and turn duration stay unchanged"
 particle = read("particles/CreatureToxicCloud.particle")
 assert re.search(r"^particle_system\s+" + re.escape(gas[8]) + r"\s*\{", particle, re.M)

@@ -230,7 +230,17 @@ check("getCombatGroups().getFightTarget(creature)" in handle_fight and "enemyPri
 # The aggro is a rule of target choice: no new skill
 for path in ("source/game/CombatGroupRules.cpp", "source/game/CombatGroupManager.cpp"):
     check("CreatureSkill" not in read(path).replace("CreatureSkillTree", ""), "G5: no skill in " + path)
-check(not re.search(r"^Kind\s+(TAUNT|AGGRO)", SKILLS_CFG, re.M), "G5: no aggro skill in creatureSkills.cfg")
+# The roster plan (D11, D25) adds one taunt skill: tier 1 of the tank path Ironclad, the pre-skill of every tank. It is
+# the only taunt and lives in the tank group; there is no other aggro skill kind.
+taunt_blocks = [block for block in re.findall(r"^\[Skill\]\s*$(.*?)^\[/Skill\]", SKILLS_CFG, re.M | re.S)
+                if re.search(r"^Kind\s+TAUNT\s*$", block, re.M)]
+check(len(taunt_blocks) == 1 and re.search(r"^Id\s+TNK_A1\s*$", taunt_blocks[0], re.M) and
+      re.search(r"^Group\s+tank\s*$", taunt_blocks[0], re.M) and re.search(r"^Path\s+Ironclad\s*$", taunt_blocks[0], re.M)
+      and re.search(r"^Tier\s+1\s*$", taunt_blocks[0], re.M),
+      "G5: the only taunt skill is TNK_A1, tier 1 of the tank path Ironclad")
+check(not re.search(r"^Kind\s+TAUNT", "\n".join(re.findall(r"^\[TierFour\]\s*$(.*?)^\[/TierFour\]", SKILLS_CFG,
+                                                              re.M | re.S)), re.M), "G5: no tier 4 taunt")
+check(not re.search(r"^Kind\s+AGGRO", SKILLS_CFG, re.M), "G5: no aggro skill kind in creatureSkills.cfg")
 
 # ------------------------------------------------------------------------------------------------ G6 formation
 

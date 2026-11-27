@@ -102,7 +102,13 @@ std::string kindText(const std::string& kind)
         {"HAILSTORM", "Hailstorm"}, {"GASCLOUD", "Gas cloud"}, {"GRENADE", "Grenade"},
         {"GUIDEDBOLT", "Guided bolt"}, {"WHIRLWIND", "Whirlwind"}, {"FREEZE", "Freeze"},
         {"INVISIBLE", "Invisibility"}, {"TELEPORT", "Teleport"}, {"DRAIN", "Drain"}, {"RAISEDEAD", "Raise dead"},
-        {"SKELARMY", "Skeleton army"}
+        {"SKELARMY", "Skeleton army"},
+        {"TAUNT", "Taunt"}, {"PARRY_COUNTER", "Parry"}, {"AURA_ALLY_Defense", "Defense aura (allies)"},
+        {"BUFF_ALLY_Defense", "Defense (ally)"}, {"SHIELD_ALLY", "Shield (ally)"}, {"SHIELD_AREA", "Shield (group)"},
+        {"HEAL_INSTANT", "Instant heal"}, {"HOT_AREA", "Heal over time (area)"}, {"HOT_SELF", "Heal over time (self)"},
+        {"CURSE_DOT", "Curse"}, {"MARK", "Mark"}, {"HOLD", "Hold"}, {"BLEED", "Bleeding"}, {"POISON", "Poison"},
+        {"BURN_DOT", "Burn"}, {"DRAIN_HEAL_ALLIES", "Life drain (allies)"}, {"CHAIN_LIGHTNING", "Lightning"},
+        {"FLURRY", "Flurry"}
     };
     std::map<std::string, std::string>::const_iterator it = TEXTS.find(kind);
     if(it == TEXTS.end())
@@ -117,6 +123,12 @@ std::string effectValueText(const std::string& kind, const std::string& value)
         const std::string::size_type slash = value.find('/');
         if(slash != std::string::npos)
             return "push " + value.substr(0, slash) + ", stun " + value.substr(slash + 1);
+    }
+    if(kind == "FLURRY")
+    {
+        const std::string::size_type slash = value.find('/');
+        if(slash != std::string::npos)
+            return "blows " + value.substr(0, slash) + ", factor " + value.substr(slash + 1);
     }
     if(!kind.empty() && (kind[kind.size() - 1] == '%'))
         return value + "%";

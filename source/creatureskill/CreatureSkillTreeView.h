@@ -107,12 +107,12 @@ struct TreeView
 TreeView buildTreeView(const SkillTreeConfig& config, const TypeInfo& type, const SkillBuild& build,
     const ViewRules& rules);
 
-//! \brief Returns the readable text of a skill kind for the "Effect:" tooltip line, the kind token itself when it
-//! is unknown.
+//! \brief Returns the readable text of a skill kind (the role skill kinds included) for the "Effect:" tooltip line,
+//! the kind token itself when it is unknown.
 std::string kindText(const std::string& kind);
 
 //! \brief Returns the value part of the "Effect:" line: the value as written, "%" after it for kinds ending in
-//! "%", and "push p, stun s" for a WHIRLWIND value "p/s".
+//! "%", "push p, stun s" for a WHIRLWIND value "p/s" and "blows b, factor f" for a FLURRY value "b/f".
 std::string effectValueText(const std::string& kind, const std::string& value);
 
 //! \brief Returns the four tooltip lines of a tier 1 to 3 skill at the given rank (rank 0 uses the rank 1 values).

@@ -116,9 +116,11 @@ MAIN_GOALS = {
 }
 
 # Skill templates a raid member may be fixed to (fighter templates of config/creatureSkills.cfg; workers do not raid).
+# The role groups of the creature roster: one template per path, named after the path.
 TEMPLATES = frozenset((
-    "Berserker", "Guardian", "Warlord", "Crusader", "Protector", "Vanguard", "Shade", "Venomist", "Dancer",
-    "Marksman", "Hunter", "Skirmisher", "Destroyer", "Healer", "Hexer",
+    "Ironclad", "Evader", "Regenerator", "Mender", "Renewer", "Warder", "Empowerer", "Blighter", "Binder",
+    "Slayer", "Reaver", "Ravager", "Assassin", "Venomist", "Whirlwind", "Sharpshooter", "Poisoner", "Barrager",
+    "Sparkcaller", "Witherer", "Pyromancer",
 ))
 
 # Wing 1 rooms plan WR9: on these story maps the keeper starts with no room besides the dungeon heart and builds every

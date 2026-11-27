@@ -44,10 +44,20 @@ bool loadConfig(SkillTreeConfig& config)
 TypeInfo orcType()
 {
     TypeInfo orc;
-    orc.mGroup = "blocker";
+    orc.mGroup = "tank";
     orc.mFamily = "greenskin";
     orc.mTierFour = "T4_Orc";
     return orc;
+}
+
+//! \brief The skill keys of the Lizard Man (a supporter) in config/creatures.cfg.
+TypeInfo supporterType()
+{
+    TypeInfo lizard;
+    lizard.mGroup = "supporter";
+    lizard.mFamily = "dragonkin";
+    lizard.mTierFour = "T4_LizardMan";
+    return lizard;
 }
 }
 
@@ -59,9 +69,9 @@ BOOST_AUTO_TEST_CASE(orc_layout)
     SkillBuild build;
     const TreeView view = buildTreeView(config, orcType(), build, ViewRules());
     BOOST_REQUIRE_EQUAL(view.mColumns.size(), 4u);
-    const char* const paths[4] = {"Arms", "Bulwark", "War Cries", "Greenskin"};
-    const char* const ids[4][3] = {{"BLK_A1", "BLK_A2", "BLK_A3"}, {"BLK_B1", "BLK_B2", "BLK_B3"},
-        {"BLK_C1", "BLK_C2", "BLK_C3"}, {"GRN_1", "GRN_2", "GRN_3"}};
+    const char* const paths[4] = {"Ironclad", "Evader", "Regenerator", "Greenskin"};
+    const char* const ids[4][3] = {{"TNK_A1", "TNK_A2", "TNK_A3"}, {"TNK_B1", "TNK_B2", "TNK_B3"},
+        {"TNK_C1", "TNK_C2", "TNK_C3"}, {"GRN_1", "GRN_2", "GRN_3"}};
     for(std::size_t column = 0; column < 4; ++column)
     {
         BOOST_CHECK_EQUAL(view.mColumns[column].mPath, std::string(paths[column]));
@@ -79,18 +89,18 @@ BOOST_AUTO_TEST_CASE(orc_unlock_and_bars)
     SkillTreeConfig config;
     BOOST_REQUIRE(loadConfig(config));
     SkillBuild build;
-    build.mRanks["BLK_A1"] = 5;
-    build.mRanks["BLK_A2"] = 1;
-    build.mRanks["BLK_B1"] = 3;
+    build.mRanks["TNK_A1"] = 5;
+    build.mRanks["TNK_A2"] = 1;
+    build.mRanks["TNK_B1"] = 3;
     TreeView view = buildTreeView(config, orcType(), build, ViewRules());
-    // Arms: tier 2 unlocked by 5 ranks in tier 1, tier 3 locked with only 1 rank in tier 2
+    // Ironclad: tier 2 unlocked by 5 ranks in tier 1, tier 3 locked with only 1 rank in tier 2
     BOOST_CHECK(view.mColumns[0].mTiers[0].mUnlocked);
     BOOST_CHECK(view.mColumns[0].mTiers[1].mUnlocked);
     BOOST_CHECK(!view.mColumns[0].mTiers[2].mUnlocked);
     BOOST_CHECK_EQUAL(view.mColumns[0].mTiers[0].mBarText, std::string("5/5"));
     BOOST_CHECK_EQUAL(view.mColumns[0].mTiers[1].mBarText, std::string("1/5"));
     BOOST_CHECK_EQUAL(view.mColumns[0].mTiers[2].mBarText, std::string("0/5"));
-    // Bulwark: tier 2 unlocked by 3 ranks in tier 1; War Cries: only tier 1 unlocked
+    // Evader: tier 2 unlocked by 3 ranks in tier 1; Regenerator: only tier 1 unlocked
     BOOST_CHECK(view.mColumns[1].mTiers[1].mUnlocked);
     BOOST_CHECK(!view.mColumns[1].mTiers[2].mUnlocked);
     BOOST_CHECK(view.mColumns[2].mTiers[0].mUnlocked);
@@ -100,12 +110,12 @@ BOOST_AUTO_TEST_CASE(orc_unlock_and_bars)
     BOOST_CHECK(!view.mTierFour.mUnlocked);
     BOOST_CHECK_EQUAL(view.mTierFour.mBarText, std::string("0/1"));
 
-    build.mRanks["BLK_A2"] = 2;
-    build.mRanks["BLK_A3"] = 5;
-    build.mRanks["BLK_B1"] = 5;
+    build.mRanks["TNK_A2"] = 2;
+    build.mRanks["TNK_A3"] = 5;
+    build.mRanks["TNK_B1"] = 5;
     build.mRanks["GRN_1"] = 3;
     view = buildTreeView(config, orcType(), build, ViewRules());
-    // 20 points spent: tier 3 of Arms and tier 4 unlocked
+    // 20 points spent: tier 3 of Ironclad and tier 4 unlocked
     BOOST_CHECK(view.mColumns[0].mTiers[2].mUnlocked);
     BOOST_CHECK(view.mTierFour.mUnlocked);
     build.mRanks["T4_Orc"] = 1;
@@ -122,7 +132,7 @@ BOOST_AUTO_TEST_CASE(orc_template_highlight)
     TreeView view = buildTreeView(config, orcType(), build, ViewRules());
     for(std::size_t column = 0; column < view.mColumns.size(); ++column)
         BOOST_CHECK(!view.mColumns[column].mHighlighted);
-    // Template index 1 of the blocker group is "Guardian" with the primary path Bulwark
+    // Template index 1 of the tank group is "Evader" with the primary path Evader
     build.mTemplate = 1;
     view = buildTreeView(config, orcType(), build, ViewRules());
     BOOST_CHECK(!view.mColumns[0].mHighlighted);
@@ -131,47 +141,56 @@ BOOST_AUTO_TEST_CASE(orc_template_highlight)
     BOOST_CHECK(!view.mColumns[3].mHighlighted);
 }
 
-//! \brief Checks the four tooltip lines of a passive skill, an active skill with mana and cooldown, a WHIRLWIND
-//! skill and the tier 4 skill.
+//! \brief Checks the four tooltip lines of a passive skill, an active skill with mana and cooldown, a skill without a
+//! rank, a WHIRLWIND skill (of the supporter path Binder) and the tier 4 skill.
 BOOST_AUTO_TEST_CASE(orc_tooltips)
 {
     SkillTreeConfig config;
     BOOST_REQUIRE(loadConfig(config));
     SkillBuild build;
-    build.mRanks["BLK_A1"] = 3;
-    build.mRanks["BLK_A2"] = 2;
-    build.mRanks["BLK_A3"] = 2;
-    build.mRanks["BLK_C1"] = 1;
-    build.mRanks["BLK_C2"] = 2;
+    build.mRanks["TNK_A1"] = 3;
+    build.mRanks["TNK_A2"] = 2;
+    build.mRanks["TNK_A3"] = 2;
+    build.mRanks["TNK_C1"] = 1;
+    build.mRanks["TNK_C2"] = 2;
     const TreeView view = buildTreeView(config, orcType(), build, ViewRules());
 
-    const std::vector<std::string>& passive = view.mColumns[0].mTiers[0].mTooltip;
+    const std::vector<std::string>& passive = view.mColumns[0].mTiers[1].mTooltip;
     BOOST_REQUIRE_EQUAL(passive.size(), 4u);
-    BOOST_CHECK_EQUAL(passive[0], std::string("Weapon Training"));
-    BOOST_CHECK_EQUAL(passive[1], std::string("Effect: Damage 0.939%"));
+    BOOST_CHECK_EQUAL(passive[0], std::string("Fortify"));
+    BOOST_CHECK_EQUAL(passive[1], std::string("Effect: Max HP 1.492%"));
     BOOST_CHECK_EQUAL(passive[2], std::string("Mana: none"));
     BOOST_CHECK_EQUAL(passive[3], std::string("Cooldown: none"));
 
-    const std::vector<std::string>& active = view.mColumns[0].mTiers[2].mTooltip;
+    const std::vector<std::string>& active = view.mColumns[0].mTiers[0].mTooltip;
     BOOST_REQUIRE_EQUAL(active.size(), 4u);
-    BOOST_CHECK_EQUAL(active[0], std::string("Heavy Blow"));
-    BOOST_CHECK_EQUAL(active[1], std::string("Effect: Strike 1.146"));
-    BOOST_CHECK_EQUAL(active[2], std::string("Mana: 5"));
-    BOOST_CHECK_EQUAL(active[3], std::string("Cooldown: 30 turns"));
+    BOOST_CHECK_EQUAL(active[0], std::string("Taunt"));
+    BOOST_CHECK_EQUAL(active[1], std::string("Effect: Taunt 6"));
+    BOOST_CHECK_EQUAL(active[2], std::string("Mana: 3"));
+    BOOST_CHECK_EQUAL(active[3], std::string("Cooldown: 20 turns"));
 
     // Rank 0 shows the values of rank 1
-    const std::vector<std::string>& whirlwind = view.mColumns[2].mTiers[2].mTooltip;
+    const std::vector<std::string>& unranked = view.mColumns[2].mTiers[2].mTooltip;
+    BOOST_REQUIRE_EQUAL(unranked.size(), 4u);
+    BOOST_CHECK_EQUAL(unranked[0], std::string("Lasting Recovery"));
+    BOOST_CHECK_EQUAL(unranked[1], std::string("Effect: Heal over time (self) 8"));
+    BOOST_CHECK_EQUAL(unranked[2], std::string("Mana: 10"));
+    BOOST_CHECK_EQUAL(unranked[3], std::string("Cooldown: 40 turns"));
+
+    const TreeView support = buildTreeView(config, supporterType(), SkillBuild(), ViewRules());
+    BOOST_REQUIRE_EQUAL(support.mColumns.size(), 4u);
+    const std::vector<std::string>& whirlwind = support.mColumns[2].mTiers[2].mTooltip;
     BOOST_REQUIRE_EQUAL(whirlwind.size(), 4u);
-    BOOST_CHECK_EQUAL(whirlwind[0], std::string("Cleaving Spin"));
+    BOOST_CHECK_EQUAL(whirlwind[0], std::string("Repel"));
     BOOST_CHECK_EQUAL(whirlwind[1], std::string("Effect: Whirlwind push 1, stun 1"));
     BOOST_CHECK_EQUAL(whirlwind[2], std::string("Mana: 12.5"));
     BOOST_CHECK_EQUAL(whirlwind[3], std::string("Cooldown: 14 turns"));
 
     const std::vector<std::string>& tierFour = view.mTierFour.mTooltip;
     BOOST_REQUIRE_EQUAL(tierFour.size(), 4u);
-    BOOST_CHECK_EQUAL(tierFour[0], std::string("Blood Frenzy"));
-    BOOST_CHECK_EQUAL(tierFour[1], std::string("Effect: Strength (self) 1.201"));
-    BOOST_CHECK_EQUAL(tierFour[2], std::string("Mana: 30"));
+    BOOST_CHECK_EQUAL(tierFour[0], std::string("Iron Will"));
+    BOOST_CHECK_EQUAL(tierFour[1], std::string("Effect: Defense (self) 20"));
+    BOOST_CHECK_EQUAL(tierFour[2], std::string("Mana: 35"));
     BOOST_CHECK_EQUAL(tierFour[3], std::string("Cooldown: 140 turns"));
 }
 

@@ -1590,7 +1590,7 @@ TavernPayer	0
     LifePerLevel	1
     ManaPerLevel	1
     ManaPerPoint	1.5
-    SkillGroup	blitzer
+    SkillGroup	warrior
     SkillFamily	dragonkin
     PreSkill	DRK_1
     TierFourSkill	T4_Dragon
