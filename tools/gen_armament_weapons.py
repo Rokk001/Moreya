@@ -101,10 +101,6 @@ def build(name):
             y,z,w=.03*t*t,.06+.15*t,.015*(1-t)
             rings.append([(-.003,y-w,z),(.003,y-w,z),(.003,y+w,z),(-.003,y+w,z)])
         m.rings(rings,IRON)
-    elif name == 'Wand':
-        m.prism([(-.05,.006),(.10,.006)],WOOD)
-        m.prism([(-.03,.008),(.03,.008)],GRIP)
-        m.rings([[(0,0,.10)]*4,[(.012,0,.11),(0,.012,.11),(-.012,0,.11),(0,-.012,.11)],[(0,0,.12)]*4],CRYSTAL)
     return m
 
 # Fill the four specified colour bands with deterministic per-pixel variation.
@@ -122,7 +118,7 @@ def write_texture(path):
 def main():
     out=Path(sys.argv[1])
     out.mkdir(parents=True,exist_ok=True)
-    for name in ('HandAxe','Club','Trident','RitualDagger','Wand'):
+    for name in ('HandAxe','Club','Trident','RitualDagger'):
         build(name).write(out/(name+'.mesh.xml'))
     write_texture(ROOT/'materials/textures/ArmamentWeaponsSurface.png')
     source=(ROOT/'materials/scripts/ShortSword.material').read_text()

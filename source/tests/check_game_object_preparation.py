@@ -59,7 +59,8 @@ def mesh_exists(name):
 # MinotaurAxe and CyclopsClub of the neutral creatures (counted on the branch)
 # 228 since Pile_VeteranScarab.mesh was removed with the VeteranScarab class (Mario 2026-11-27; counted on
 # feature/creature-roster after the merge of main; was 229)
-LISTED = 228
+# 227 since Wand.mesh was removed with the wand (Mario 2026-11-27; counted on feature/drop-items-roster; was 228)
+LISTED = 227
 OBJECT_SOURCES = ('source/rooms/', 'source/entities/', 'source/traps/', 'source/spells/', 'source/render/',
                   'source/modes/', 'source/gamemap/', 'source/utils/')
 OBJECT_CONFIGS = ('config/roomAmbience', 'config/creatureSkills', 'config/equipments')

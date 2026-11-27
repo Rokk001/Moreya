@@ -177,7 +177,7 @@ class Roster:
                 weapon_type = "sword"
                 for legacy_type, words in (("shield", ("shield",)), ("bow", ("bow",)), ("axe", ("axe",)),
                                            ("hammer", ("hammer", "mace")), ("spear", ("spear", "lance", "pike")),
-                                           ("dagger", ("dagger", "knife")), ("staff", ("staff", "wand"))):
+                                           ("dagger", ("dagger", "knife")), ("staff", ("staff",))):
                     if any(word in mesh for word in words):
                         weapon_type = legacy_type
                         break

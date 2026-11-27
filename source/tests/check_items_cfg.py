@@ -18,19 +18,18 @@ PATH_COUNTS = {
     ("healer", "Renewer"): 5,
     ("supporter", "Empowerer"): 4, ("supporter", "Blighter"): 1,
     ("warrior", "Slayer"): 9, ("warrior", "Ravager"): 2, ("warrior", "Reaver"): 1,
-    ("skirmisher", "Assassin"): 11, ("skirmisher", "Venomist"): 7, ("skirmisher", "Whirlwind"): 2,
+    ("skirmisher", "Assassin"): 10, ("skirmisher", "Venomist"): 6, ("skirmisher", "Whirlwind"): 1,
     ("marksman", "Sharpshooter"): 6, ("marksman", "Poisoner"): 6, ("marksman", "Barrager"): 6,
     ("mage", "Pyromancer"): 5, ("mage", "Sparkcaller"): 5,
     ("worker", "Delving"): 5, ("worker", "Claiming"): 5, ("worker", "Survival"): 5,
-    ("family", "Arcane"): 7, ("family", "Demon"): 7, ("family", "Greenskin"): 7, ("family", "Dwarf"): 8,
+    ("family", "Arcane"): 6, ("family", "Demon"): 7, ("family", "Greenskin"): 7, ("family", "Dwarf"): 8,
     ("family", "Elf"): 6, ("family", "Human"): 6, ("family", "Undead"): 6, ("family", "Dragonkin"): 5,
     ("family", "Workfolk"): 5, ("family", "Beastkin"): 4, ("family", "Stonekin"): 4, ("family", "Vermin"): 4,
 }
 # Weapon and shield lines whose WeaponClass no creature of their group or family spawns with (counted once on the
-# branch): crossbows and wands are carried by no creature at all, the spear, club and hammer of BLK_A strengthen the
+# branch): crossbows are carried by no creature at all, the spear, club and hammer of BLK_A strengthen the
 # warrior group that carries none of them, and five family lines name a class their family does not carry.
 UNWEARABLE = {"ARC_A_Crossbow", "ARC_B_Crossbow", "ARC_C_Crossbow", "ELF_Crossbow",
-              "FLK_A_Wand", "FLK_B_Wand", "FLK_C_Wand", "ARC_Wand",
               "BLK_A_Spear", "BLK_A_Club", "BLK_A_Hammer",
               "DMN_Shield", "DMN_Sword", "DWF_Axe", "DWF_Sword", "ARC_Dagger"}
 
@@ -66,7 +65,7 @@ def main():
         content_packages.unchecked("check_items_cfg", ["config/items.cfg"])
         return
     items = blocks(read("config/items.cfg"), "Item")
-    assert len(items) == 187, "expected five Poor and 182 path lines"
+    assert len(items) == 183, "expected five Poor and 178 path lines"
     equipment = {value(block, "Name"): block for block in blocks(read("config/equipments.cfg"), "Equipment")}
     creatures = blocks(read("config/creatures.cfg"), "Creature")
     effects_source = read("source/entities/ItemEffects.cpp")
@@ -132,11 +131,11 @@ def main():
             assert all(effect.split()[0] in effects for effect in actual_effects), item_id
             price = tuple(map(float, value(block, "Price").split()))
             assert price == {"Poor": (20,), "Common": (100,), "Rare": (300, 100), "Epic": (1500, 250)}[quality], item_id
-    assert len(poor) == 5 and len(paths) == 182 and len(displays) == 546
+    assert len(poor) == 5 and len(paths) == 178 and len(displays) == 534
     assert set(poor) == {"POOR_Head", "POOR_Armour", "POOR_Boots", "POOR_Ring", "POOR_Shield"}
     assert path_counts == PATH_COUNTS, sorted(set(path_counts.items()) ^ set(PATH_COUNTS.items()))
     assert unwearable == UNWEARABLE, sorted(unwearable ^ UNWEARABLE)
-    print("equipment catalogue: 187 lines, 546 distinct path displays, %d group/family paths, %d unwearable weapon lines,"
+    print("equipment catalogue: 183 lines, 534 distinct path displays, %d group/family paths, %d unwearable weapon lines,"
           " ranges/effects/prices/weapons passed" % (len(PATH_COUNTS), len(UNWEARABLE)))
 
 

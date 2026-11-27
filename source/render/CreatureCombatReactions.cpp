@@ -165,7 +165,7 @@ std::string weaponKind(const Weapon* weapon)
     if(type == "club" || type == "mace" || type == "hammer" || type == "scepter") return "Hammer";
     if(type == "spear" || type == "polearm" || type == "javelin") return "Spear";
     if(type == "dagger" || type == "throwing" || type == "claw") return "Dagger";
-    if(type == "staff" || type == "wand" || type == "orb") return "Staff";
+    if(type == "staff" || type == "orb") return "Staff";
     return "Sword";
 }
 

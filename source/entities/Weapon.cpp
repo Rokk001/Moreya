@@ -516,6 +516,6 @@ std::string Weapon::getWeaponType() const
     if(mesh.find("hammer") != std::string::npos || mesh.find("mace") != std::string::npos) return "hammer";
     if(mesh.find("spear") != std::string::npos || mesh.find("lance") != std::string::npos || mesh.find("pike") != std::string::npos) return "spear";
     if(mesh.find("dagger") != std::string::npos || mesh.find("knife") != std::string::npos) return "dagger";
-    if(mesh.find("staff") != std::string::npos || mesh.find("wand") != std::string::npos) return "staff";
+    if(mesh.find("staff") != std::string::npos) return "staff";
     return "sword";
 }

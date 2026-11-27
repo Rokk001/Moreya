@@ -32,7 +32,7 @@ const uint32_t MODE_ALTERNATE = 1; //!< left, right, left, right ...
 const uint32_t MODE_RANDOM = 2;    //!< a fixed pseudo random side per blow, never more than two in a row
 
 //! A weapon kind (see weaponKind in CreatureCombatReactions.cpp) that strikes. A shield, a bow or a crossbow and a
-//! staff or wand are no attack weapons for this rule.
+//! staff are no attack weapons for this rule.
 inline bool isStrikeKind(const std::string& kind)
 {
     return (kind == "Sword") || (kind == "Axe") || (kind == "Hammer") || (kind == "Spear") || (kind == "Dagger");

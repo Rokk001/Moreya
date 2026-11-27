@@ -34,7 +34,6 @@ TYPES = {
     'axe': (('BasicAxe', 'BasicAxeOrc', 'MinotaurAxe'), 2),
     'staff': (('Staff', 'StaffLich'), 2), 'bow': (('Bow',), 2), 'crossbow': (('Crossbow',), 2),
     'tool': (('KoboldPick', 'Pickaxe'), 1), 'club': (('Club', 'CyclopsClub'), 1), 'spear': (('Trident',), 2),
-    'wand': (('Wand',), 1),
 }
 EXPECTED_TYPES = {name: (kind, hands) for kind, (names, hands) in TYPES.items() for name in names}
 EXPECTED_TYPES.update({name: ('sword', 2) for name in ('Longsword', 'T3SwordGood', 'T4SwordGood', 'DefenderWeapon')})
@@ -53,7 +52,7 @@ PARENTS = {
     'LizardMan': ('Lizardman', 'RightHand'), 'Skeleton': ('skeleton', 'RightHand'),
     'Lich': ('lich', 'RightHand'), 'PitDemon': ('PitDemon', 'RightHand'),
 }
-NEW_WEAPONS = {'HandAxe': 2, 'Club': 2, 'Trident': 4, 'RitualDagger': 1, 'Wand': 2}
+NEW_WEAPONS = {'HandAxe': 2, 'Club': 2, 'Trident': 4, 'RitualDagger': 1}
 
 
 # Read a tracked production input without invoking any asset tools; a data table of config/ comes with its own rows
@@ -232,7 +231,7 @@ def check_source():
         'Explicit type overrides must survive a changed mesh on an inherited legacy definition'
     fallback = body(weapon, 'std::string Weapon::getWeaponType() const')
     assert 'if(!mWeaponType.empty())' in fallback and 'return mWeaponType;' in fallback
-    for keyword in ('shield', 'bow', 'axe', 'hammer', 'mace', 'spear', 'lance', 'pike', 'dagger', 'knife', 'staff', 'wand'):
+    for keyword in ('shield', 'bow', 'axe', 'hammer', 'mace', 'spear', 'lance', 'pike', 'dagger', 'knife', 'staff'):
         assert 'mesh.find("' + keyword + '")' in fallback, keyword
     reaction = body(read('source/render/CreatureCombatReactions.cpp'), 'std::string weaponKind(')
     assert 'weapon->getWeaponType()' in reaction and 'getMeshName' not in reaction
@@ -243,7 +242,7 @@ def check_source():
     expected = {'axe': 'Axe', 'shield': 'Shield', 'bow': 'Bow', 'crossbow': 'Bow',
                 'club': 'Hammer', 'mace': 'Hammer', 'hammer': 'Hammer', 'scepter': 'Hammer',
                 'spear': 'Spear', 'polearm': 'Spear', 'javelin': 'Spear', 'dagger': 'Dagger',
-                'throwing': 'Dagger', 'claw': 'Dagger', 'staff': 'Staff', 'wand': 'Staff', 'orb': 'Staff'}
+                'throwing': 'Dagger', 'claw': 'Dagger', 'staff': 'Staff', 'orb': 'Staff'}
     assert actual == expected, (actual, expected)
     assert reaction.rstrip().endswith('return "Sword";')
     defence = read('source/entities/DefenceChance.h')

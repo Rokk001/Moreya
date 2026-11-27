@@ -73,7 +73,7 @@ def weapon_kind(weapon_type):
     mesh = weapon_type.lower()
     for kind, parts in (('Shield', ('shield',)), ('Bow', ('bow', 'crossbow')), ('Axe', ('axe',)), ('Hammer', ('club', 'hammer', 'mace', 'scepter')),
                         ('Spear', ('spear', 'polearm', 'javelin')), ('Dagger', ('dagger', 'throwing', 'claw')),
-                        ('Staff', ('staff', 'wand', 'orb'))):
+                        ('Staff', ('staff', 'orb'))):
         if mesh in parts:
             return kind
     return 'Sword'
@@ -90,7 +90,7 @@ if WITH_CONTENT:
             weapon_type = 'sword'
             for kind, words in (('shield', ('shield',)), ('bow', ('bow',)), ('axe', ('axe',)),
                                 ('hammer', ('hammer', 'mace')), ('spear', ('spear', 'lance', 'pike')),
-                                ('dagger', ('dagger', 'knife')), ('staff', ('staff', 'wand'))):
+                                ('dagger', ('dagger', 'knife')), ('staff', ('staff',))):
                 if any(word in mesh for word in words):
                     weapon_type = kind
                     break

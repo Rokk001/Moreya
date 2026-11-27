@@ -9,7 +9,7 @@ def main():
     args=sys.argv[sys.argv.index('--')+1:]
     repo,private=map(Path,args[:2])
     name=os.environ['ODP_ARMAMENT_WEAPON']
-    if name not in ('HandAxe','Club','Trident','RitualDagger','Wand'):
+    if name not in ('HandAxe','Club','Trident','RitualDagger'):
         raise ValueError('Unknown armament weapon')
     sys.path.insert(0,str(repo/'tools/blender-assets'))
     import odp_ogre_io
