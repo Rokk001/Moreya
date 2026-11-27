@@ -107,9 +107,9 @@ BOOST_AUTO_TEST_CASE(test_SocialDataLoads)
     for(std::size_t i = 0; i < data.getErrors().size(); ++i)
         BOOST_TEST_MESSAGE(data.getErrors()[i]);
     BOOST_CHECK(data.getErrors().empty());
-    BOOST_CHECK_EQUAL(data.getGroups().size(), 11u);
+    BOOST_CHECK_EQUAL(data.getGroups().size(), 13u);
     BOOST_CHECK(data.hasGroupForClass("Kobold"));
-    BOOST_CHECK(data.hasGroupForClass("Kreatur"));
+    BOOST_CHECK(data.hasGroupForClass("Minotaur"));
     BOOST_CHECK(!data.hasGroupForClass("NoSuchClass"));
     BOOST_CHECK_EQUAL(social::SocialGenerator::displayClassName(data, "CaveHornet"), "Cave Hornet");
     BOOST_CHECK_EQUAL(social::SocialGenerator::displayClassName(data, "NoSuchClass"), "NoSuchClass");
@@ -393,7 +393,7 @@ BOOST_AUTO_TEST_CASE(test_SocialMoodPosts)
 
     // A creature of every kind of name group has a text for a cause that also has texts of its own for the group
     const char* classes[] = {"Kobold", "DwarfWorker", "Knight", "Elf", "Goblin", "Orc", "LizardMan", "Skeleton", "PitDemon",
-        "Rat", "Troll"};
+        "CaveHornet", "Troll", "Minotaur", "Cyclops"};
     for(std::size_t i = 0; i < sizeof(classes) / sizeof(classes[0]); ++i)
     {
         social::CreatureProfile other = social::SocialGenerator::makeProfile(data, "Creature5", classes[i], false);
