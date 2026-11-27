@@ -101,7 +101,7 @@ def main():
         'Paladin':('AlchemyLab',90,1),'Adventurer':('AlchemyLab',80,.5),
         'PitDemon':('GhostRoom',0,3),'Troll':('GhostRoom',0,1.5),'Skeleton':('GhostRoom',0,.5),
         'RunelordDwarf':('GhostRoom',0,3),'Knight':('GhostRoom',0,1.5),'Defender':('GhostRoom',0,.5),
-        'Banshee':('GhostRoom',0,.4)}
+        'Banshee':('GhostRoom',150,.4)}
     hunters = set()
     for name, block in creatures.items():
         match = re.search(r'\[RoomAffinity\](.*?)\[/RoomAffinity\]', block, re.S)
@@ -109,8 +109,14 @@ def main():
             if len(row:=line.split('#',1)[0].split())==3}
         if 'GhostRoom' in affinities:
             hunters.add(name)
-            assert name not in afraid
-            assert affinities['GhostRoom'][0] == 0
+            # The Banshee needs the ghost room as its required room, which is its favourite room (roster D23/D32);
+            # every other ghost hunter keeps likeness 0 and is not afraid of ghosts
+            if name == 'Banshee':
+                assert affinities['GhostRoom'][0] == 150
+                assert list(affinities)[0] == 'GhostRoom', affinities
+            else:
+                assert name not in afraid
+                assert affinities['GhostRoom'][0] == 0
         if name in jobs:
             job, likeness, efficiency = jobs[name]
             assert affinities.get(job)==(likeness,efficiency), (name, job, affinities)
