@@ -57,21 +57,20 @@ class SelectionTests(unittest.TestCase):
     def test_no_changes(self):
         self.assertEqual(self.selected(), ['levels/campaign/Mossgate.level'])
 
-    # Changed Mossgate must not run twice, and all changed map types are included.
+    # Changed maps are not loaded in addition: the deploy load test is Mossgate only (owner decision 2026-11-28).
     def test_changed_added_and_duplicate(self):
         self.write('levels/campaign/Mossgate.level', 'modified')
         self.write('levels/campaign/Second.level', 'modified')
         self.write('levels/skirmish/New map.level', 'new')
         self.commit()
-        self.assertEqual(self.selected(), ['levels/campaign/Mossgate.level',
-                         'levels/campaign/Second.level', 'levels/skirmish/New map.level'])
+        self.assertEqual(self.selected(), ['levels/campaign/Mossgate.level'])
 
-    # Renames select the destination, while deleted files cannot be loaded.
+    # Renamed and deleted maps are not loaded in addition either: Mossgate only (owner decision 2026-11-28).
     def test_rename_and_delete(self):
         self.git('mv', 'levels/campaign/Second.level', 'levels/campaign/Renamed.level')
         self.git('rm', 'levels/skirmish/Other.level')
         self.commit()
-        self.assertEqual(self.selected(), ['levels/campaign/Mossgate.level', 'levels/campaign/Renamed.level'])
+        self.assertEqual(self.selected(), ['levels/campaign/Mossgate.level'])
 
     # Campaign metadata changes alone do not trigger a full campaign test.
     def test_config_only(self):
@@ -79,7 +78,7 @@ class SelectionTests(unittest.TestCase):
         self.commit()
         self.assertEqual(self.selected(), ['levels/campaign/Mossgate.level'])
 
-    # A ref advancing after capture must not hide a changed map after push.
+    # A ref advancing after capture keeps the selection of the captured tip: Mossgate only (owner decision 2026-11-28).
     def test_reference_advances(self):
         self.write('levels/campaign/Second.level', 'modified')
         self.commit()
@@ -87,7 +86,7 @@ class SelectionTests(unittest.TestCase):
         self.git('switch', '-q', 'baseline')
         self.git('merge', '--ff-only', json.loads(self.saved.read_text())['tip'])
         self.assertEqual([p.name for p in runner.integration_levels(self.repo, self.saved)],
-                         ['Mossgate.level', 'Second.level'])
+                         ['Mossgate.level'])
 
     # Wrong or missing build metadata must fail, never silently select fewer maps.
     def test_invalid_metadata(self):
