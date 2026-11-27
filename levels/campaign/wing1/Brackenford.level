@@ -1641,9 +1641,9 @@ Countdown	3600	3600	3600
 Interval	-
 EscapeShare	-
 Group	1	ElsaBrack
-Member	1	Knight	5	ElsaBrack	Berserker
-Member	1	Adventurer	4	-	Shade
-Member	1	Adventurer	4	-	Dancer
+Member	1	Knight	5	ElsaBrack	Ironclad
+Member	1	Adventurer	4	-	Assassin
+Member	1	Adventurer	4	-	Whirlwind
 Member	1	Adventurer	4	-	Venomist
-Member	1	Monk	4	-	Guardian
+Member	1	Monk	4	-	Mender
 [/Raid]

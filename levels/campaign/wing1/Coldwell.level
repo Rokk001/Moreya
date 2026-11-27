@@ -1685,9 +1685,9 @@ Countdown	3600	3600	3600
 Interval	-
 EscapeShare	-
 Group	1	HugoCole
-Member	1	Knight	6	HugoCole	Guardian
-Member	1	Knight	4	-	Guardian
-Member	1	Adventurer	4	-	Shade
-Member	1	Adventurer	4	-	Dancer
-Member	1	Monk	4	-	Berserker
+Member	1	Knight	6	HugoCole	Ironclad
+Member	1	Knight	4	-	Ironclad
+Member	1	Adventurer	4	-	Assassin
+Member	1	Adventurer	4	-	Whirlwind
+Member	1	Monk	4	-	Mender
 [/Raid]
