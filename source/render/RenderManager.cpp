@@ -257,6 +257,16 @@ const Ogre::Vector3 RATTLE_DIRECTION(0.0f, -0.5f, 1.0f);
 const std::string TRIP_BUCKET_MESH = "InfirmaryBucket.mesh";
 const Ogre::Real TRIP_BUCKET_HEIGHT_SHARE = 0.25f;
 const Ogre::Vector3 TRIP_BUCKET_SPOT(0.17f, 0.52f, 0.0f);
+//! PotionTaste: the left hand of the infirmary shaman holds the flask by its belly (this point in mesh units of the
+//! 1 unit high flask, base at z = 0) in its palm, this share of her height along the fingers from the hand bone; in the
+//! middle of the clip, when she drinks, the neck points from the palm to her mouth (the head bone shifted by this share
+//! of her height); the flask is as high as this share of her height
+const std::string FLASK_MESH = "InfirmaryFlask.mesh";
+const std::string FLASK_BONE = "LeftHand";
+const Ogre::Real FLASK_HEIGHT_SHARE = 0.12f;
+const Ogre::Vector3 FLASK_GRIP(0.0f, 0.0f, 0.22f);
+const Ogre::Real FLASK_PALM_REACH = 0.04f;
+const Ogre::Vector3 FLASK_MOUTH_SHIFT(0.0f, -0.10f, 0.04f);
 
 //! \brief Position and orientation of a bone in model space at this share of the length of a clip, read from the tracks
 //! of the clip without touching the pose of the entity. False when the skeleton has no such bone or clip.
@@ -300,12 +310,13 @@ bool getMidClipBonePose(const Ogre::Skeleton& skeleton, const std::string& clip,
     return getClipBonePose(skeleton, clip, boneName, 0.5f, position, orientation);
 }
 
-//! \brief True for the clips of a room figure (not a creature) that show a clip prop: HerbSniff, RattleShake and
-//! TripOverBucket of the infirmary shaman, Pour of the innkeeper.
+//! \brief True for the clips of a room figure (not a creature) that show a clip prop: HerbSniff, RattleShake,
+//! TripOverBucket and PotionTaste of the infirmary shaman, Pour of the innkeeper.
 bool isFigureClipWithProp(const std::string& clip)
 {
     return (clip == EntityAnimation::herb_sniff_anim) || (clip == EntityAnimation::rattle_shake_anim) ||
-        (clip == EntityAnimation::trip_over_bucket_anim) || (clip == InnkeeperPose::pour);
+        (clip == EntityAnimation::trip_over_bucket_anim) || (clip == EntityAnimation::potion_taste_anim) ||
+        (clip == InnkeeperPose::pour);
 }
 
 //! \brief Rotation that puts the z axis of a mesh on the direction and its x axis as near to the hint as possible.
@@ -9395,6 +9406,33 @@ void RenderManager::attachRattle(const std::string& objectName, Ogre::Entity* ho
     tag->setScale(scale, scale, scale);
 }
 
+//! The flask is fixed to the hand as it is in the middle of the clip: its belly in the palm, its neck at her mouth.
+void RenderManager::attachFlask(const std::string& objectName, Ogre::Entity* holder, const Ogre::Skeleton& skeleton)
+{
+    Ogre::Vector3 handPosition;
+    Ogre::Quaternion handOrientation;
+    Ogre::Vector3 headPosition;
+    Ogre::Quaternion headOrientation;
+    if(!getMidClipBonePose(skeleton, EntityAnimation::potion_taste_anim, FLASK_BONE, handPosition, handOrientation) ||
+       !getMidClipBonePose(skeleton, EntityAnimation::potion_taste_anim, "Head", headPosition, headOrientation))
+    {
+        OD_LOG_WRN("No hand or head bone for the flask, skeleton=" + skeleton.getName());
+        return;
+    }
+
+    Ogre::Entity* flaskEntity = mSceneManager->createEntity(CLIP_PROP_PREFIX + objectName, FLASK_MESH);
+    flaskEntity->setQueryFlags(0);
+    const Ogre::Real height = holder->getMesh()->getBounds().getSize().z;
+    const Ogre::Real scale = FLASK_HEIGHT_SHARE * height / flaskEntity->getMesh()->getBounds().getSize().z;
+    const Ogre::Vector3 palm = handPosition + handOrientation * Ogre::Vector3(0.0f, FLASK_PALM_REACH * height, 0.0f);
+    const Ogre::Quaternion wanted = alignMeshAxes(headPosition + FLASK_MOUTH_SHIFT * height - palm, Ogre::Vector3::UNIT_X);
+    const Ogre::Vector3 origin = palm - wanted * (FLASK_GRIP * scale);
+    Ogre::TagPoint* tag = holder->attachObjectToBone(FLASK_BONE, flaskEntity, handOrientation.Inverse() * wanted,
+        handOrientation.Inverse() * (origin - handPosition));
+    tag->setInheritScale(false);
+    tag->setScale(scale, scale, scale);
+}
+
 //! The bucket stands upright on the floor of the shaman's model space, on a node of its own that the clip does not move.
 void RenderManager::placeTripBucket(const std::string& objectName, Ogre::Entity* holder)
 {
@@ -9499,6 +9537,8 @@ void RenderManager::updateClipProp(const std::string& objectName, const std::str
         meshName = RATTLE_MESH;
     else if(clip == EntityAnimation::trip_over_bucket_anim)
         meshName = TRIP_BUCKET_MESH;
+    else if(clip == EntityAnimation::potion_taste_anim)
+        meshName = FLASK_MESH;
     else
         return;
 
@@ -9524,6 +9564,11 @@ void RenderManager::updateClipProp(const std::string& objectName, const std::str
     if(clip == EntityAnimation::rattle_shake_anim)
     {
         attachRattle(objectName, holder, *skeleton);
+        return;
+    }
+    if(clip == EntityAnimation::potion_taste_anim)
+    {
+        attachFlask(objectName, holder, *skeleton);
         return;
     }
 

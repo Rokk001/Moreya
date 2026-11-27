@@ -1,12 +1,15 @@
-"""The infirmary shaman shakes a rattle (RattleShake) and trips over a bucket that stands before her (TripOverBucket).
+"""The infirmary shaman shakes a rattle (RattleShake), trips over a bucket that stands before her (TripOverBucket) and
+tastes a potion from a flask (PotionTaste).
 
 Two parts, no compiler:
   wiring
-      rrSetObjectAnimationState gives and takes the clip prop on every change into or out of RattleShake and
-      TripOverBucket (isFigureClipWithProp names both clips); updateClipProp hands RattleShake to attachRattle and
-      TripOverBucket to placeTripBucket; the placement constants have the fixed values below.
+      rrSetObjectAnimationState gives and takes the clip prop on every change into or out of RattleShake,
+      TripOverBucket and PotionTaste (isFigureClipWithProp names the clips); updateClipProp hands RattleShake to
+      attachRattle, TripOverBucket to placeTripBucket and PotionTaste to attachFlask; the placement constants have the
+      fixed values below.
   assets (OgreXMLConverter converts the shipped binaries)
-      - the rattle InfirmaryRattle.mesh and the bucket InfirmaryBucket.mesh: one material each (named like the mesh,
+      - the rattle InfirmaryRattle.mesh, the bucket InfirmaryBucket.mesh and the flask InfirmaryFlask.mesh: one
+        material each (named like the mesh,
         materials/scripts/<name>.material with texture <name>.png, 512 x 512), 1 unit high with the base at z = 0, at
         most 4000 triangles each;
       - the rattle is posed with the real keys of RattleShake of InfirmaryShaman.skeleton, fixed to the right hand like
@@ -15,20 +18,25 @@ Two parts, no compiler:
         the top of the rattle stays above the hand;
       - the bucket stands on the floor at TRIP_BUCKET_SPOT, as high as TRIP_BUCKET_HEIGHT_SHARE x the height: at the
         first key of TripOverBucket a foot is within 0.35 x height of its centre (it stands before her feet), and at no
-        key does a foot bone come within the bucket's radius of its centre.
+        key does a foot bone come within the bucket's radius of its centre;
+      - the flask is posed with the keys of PotionTaste, fixed to the left hand like RenderManager::attachFlask (pose in
+        the middle of the clip): in the middle its belly lies in the palm and the tip of its neck within 0.06 x height
+        of the mouth (the head bone shifted by FLASK_MOUTH_SHIFT), the neck pointing down to it.
 
 Fixed expected values of this branch (counted once): RATTLE_HEIGHT_SHARE 0.28, RATTLE_GRIP (0.14, 0, 0.2),
 RATTLE_PALM_REACH 0.05, RATTLE_DIRECTION (0, -0.5, 1), RattleShake 2 s; rattle 3204 triangles, bucket 2994 triangles
 (limit 4000 each); TRIP_BUCKET_HEIGHT_SHARE 0.25, TRIP_BUCKET_SPOT (0.17, 0.52, 0), bucket radius 0.125 x height,
 TripOverBucket 2.5 s, 61 keys; nearest foot at the first key 0.267 x height counted, closest foot over the clip 0.171
-counted; rattle top at least 0.021 x height above the raised hand counted (37 raised keys).
+counted; rattle top at least 0.021 x height above the raised hand counted (37 raised keys); FLASK_HEIGHT_SHARE 0.12,
+FLASK_GRIP (0, 0, 0.22), FLASK_PALM_REACH 0.04, FLASK_MOUTH_SHIFT (0, -0.10, 0.04), PotionTaste 8.875 s, flask 2986
+triangles, neck tip 0.0103 x height from the mouth counted.
 
 Without --assets the models, materials and textures are read from the public tree or the content packages
 (scripts/content_packages.py); without the content the props (room-infirmary) and the shaman (creatures) are named
 as not checked.
 
 Call (from the repository root; set OGRE_XML_CONVERTER to the full path of OgreXMLConverter.exe):
-    python source/tests/check_shaman_rattle_bucket.py [--assets <folder with models/ and materials/>]
+    python source/tests/check_shaman_clip_props.py [--assets <folder with models/ and materials/>]
 """
 from pathlib import Path
 import json
@@ -47,7 +55,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'scripts'))
 import content_packages  # noqa: E402
 
-CHECK = 'check_shaman_rattle_bucket'
+CHECK = 'check_shaman_clip_props'
 ASSETS = Path(sys.argv[sys.argv.index('--assets') + 1]) if '--assets' in sys.argv else ROOT
 RATTLE_SHARE = 0.28
 RATTLE_GRIP = (0.14, 0.0, 0.2)
@@ -61,6 +69,12 @@ RATTLE_SECONDS = 2.0
 TRIP_SECONDS = 2.5
 FIRST_FOOT_REACH = 0.35
 RAISED_HAND = 0.7
+FLASK_SHARE = 0.12
+FLASK_GRIP = (0.0, 0.0, 0.22)
+FLASK_REACH = 0.04
+FLASK_MOUTH_SHIFT = (0.0, -0.10, 0.04)
+FLASK_SECONDS = 8.875
+FLASK_TIP_GAP = 0.06
 fails = []
 converter = os.environ.get('OGRE_XML_CONVERTER', 'OgreXMLConverter')
 work = Path(tempfile.mkdtemp(prefix='shaman_props_'))
@@ -259,36 +273,45 @@ constants = {
     'TRIP_BUCKET_MESH = "InfirmaryBucket.mesh";': 'bucket mesh InfirmaryBucket.mesh',
     'TRIP_BUCKET_HEIGHT_SHARE = 0.25f;': 'bucket height share 0.25',
     'TRIP_BUCKET_SPOT(0.17f, 0.52f, 0.0f);': 'bucket spot (0.17, 0.52, 0)',
+    'FLASK_MESH = "InfirmaryFlask.mesh";': 'flask mesh InfirmaryFlask.mesh',
+    'FLASK_BONE = "LeftHand";': 'flask in the left hand',
+    'FLASK_HEIGHT_SHARE = 0.12f;': 'flask height share 0.12',
+    'FLASK_GRIP(0.0f, 0.0f, 0.22f);': 'flask grip point (0, 0, 0.22)',
+    'FLASK_PALM_REACH = 0.04f;': 'flask palm reach 0.04',
+    'FLASK_MOUTH_SHIFT(0.0f, -0.10f, 0.04f);': 'flask mouth shift (0, -0.10, 0.04)',
 }
 for text, name in constants.items():
     if text not in source:
         fail('RenderManager.cpp: ' + name + ' missing (' + text + ')')
 figure_clips = re.search(r'bool isFigureClipWithProp\(const std::string& clip\)\s*\{[^}]*\}', source)
 if figure_clips is None or 'EntityAnimation::rattle_shake_anim' not in figure_clips.group(0) or \
-        'EntityAnimation::trip_over_bucket_anim' not in figure_clips.group(0):
-    fail('isFigureClipWithProp does not name RattleShake and TripOverBucket')
+        'EntityAnimation::trip_over_bucket_anim' not in figure_clips.group(0) or \
+        'EntityAnimation::potion_taste_anim' not in figure_clips.group(0):
+    fail('isFigureClipWithProp does not name RattleShake, TripOverBucket and PotionTaste')
 if not re.search(r'if\(isFigureClipWithProp\(anim\) \|\|\s*\(\(previousState != nullptr\) && '
                  r'isFigureClipWithProp\(previousState->getAnimationName\(\)\)\)\)\s*updateClipProp\(objectName, anim\);',
                  source):
     fail('rrSetObjectAnimationState does not give and take the figure clip props')
 for call, name in (('attachRattle(objectName, holder, *skeleton);', 'the rattle'),
-                   ('placeTripBucket(objectName, holder);', 'the bucket')):
+                   ('placeTripBucket(objectName, holder);', 'the bucket'),
+                   ('attachFlask(objectName, holder, *skeleton);', 'the flask')):
     if call not in source:
         fail('updateClipProp does not give the shaman ' + name)
 animations = (ROOT / 'source/entities/MovableGameEntity.h').read_text(encoding='utf-8')
-for text in ('rattle_shake_anim = "RattleShake";', 'trip_over_bucket_anim = "TripOverBucket";'):
+for text in ('rattle_shake_anim = "RattleShake";', 'trip_over_bucket_anim = "TripOverBucket";',
+             'potion_taste_anim = "PotionTaste";'):
     if text not in animations:
         fail('MovableGameEntity.h: ' + text + ' missing')
 
 # ================================================================================================ assets
 assets_started = time.monotonic()
 info = {}
-props = {name: convert(name + '.mesh') for name in ('InfirmaryRattle', 'InfirmaryBucket')}
+props = {name: convert(name + '.mesh') for name in ('InfirmaryRattle', 'InfirmaryBucket', 'InfirmaryFlask')}
 shaman_mesh = convert('InfirmaryShaman.mesh')
 shaman_skeleton = convert('InfirmaryShaman.skeleton')
 missing = ['models/%s.mesh, its material and texture' % name for name, root in props.items() if root is None]
 if shaman_mesh is None or shaman_skeleton is None:
-    missing.append('models/InfirmaryShaman.mesh and its skeleton (RattleShake, TripOverBucket)')
+    missing.append('models/InfirmaryShaman.mesh and its skeleton (RattleShake, TripOverBucket, PotionTaste)')
 if missing and ASSETS == ROOT and not content_packages.has_content(ROOT):
     content_packages.unchecked(CHECK, missing)
 elif missing:
@@ -326,7 +349,8 @@ else:
     body = positions(shaman_mesh)
     height = max(p[2] for p in body) - min(p[2] for p in body)
     skeleton = Skeleton(shaman_skeleton)
-    for clip, seconds in (('RattleShake', RATTLE_SECONDS), ('TripOverBucket', TRIP_SECONDS)):
+    for clip, seconds in (('RattleShake', RATTLE_SECONDS), ('TripOverBucket', TRIP_SECONDS),
+                          ('PotionTaste', FLASK_SECONDS)):
         if clip not in skeleton.clips:
             fail('InfirmaryShaman.skeleton: no %s clip' % clip)
         elif abs(skeleton.clips[clip][0] - seconds) > 1e-3:
@@ -383,6 +407,28 @@ else:
         if min(gaps) < BUCKET_RADIUS:
             fail('TripOverBucket: a foot comes %.3f x height near the bucket centre, inside its radius %.3f'
                  % (min(gaps), BUCKET_RADIUS))
+    if 'PotionTaste' in skeleton.clips and 'LeftHand' in skeleton.bones and 'Head' in skeleton.bones:
+        # ---- the flask, placed like RenderManager::attachFlask
+        middle = skeleton.pose('PotionTaste', 0.5 * skeleton.clips['PotionTaste'][0], interpolate=True)
+        hand, hand_turn = middle['LeftHand']
+        lo, hi = bounds['InfirmaryFlask']
+        scale = FLASK_SHARE * height / (hi[2] - lo[2])
+        palm = add(hand, qrot(hand_turn, (0.0, FLASK_REACH * height, 0.0)))
+        mouth = add(middle['Head'][0], mul(FLASK_MOUTH_SHIFT, height))
+        wanted = qframe(sub(mouth, palm), (1.0, 0.0, 0.0))
+        origin = sub(palm, qrot(wanted, mul(FLASK_GRIP, scale)))
+        tip = add(origin, qrot(wanted, (0.0, 0.0, hi[2] * scale)))
+        grip = add(origin, qrot(wanted, mul(FLASK_GRIP, scale)))
+        axis = qrot(wanted, (0.0, 0.0, 1.0))
+        info['flask'] = {'tip_mouth_gap': round(length(sub(tip, mouth)) / height, 4), 'axis_mid': [round(v, 3) for v in axis],
+                         'grip_gap_mid': round(length(sub(grip, palm)) / height, 5)}
+        if length(sub(grip, palm)) > 1e-4 * height:
+            fail('PotionTaste middle: the belly of the flask is not in the palm')
+        if length(sub(tip, mouth)) > FLASK_TIP_GAP * height:
+            fail('PotionTaste middle: the neck of the flask ends %.4f x height from the mouth, at most %.2f'
+                 % (length(sub(tip, mouth)) / height, FLASK_TIP_GAP))
+        if axis[2] >= 0.0:
+            fail('PotionTaste middle: the neck of the flask points up, not down to the mouth')
 assets_seconds = time.monotonic() - assets_started
 print('ODP_TEST_PHASE ' + json.dumps({'name': 'assets', 'seconds': round(assets_seconds, 3)}))
 print(json.dumps(info, indent=1))
@@ -391,4 +437,4 @@ if fails:
     for text in fails:
         print(CHECK + ': ' + text)
     sys.exit(1)
-print('shaman rattle and bucket ok')
+print('shaman clip props ok')

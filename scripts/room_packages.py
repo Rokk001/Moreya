@@ -38,9 +38,10 @@ ROOM_NAMES = tuple(room[0] for room in ROOMS)
 
 
 #: The files of every room package besides its Package.cfg, at their relative paths, fixed for this branch (the inventory
-#: of the content repository, docs/ROOM-PACKAGES.md, gives the reasons); 324 files (323 before the meshes and
+#: of the content repository, docs/ROOM-PACKAGES.md, gives the reasons); 327 files (323 before the meshes and
 #: skeletons of the merchant, innkeeper, shaman and pool attendant moved into the creatures content package, 315 after
-#: it, 324 with the clip props: the innkeeper's jug in the tavern, the shaman's rattle and bucket in the infirmary)
+#: it, 327 with the clip props: the innkeeper's jug in the tavern, the shaman's rattle, bucket and flask in the
+#: infirmary)
 PACKAGED_ASSETS = {
     'GuardRoom': (
         'materials/scripts/Dojo.material', 'materials/textures/Dojo.png', 'materials/textures/DojoNormal.png',
@@ -152,9 +153,11 @@ PACKAGED_ASSETS = {
         'sounds/Spatial/Rooms/Tavern/Pour/Pour.ogg',
     ),
     'Infirmary': (
-        'materials/scripts/InfirmaryBucket.material', 'materials/scripts/InfirmaryFloor.material',
+        'materials/scripts/InfirmaryBucket.material', 'materials/scripts/InfirmaryFlask.material',
+        'materials/scripts/InfirmaryFloor.material',
         'materials/scripts/InfirmaryObjects.material', 'materials/scripts/InfirmaryRattle.material',
-        'materials/textures/InfirmaryBucket.png', 'materials/textures/InfirmaryFloor.png', 'materials/textures/InfirmaryFloorNormal.png',
+        'materials/textures/InfirmaryBucket.png', 'materials/textures/InfirmaryFlask.png',
+        'materials/textures/InfirmaryFloor.png', 'materials/textures/InfirmaryFloorNormal.png',
         'materials/textures/InfirmaryObjectBone.png', 'materials/textures/InfirmaryObjectBottle.png',
         'materials/textures/InfirmaryObjectCloth.png', 'materials/textures/InfirmaryObjectDark.png',
         'materials/textures/InfirmaryObjectFeather.png', 'materials/textures/InfirmaryObjectHerb.png',
@@ -162,7 +165,7 @@ PACKAGED_ASSETS = {
         'materials/textures/InfirmaryObjectSkin.png', 'materials/textures/InfirmaryObjectStone.png',
         'materials/textures/InfirmaryObjectStraw.png', 'materials/textures/InfirmaryObjectWood.png',
         'materials/textures/InfirmaryRattle.png',
-        'models/HerbShelf.mesh', 'models/InfirmaryBucket.mesh', 'models/InfirmaryCotLarge.mesh',
+        'models/HerbShelf.mesh', 'models/InfirmaryBucket.mesh', 'models/InfirmaryCotLarge.mesh', 'models/InfirmaryFlask.mesh',
         'models/InfirmaryCotMedium.mesh', 'models/InfirmaryCotSmall.mesh', 'models/InfirmaryRattle.mesh',
         'models/InstrumentTable.mesh', 'models/MedicineCabinet.mesh', 'models/WashBasin.mesh',
         'particles/Infirmary.particle', 'sounds/Rooms/Infirmary/Admit.ogg', 'sounds/Rooms/Infirmary/Chant.ogg',
@@ -228,7 +231,7 @@ PACKAGED_MATERIALS = {
     'Infirmary': ('InfirmaryFloor', 'InfirmaryObjectWood', 'InfirmaryObjectStone', 'InfirmaryObjectCloth',
                   'InfirmaryObjectIron', 'InfirmaryObjectStraw', 'InfirmaryObjectBone', 'InfirmaryObjectHerb',
                   'InfirmaryObjectBottle', 'InfirmaryObjectSkin', 'InfirmaryObjectLeather', 'InfirmaryObjectFeather',
-                  'InfirmaryObjectDark', 'InfirmaryRattle', 'InfirmaryBucket'),
+                  'InfirmaryObjectDark', 'InfirmaryRattle', 'InfirmaryBucket', 'InfirmaryFlask'),
     'Merchant': ('MerchantApprovedRobe', 'MerchantApprovedCloak', 'MerchantApprovedLinen', 'MerchantApprovedLeather',
                  'MerchantApprovedBrass', 'MerchantApprovedDetails', 'MerchantApprovedHair', 'MerchantApprovedHood',
                  'MerchantApprovedHide', 'MerchantApprovedGold', 'MerchantApprovedHideHand',
