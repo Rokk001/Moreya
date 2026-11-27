@@ -53,7 +53,7 @@ MINIMUM = (-0.6352, -0.198587, 0.0)
 MAXIMUM = (0.651964, 0.170507, 1.29516)
 HASHES = {
     'models/Merchant.mesh': 'ebe09388bfb9b584e08da76c9ea4ded14e89f934eb4653b29d777b498a6f997c',
-    'models/Merchant.skeleton': '4430fa3fd41134eadb6a5a4ca3426980b38400b050efad73d04db8ec3759de86',
+    'models/Merchant.skeleton': '770d4c8b39e0806af8dacd5aaed4620f18e9e734e4a51344992025d5f162d742',
     TEXTURE: '3f28d6fbff3a40e8404000b8fe6db7e8e0d1b444aa8fd32ae1da8d891399db4b',
 }
 # The clips the game plays for the merchant (unchanged from the merchant of 2026-11-15)
