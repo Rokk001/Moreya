@@ -46,6 +46,10 @@ std::string prepareHeap(Ogre::SceneManager* sceneManager, const std::string& mes
 //! Returns the name of the shipped sack mesh for the stack mesh name, or an empty string
 //! when no sack is to be used (not a stack name, or the detail option is "off").
 std::string prepareSack(Ogre::SceneManager* sceneManager, const std::string& meshName);
+
+//! Returns the name of the shipped mesh of the gold load a digging worker carries on its back for the stack mesh name
+//! (GoldLoad_1..4, from a few coins to full), or an empty string whenever no sack is to be used (see prepareSack).
+std::string prepareLoad(Ogre::SceneManager* sceneManager, const std::string& meshName);
 }
 
 #endif // LOOSEGOLDMESH_H

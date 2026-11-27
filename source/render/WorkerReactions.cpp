@@ -967,10 +967,10 @@ void WorkerReactions::updateGoldBody(CreatureReactions& reactions, Creature* wor
         return;
 
     Ogre::Entity* workerEntity = sceneManager->getEntity(workerEntityName);
-    // The gold on the back is the coin sack of LooseGoldMesh (the heap when the treasury detail leaves the sack
-    // out); the classic stack name only selects its size
+    // The gold on the back is the load bundle of LooseGoldMesh (the heap when the treasury detail leaves the sacks
+    // out); the classic stack name only selects its fill level
     const std::string stackName = "GoldstackLv" + Helper::toString(level);
-    std::string goldMesh = LooseGoldMesh::prepareSack(sceneManager, stackName);
+    std::string goldMesh = LooseGoldMesh::prepareLoad(sceneManager, stackName);
     if(goldMesh.empty())
         goldMesh = LooseGoldMesh::prepareHeap(sceneManager, stackName);
     std::string meshName = goldMesh + ".mesh";

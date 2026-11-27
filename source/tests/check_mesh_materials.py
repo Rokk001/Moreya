@@ -24,7 +24,7 @@ import content_packages  # noqa: E402
 
 HEADER, MESH, SUBMESH = 0x1000, 0x3000, 0x4000
 CHUNK = 6
-CONTENT_MESHES = 478
+CONTENT_MESHES = 486
 TILE_MESHES = 17
 #: materials the engine itself defines
 ENGINE_MATERIALS = {'BaseWhite', 'BaseWhiteNoLighting'}
