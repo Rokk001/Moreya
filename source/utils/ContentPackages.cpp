@@ -19,6 +19,7 @@
 
 #include "game/CampaignPackages.h"
 #include "utils/LogManager.h"
+#include "utils/Translation.h"
 
 #include <boost/filesystem.hpp>
 
@@ -163,16 +164,24 @@ std::vector<std::string> ContentPackages::getMissingPackages()
     return missing;
 }
 
-//! \brief One text for the message box and the log: what is missing and where the game looks for it.
+//! \brief One text for the message box and the log: what is missing and where the game looks for it. The text comes
+//! from the language files in the chosen language. They are content packages themselves, so a build without any content
+//! has none: then the built-in English text with the same placeholders is used (the only English text of the game that
+//! is not in a language file).
 std::string ContentPackages::getMissingContentMessage(const std::vector<std::string>& missing)
 {
     std::string names;
     for(const std::string& name : missing)
         names += (names.empty() ? "" : ", ") + name;
-    return "The content of Moreya is missing (content packages: " + names + "). The game data of this build holds "
-        "the game code only; the content comes with the game on Steam. Point the environment variable "
-        + CampaignPackages::CONTENT_VARIABLE + " at the folder of the content packages, or install the game with "
-        "its content. The game quits now.";
+    std::map<std::string, std::string> values;
+    values["packages"] = names;
+    values["variable"] = CampaignPackages::CONTENT_VARIABLE;
+    if(Translation::hasText("ui.missingcontent"))
+        return Translation::tr("ui.missingcontent", values);
+    return Translation::formatText("The content of Moreya is missing (content packages: {packages}). The game data of "
+        "this build holds the game code only; the content comes with the game on Steam. Point the environment "
+        "variable {variable} at the folder of the content packages, or install the game with its content. The game "
+        "quits now.", values);
 }
 
 //! \brief Keeps the flag for main().

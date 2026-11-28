@@ -100,7 +100,13 @@ int main(int argc, char** argv)
                 || (options.count("serversave") > 0) || (options.count("run-level") > 0)
                 || (options.count("raid-sim") > 0);
             if(!headless)
-                MessageBox(0, message.c_str(), "Moreya", MB_OK | MB_ICONERROR | MB_TASKMODAL);
+            {
+                // The message is UTF-8 (it may be German), so the wide variant of the message box shows it right
+                std::wstring wideMessage(message.size() + 1, L'\0');
+                MultiByteToWideChar(CP_UTF8, 0, message.c_str(), -1, &wideMessage[0],
+                    static_cast<int>(wideMessage.size()));
+                MessageBoxW(0, wideMessage.c_str(), L"Moreya", MB_OK | MB_ICONERROR | MB_TASKMODAL);
+            }
 #endif
             return ContentPackages::MISSING_CONTENT_EXIT_CODE;
         }
