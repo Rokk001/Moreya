@@ -34,7 +34,7 @@ namespace social
 class SocialGenerator
 {
 public:
-    //! Maximum length of a bio after the slots are expanded
+    //! Maximum length (in bytes) of a bio after the slots are expanded
     static const std::size_t MAX_BIO_LENGTH = 160;
 
     //! Highest name variant that is drawn from the name tables, see makeProfile
@@ -49,7 +49,9 @@ public:
     //! \brief Builds the profile of a creature from its name (for example "Orc17"). Variant 0 is the
     //! normal name; a higher variant draws another first name and surname or title (everything else stays
     //! the same), so a caller can resolve two creatures of a dungeon with the same name. Variants above
-    //! MAX_NAME_VARIANT use the creature name as surname, which is unique in a game.
+    //! MAX_NAME_VARIANT use the creature name as surname, which is unique in a game. The choice of every text is
+    //! the same in every language (the generator draws an index, the text of that entry comes from the language
+    //! files), the profile holds the texts of the language chosen when it was made.
     static CreatureProfile makeProfile(const SocialData& data, const std::string& creatureName,
         const std::string& className, bool isWorker, uint32_t nameVariant = 0);
 

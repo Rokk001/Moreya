@@ -19,6 +19,7 @@
 
 #include "entities/CreatureMoodValues.h"
 #include "rooms/RoomType.h"
+#include "social/SocialData.h"
 
 namespace social
 {
@@ -82,47 +83,47 @@ std::string CreaturePosts::getRoomName(int32_t roomType)
     switch(static_cast<RoomType>(roomType))
     {
         case RoomType::dungeonTemple:
-            return "temple";
+            return getSocialCodeText("social.code.room.temple", "temple");
         case RoomType::dormitory:
-            return "dormitory";
+            return getSocialCodeText("social.code.room.dormitory", "dormitory");
         case RoomType::treasury:
-            return "treasury";
+            return getSocialCodeText("social.code.room.treasury", "treasury");
         case RoomType::portal:
         case RoomType::portalWave:
-            return "portal";
+            return getSocialCodeText("social.code.room.portal", "portal");
         case RoomType::workshop:
-            return "workshop";
+            return getSocialCodeText("social.code.room.workshop", "workshop");
         case RoomType::trainingHall:
-            return "training hall";
+            return getSocialCodeText("social.code.room.traininghall", "training hall");
         case RoomType::library:
-            return "library";
+            return getSocialCodeText("social.code.room.library", "library");
         case RoomType::hatchery:
-            return "hatchery";
+            return getSocialCodeText("social.code.room.hatchery", "hatchery");
         case RoomType::crypt:
-            return "crypt";
+            return getSocialCodeText("social.code.room.crypt", "crypt");
         case RoomType::prison:
-            return "prison";
+            return getSocialCodeText("social.code.room.prison", "prison");
         case RoomType::bridgeWooden:
         case RoomType::bridgeStone:
-            return "bridge";
+            return getSocialCodeText("social.code.room.bridge", "bridge");
         case RoomType::arena:
-            return "arena";
+            return getSocialCodeText("social.code.room.arena", "arena");
         case RoomType::casino:
-            return "casino";
+            return getSocialCodeText("social.code.room.casino", "casino");
         case RoomType::torture:
-            return "torture chamber";
+            return getSocialCodeText("social.code.room.torture", "torture chamber");
         case RoomType::guardRoom:
-            return "guard room";
+            return getSocialCodeText("social.code.room.guardroom", "guard room");
         case RoomType::temple:
-            return "temple";
+            return getSocialCodeText("social.code.room.temple", "temple");
         case RoomType::toilet:
-            return "toilet room";
+            return getSocialCodeText("social.code.room.toilet", "toilet room");
         case RoomType::tavern:
-            return "tavern";
+            return getSocialCodeText("social.code.room.tavern", "tavern");
         case RoomType::spa:
-            return "lava spa";
+            return getSocialCodeText("social.code.room.spa", "lava spa");
         default:
-            return "dungeon";
+            return getSocialCodeText("social.code.room.dungeon", "dungeon");
     }
 }
 
@@ -209,12 +210,12 @@ void CreaturePosts::reportRelationshipChange(int64_t turn, const std::string& cr
 std::string CreaturePosts::getRelationshipStatus(bool hasPartner, bool hasFriends, bool hasHated, bool hasNemesis)
 {
     if(hasPartner)
-        return "In a relationship";
+        return getSocialCodeText("social.code.status.partner", "In a relationship");
     if(hasNemesis && !hasFriends)
-        return "Sworn enemies";
+        return getSocialCodeText("social.code.status.enemies", "Sworn enemies");
     if(hasFriends && (hasHated || hasNemesis))
-        return "It's complicated";
-    return "Single";
+        return getSocialCodeText("social.code.status.complicated", "It's complicated");
+    return getSocialCodeText("social.code.status.single", "Single");
 }
 
 void CreaturePosts::reportRemoval(int64_t turn, const std::string& creature, const std::string& className,
