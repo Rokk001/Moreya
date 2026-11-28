@@ -1,8 +1,8 @@
 OpenDungeons_Version:0.7.1  # The version of OpenDungeons which created this file (for compatibility reasons).
 
 [Info]
-Name	\[Test\] Region scripting
-Description	Test map for level script regions, creature events, unlocking, reveal and a time limit. Read the objective messages.
+Name	@level.testregionscripting.name
+Description	@level.testregionscripting.description
 Music	Searching_yd.ogg
 FightMusic	TheDarkAmulet_MP.ogg
 [/Info]
@@ -2666,59 +2666,59 @@ Region	Far	40	30	44	34
 Name	welcome
 Mode	once
 Cond	time	3
-Action	objective	1	Pick up a creature with the hand, drop it, slap it, then carry a creature into the Gate area (x 20 to 24, y 10 to 14).
+Action	objective	1	@level.testregionscripting.goal.01
 [/Trigger]
 [Trigger]
 Name	home
 Mode	once
 Cond	claimed	1	Home	all
-Action	message	1	The whole Home region is claimed by you.
+Action	message	1	@level.testregionscripting.message.01
 [/Trigger]
 [Trigger]
 Name	handled
 Mode	once
 Cond	pickedup	1	>=	1
 Cond	dropped	1	>=	1
-Action	message	1	You picked a creature up and dropped it.
+Action	message	1	@level.testregionscripting.message.02
 [/Trigger]
 [Trigger]
 Name	slapped
 Mode	once
 Cond	slapped	1	>=	1
-Action	message	1	You slapped one of your creatures.
+Action	message	1	@level.testregionscripting.message.03
 [/Trigger]
 [Trigger]
 Name	cheerful
 Mode	once
 Cond	happy	1	>=	1
-Action	message	1	At least one of your creatures is happy.
+Action	message	1	@level.testregionscripting.message.04
 [/Trigger]
 [Trigger]
 Name	gate
 Mode	once
 Cond	region	1	Gate
-Action	message	1	You reached the Gate. The Far area is revealed, the training hall is unlocked and a knight is coming. You have 3 minutes.
+Action	message	1	@level.testregionscripting.message.05
 Action	reveal	1	Far
 Action	make	1	roomTrainingHall
 Action	spawn	0	40	20	1	Knight:1
 Action	gold	1	500
 Action	setflag	gate	1
 Action	timelimit	180
-Action	objective	1	Move a creature into the Far area (x 40 to 44, y 30 to 34) before the time runs out.
+Action	objective	1	@level.testregionscripting.goal.02
 [/Trigger]
 [Trigger]
 Name	rich
 Mode	once
 Cond	flag	gate	1
 Cond	gold	1	>=	1500
-Action	message	1	Your gold has reached 1500.
+Action	message	1	@level.testregionscripting.message.06
 [/Trigger]
 [Trigger]
 Name	bounty
 Mode	once
 Cond	flag	gate	1
 Cond	kills	1	>=	1
-Action	message	1	The knight is dead. Here is a bounty.
+Action	message	1	@level.testregionscripting.message.07
 Action	gold	1	200
 [/Trigger]
 [Trigger]
@@ -2726,7 +2726,7 @@ Name	lostOne
 Mode	once
 Cond	flag	gate	1
 Cond	lost	1	>=	1
-Action	message	1	One of your creatures has died.
+Action	message	1	@level.testregionscripting.message.08
 [/Trigger]
 [Trigger]
 Name	far
@@ -2734,7 +2734,7 @@ Mode	once
 Cond	flag	gate	1
 Cond	region	1	Far
 Action	timelimit	0
-Action	message	1	You made it in time.
+Action	message	1	@level.testregionscripting.message.09
 Action	win	-1
 [/Trigger]
 [/Triggers]

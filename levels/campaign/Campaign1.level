@@ -1,8 +1,8 @@
 OpenDungeons_Version:0.7.1  # The version of OpenDungeons which created this file (for compatibility reasons).
 
 [Info]
-Name	Campaign 1 - Falling Keeper
-Description	A strong keeper is being attacked by heroes. Kill them all to gain control of the underground.
+Name	@level.campaign1.name
+Description	@level.campaign1.description
 Music	Searching_yd.ogg
 FightMusic	TheDarkAmulet_MP.ogg
 [/Info]
@@ -2282,14 +2282,14 @@ Paladin	12
 Name	intro
 Mode	once
 Cond	time	3
-Action	message	-1	Heroes are attacking a keeper nearby. Let them weaken each other.
-Action	objectiveid	-1	campaign1-o01	Defeat all enemies; protect your heart.
+Action	message	-1	@level.campaign1.message.01
+Action	objectiveid	-1	campaign1-o01	@level.campaign1.objective.campaign1-o01
 [/Trigger]
 [Trigger]
 Name	hint
 Mode	once
 Cond	time	180
-Action	message	-1	Keep building rooms and train your creatures. Gold and a strong army win the level.
+Action	message	-1	@level.campaign1.message.02
 [/Trigger]
 [Trigger]
 Name	bonus1
@@ -2310,9 +2310,9 @@ Action	objectivestate	-1	campaign1-o01	reached
 Name	mainGoalList
 Mode	once
 Cond	time	0
-Action	mainobjectiveid	1	campaign1-main-heart	Protect your heart.
-Action	mainobjectiveid	1	campaign1-main-enemies	Defeat all enemies.
-Action	optionalobjectiveid	1	campaign1-extra-gold	Mine 500 gold.
+Action	mainobjectiveid	1	campaign1-main-heart	@level.campaign1.objective.campaign1-main-heart
+Action	mainobjectiveid	1	campaign1-main-enemies	@level.campaign1.objective.campaign1-main-enemies
+Action	optionalobjectiveid	1	campaign1-extra-gold	@level.campaign1.objective.campaign1-extra-gold
 [/Trigger]
 [Trigger]
 Name	mainHeart

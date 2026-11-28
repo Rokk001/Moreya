@@ -263,7 +263,8 @@ check("levelsDefeated * PERCENT_FULL / levelTotal" in progress, "the bar shows t
 
 # ------------------------------------------------------------------------------------------------ CM2: guild panel
 guild_panel = function(mode, "void MenuModeCampaign::fillGuildPanel()")
-for token in ("findCurrentCave(", "guild.mBanner", "guild.mPortrait", "guild.mName", "getGuildDetailsText(guild)"):
+# The details are built from the guild whose names are shown in the chosen language (shownGuild is a copy of guild)
+for token in ("findCurrentCave(", "guild.mBanner", "guild.mPortrait", "guild.mName", "getGuildDetailsText(shownGuild)"):
     check(token in guild_panel, "the guild in front of the gate needs " + token)
 details = world_cpp[world_cpp.index("std::string CampaignWorld::getGuildDetailsText"):]
 # The words are the entries campaign.code.* of the English language package; the code asks for them by their keys

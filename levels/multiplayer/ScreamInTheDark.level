@@ -1,8 +1,8 @@
 OpenDungeons_Version:0.7.1  # The version of OpenDungeons which created this file (for compatibility reasons).
 
 [Info]
-Name	Scream in the dark...
-Description	A classic death match. North against south side, with a fortified base in the middle... This map can be played in teams or free for all.
+Name	@level.screaminthedark.name
+Description	@level.screaminthedark.description
 Music	Searching_yd.ogg
 FightMusic	TheDarkAmulet_MP.ogg
 [/Info]

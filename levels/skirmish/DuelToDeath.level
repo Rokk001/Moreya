@@ -1,8 +1,8 @@
 OpenDungeons_Version:0.7.1  # The version of OpenDungeons which created this file (for compatibility reasons).
 
 [Info]
-Name	Duel to death
-Description	A fool keeper is trying to get control of a dungeon you were staring at. In the meantime, heroes are trying to steal the gold they can find. Show them who rules in the underworld !
+Name	@level.dueltodeath.name
+Description	@level.dueltodeath.description
 Music	Searching_yd.ogg
 FightMusic	TheDarkAmulet_MP.ogg
 [/Info]

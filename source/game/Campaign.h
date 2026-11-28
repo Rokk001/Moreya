@@ -160,6 +160,8 @@ struct CampaignSave
 //!   Title=Some title
 //!   Briefing=Text shown before the level. "\n" starts a new line.
 //!   Debriefing=Text shown after the level was won.
+//!   (The texts of Title, Briefing, Debriefing, Warden and the guild may be references @<key> to the language files;
+//!   the campaign menu shows them in the chosen language with LevelText::display, the Campaign keeps the reference.)
 //!   Preview=previews/wing1-level1.png (optional) briefing image relative to the package folder, else gui/campaign.
 //!   Wing=1 the wing of Moreya the level belongs to (bonus levels too).
 //!   Bonus=1 (optional) marks a bonus level.

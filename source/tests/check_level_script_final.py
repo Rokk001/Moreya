@@ -11,6 +11,7 @@ import sys
 
 repo = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(repo / 'scripts'))
+import campaign_packages  # noqa: E402
 import content_packages  # noqa: E402
 #: True when the content packages are present: gui/ModeGame.layout is a mixed file whose own rows come from them
 CONTENT = content_packages.has_content(repo)
@@ -123,7 +124,7 @@ assert 'campaign.getLevelSummary()' in menu
 assert menu.index('campaign.getLevelSummary()') < menu.index('campaign.clearPlayedLevel()')
 
 # the region test level: a skirmish with 100 start mana, found by the level list
-level = read('levels/skirmish/TestRegionScripting.level')
+level = campaign_packages.resolve_level_text(repo, read('levels/skirmish/TestRegionScripting.level'))
 assert 'Region scripting' in level
 assert re.search(r'^mana	100$', level, re.M), 'start mana must be 100'
 section = level[level.index('[Triggers]'):level.index('[/Triggers]')]
@@ -148,7 +149,7 @@ assert 'isPortalOff(getSeat()->getId())' in read('source/rooms/RoomPortal.cpp')
 assert 'isCreatureBlocked(getId()' in read('source/game/Seat.cpp')
 
 # the story test level: a skirmish that uses the story state conditions, a portal stone and a terrain change
-story = read('levels/skirmish/TestLevelScripting.level')
+story = campaign_packages.resolve_level_text(repo, read('levels/skirmish/TestLevelScripting.level'))
 assert 'Level scripting' in story
 story_section = story[story.index('[Triggers]'):story.index('[/Triggers]')]
 for word in ('Cond	alive', 'Cond	reached', 'Cond	portal', 'Cond	stone', 'Action	portal', 'Action	stonecreate',

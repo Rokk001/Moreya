@@ -36,6 +36,7 @@
 #include "utils/LogManager.h"
 #include "utils/Helper.h"
 #include "utils/Translation.h"
+#include "utils/LevelText.h"
 #include "utils/RunLevelTest.h"
 
 #include <algorithm>
@@ -608,7 +609,7 @@ void MenuModeConfigureSeats::activate()
     msgWin->setText(Gui::trCegui("mode.menu.loading"));
     msgWin->setVisible(false);
 
-    tmpWin->setText(Gui::toCeguiText(Translation::tr("mode.menu.seats.configure", {{"name", gameMap->getLevelName()}})));
+    tmpWin->setText(Gui::toCeguiText(Translation::tr("mode.menu.seats.configure", {{"name", LevelText::display(gameMap->getLevelName())}})));
 
     // A campaign level is fully predefined: the page is not shown, the game starts
     // as soon as the server is ready (see activatePlayerConfig)
@@ -1043,7 +1044,7 @@ void MenuModeConfigureSeats::activatePlayerConfig()
     GameMap* gameMap = ODFrameListener::getSingleton().getClientGameMap();
     CEGUI::Window* listPlayersWindow = getModeManager().getGui().getGuiSheet(Gui::guiSheet::configureSeats)->getChild("ListPlayers");
     listPlayersWindow->setText(Gui::toCeguiText(Translation::tr("mode.menu.seats.please_configure",
-        {{"name", gameMap->getLevelName()}})));
+        {{"name", LevelText::display(gameMap->getLevelName())}})));
     bool enabled = true;
 
     for(int seatId : mSeatIds)

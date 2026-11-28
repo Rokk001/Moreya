@@ -1,8 +1,8 @@
 OpenDungeons_Version:0.7.1  # The version of OpenDungeons which created this file (for compatibility reasons).
 
 [Info]
-Name	\[Test\] Raid
-Description	Test map for the raid: the Moreya gate, its countdown and early opening, two raid groups each with its own leader, plundering, the flight of a leader and the victory over the whole raid.
+Name	@level.testraid.name
+Description	@level.testraid.description
 Music	Searching_yd.ogg
 FightMusic	TheDarkAmulet_MP.ogg
 [/Info]
@@ -1775,9 +1775,9 @@ Region	NearGate	30	33	36	36
 Name	welcome
 Mode	once
 Cond	time	1
-Action	mainobjectiveid	1	raid	Defeat the raid and both of its leaders.
-Action	optionalobjectiveid	1	gate	Open the Moreya gate early to face the raid sooner.
-Action	message	1	A raid gathers behind the Moreya gate in the south-east. Open it early with the button below the top bar, or walk a creature up to it.
+Action	mainobjectiveid	1	raid	@level.testraid.objective.raid
+Action	optionalobjectiveid	1	gate	@level.testraid.objective.gate
+Action	message	1	@level.testraid.message.01
 [/Trigger]
 [Trigger]
 Name	shorterCountdown
@@ -1789,7 +1789,7 @@ Action	raidcountdown	150
 Name	openAtGate
 Mode	once
 Cond	region	1	NearGate
-Action	message	1	Your creature comes too close to the Moreya gate: it opens.
+Action	message	1	@level.testraid.message.02
 Action	raidopen
 [/Trigger]
 [Trigger]
@@ -1802,31 +1802,31 @@ Action	objectivestate	1	gate	reached
 Name	firstGroup
 Mode	once
 Cond	raid	arrived	1
-Action	message	1	The first raid group is here. The second one follows when the countdown ends.
+Action	message	1	@level.testraid.message.03
 [/Trigger]
 [Trigger]
 Name	allGroups
 Mode	once
 Cond	raid	arrived
-Action	message	1	Both raid groups have come through the gate.
+Action	message	1	@level.testraid.message.04
 [/Trigger]
 [Trigger]
 Name	firstMemberKilled
 Mode	once
 Cond	event	Raid1	killed
-Action	message	1	A member of the first raid group has fallen.
+Action	message	1	@level.testraid.message.05
 [/Trigger]
 [Trigger]
 Name	leaderFlees
 Mode	once
 Cond	raid	fleeing
-Action	message	1	A raid leader runs for the gate. Stop him before he escapes!
+Action	message	1	@level.testraid.message.06
 [/Trigger]
 [Trigger]
 Name	leaderEscaped
 Mode	once
 Cond	raid	escaped
-Action	message	1	A raid leader got away through the gate.
+Action	message	1	@level.testraid.message.07
 [/Trigger]
 [Trigger]
 Name	raidDefeated
