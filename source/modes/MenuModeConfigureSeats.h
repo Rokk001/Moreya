@@ -97,6 +97,9 @@ private:
 
     void fireSeatConfigurationToServer();
 
+    //! \brief Writes the texts set once when the pages were made again in the chosen language.
+    void translateTexts();
+
     //! \brief Reads for every seat whether its player, team and faction are chosen.
     std::vector<MultiplayerClientRules::LobbySeatChoice> collectSeatChoices();
 

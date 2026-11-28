@@ -35,6 +35,7 @@
 #include "utils/ConfigManager.h"
 #include "utils/LogManager.h"
 #include "utils/Helper.h"
+#include "utils/Translation.h"
 #include "utils/RunLevelTest.h"
 
 #include <algorithm>
@@ -98,11 +99,11 @@ std::string itemStateText(uint32_t state)
     switch(static_cast<GameMap::SkirmishItemState>(state))
     {
         case GameMap::SkirmishItemState::notAvailable:
-            return "Not available";
+            return Translation::tr("mode.menu.seats.state_not_available");
         case GameMap::SkirmishItemState::availableAtStart:
-            return "Available at start";
+            return Translation::tr("mode.menu.seats.state_available");
         default:
-            return "Needs research";
+            return Translation::tr("mode.menu.seats.state_research");
     }
 }
 
@@ -166,6 +167,35 @@ void addSettingItem(CEGUI::Combobox* combo, const std::string& text, uint32_t va
     CEGUI::ListboxTextItem* item = new CEGUI::ListboxTextItem(text, value);
     item->setSelectionBrushImage(selImg);
     combo->addItem(item);
+}
+
+//! \brief Writes the texts of the choices of the heart reward and fog of war combos in the chosen language. The
+//! choices are found by their value (the id of the list item), so that the selection stays.
+//! \param generalPage The page "General" of the Game settings window
+void translateSettingItems(CEGUI::Window* generalPage)
+{
+    std::map<std::string, std::map<uint32_t, std::string> > keys;
+    keys[COMBOBOX_HEART_DESTROYED][GameMap::SKIRMISH_HEART_REWARD_MANA] = "mode.menu.seats.reward_mana";
+    keys[COMBOBOX_HEART_DESTROYED][GameMap::SKIRMISH_HEART_REWARD_SPECIALS] = "mode.menu.seats.reward_specials";
+    keys[COMBOBOX_HEART_DESTROYED][GameMap::SKIRMISH_HEART_REWARD_ROOMS_AND_LAND] = "mode.menu.seats.reward_rooms";
+    keys[COMBOBOX_FOG_OF_WAR][SETTING_FOG_ON] = "mode.menu.seats.fog_on";
+    keys[COMBOBOX_FOG_OF_WAR][SETTING_FOG_OFF] = "mode.menu.seats.fog_off";
+    for(std::map<std::string, std::map<uint32_t, std::string> >::const_iterator comboIt = keys.begin();
+        comboIt != keys.end(); ++comboIt)
+    {
+        CEGUI::Combobox* combo = static_cast<CEGUI::Combobox*>(generalPage->getChild(comboIt->first));
+        for(size_t i = 0; i < combo->getItemCount(); ++i)
+        {
+            CEGUI::ListboxItem* item = combo->getListboxItemFromIndex(i);
+            std::map<uint32_t, std::string>::const_iterator keyIt = comboIt->second.find(item->getID());
+            if(keyIt == comboIt->second.end())
+                continue;
+            item->setText(Gui::trCegui(keyIt->second));
+            if(item->isSelected())
+                combo->setText(item->getText());
+        }
+        combo->invalidate();
+    }
 }
 
 //! \brief Returns the id of the selected item or defaultValue if nothing is selected
@@ -310,9 +340,9 @@ void MenuModeConfigureSeats::initSettingCombos()
     combo->setReadOnly(true);
     combo->setEnabled(false);
     mHostSettingWindows.push_back(combo);
-    addSettingItem(combo, "Gain mana", GameMap::SKIRMISH_HEART_REWARD_MANA);
-    addSettingItem(combo, "Gain mana and specials", GameMap::SKIRMISH_HEART_REWARD_SPECIALS);
-    addSettingItem(combo, "Gain mana, rooms and land", GameMap::SKIRMISH_HEART_REWARD_ROOMS_AND_LAND);
+    addSettingItem(combo, Translation::tr("mode.menu.seats.reward_mana"), GameMap::SKIRMISH_HEART_REWARD_MANA);
+    addSettingItem(combo, Translation::tr("mode.menu.seats.reward_specials"), GameMap::SKIRMISH_HEART_REWARD_SPECIALS);
+    addSettingItem(combo, Translation::tr("mode.menu.seats.reward_rooms"), GameMap::SKIRMISH_HEART_REWARD_ROOMS_AND_LAND);
     selectSettingValue(generalPage, COMBOBOX_HEART_DESTROYED, GameMap::SKIRMISH_HEART_REWARD_MANA);
     addEventConnection(
         combo->subscribeEvent(CEGUI::Combobox::EventListSelectionAccepted,
@@ -324,8 +354,8 @@ void MenuModeConfigureSeats::initSettingCombos()
     combo->setReadOnly(true);
     combo->setEnabled(false);
     mHostSettingWindows.push_back(combo);
-    addSettingItem(combo, "On", SETTING_FOG_ON);
-    addSettingItem(combo, "Off", SETTING_FOG_OFF);
+    addSettingItem(combo, Translation::tr("mode.menu.seats.fog_on"), SETTING_FOG_ON);
+    addSettingItem(combo, Translation::tr("mode.menu.seats.fog_off"), SETTING_FOG_OFF);
     selectSettingValue(generalPage, COMBOBOX_FOG_OF_WAR, SETTING_FOG_ON);
     addEventConnection(
         combo->subscribeEvent(CEGUI::Combobox::EventListSelectionAccepted,
@@ -440,7 +470,7 @@ void MenuModeConfigureSeats::initSettingPages()
         CEGUI::Spinner* spinner = static_cast<CEGUI::Spinner*>(winMgr.createWindow("OD/Spinner", "Limit" + def.first));
         spinner->setArea(CEGUI::UDim(0, SETTING_CONTROL_LEFT), CEGUI::UDim(0, lineY),
             CEGUI::UDim(0, SETTING_SPINNER_RIGHT), CEGUI::UDim(0, lineY + SETTING_CONTROL_HEIGHT));
-        spinner->setTooltipText("Most creatures of this type a keeper may have. 32 means no limit.");
+        spinner->setTooltipText(Gui::trCegui("mode.menu.seats.limit_tooltip"));
         pane->addChild(spinner);
         spinner->setTextInputMode(CEGUI::Spinner::Integer);
         spinner->setMinimumValue(SETTING_CREATURE_LIMIT_MIN);
@@ -486,7 +516,7 @@ void MenuModeConfigureSeats::initSettingPages()
         CEGUI::Window* button = winMgr.createWindow("OD/Button", "ItemButton" + Helper::toString(i));
         button->setArea(CEGUI::UDim(0, SETTING_CONTROL_LEFT), CEGUI::UDim(0, y),
             CEGUI::UDim(0, SETTING_BUTTON_RIGHT), CEGUI::UDim(0, y + SETTING_CONTROL_HEIGHT));
-        button->setText(itemStateText(mItemStates[i]));
+        button->setText(Gui::toCeguiText(itemStateText(mItemStates[i])));
         button->setID(i);
         button->setEnabled(false);
         pane->addChild(button);
@@ -531,9 +561,23 @@ bool MenuModeConfigureSeats::itemStateClicked(const CEGUI::EventArgs& ea)
 
     // Not available, available at start, needs research, then it starts again
     mItemStates[skill] = (mItemStates[skill] + 1) % (static_cast<uint32_t>(GameMap::SkirmishItemState::needsResearch) + 1);
-    button->setText(itemStateText(mItemStates[skill]));
+    button->setText(Gui::toCeguiText(itemStateText(mItemStates[skill])));
     fireSeatConfigurationToServer();
     return true;
+}
+
+//! \brief Writes the texts that are set once when the pages of the Game settings window are made (the choices of the
+//! combos, the buttons of the items and the tooltips of the creature limits) again in the chosen language.
+void MenuModeConfigureSeats::translateTexts()
+{
+    translateSettingItems(getGeneralPage(getModeManager().getGui().getGuiSheet(Gui::guiSheet::configureSeats)));
+    for(std::map<uint32_t, CEGUI::Window*>::iterator it = mItemButtons.begin(); it != mItemButtons.end(); ++it)
+    {
+        if(it->first < mItemStates.size())
+            it->second->setText(Gui::toCeguiText(itemStateText(mItemStates[it->first])));
+    }
+    for(std::map<std::string, CEGUI::Spinner*>::iterator it = mLimitSpinners.begin(); it != mLimitSpinners.end(); ++it)
+        it->second->setTooltipText(Gui::trCegui("mode.menu.seats.limit_tooltip"));
 }
 
 //! \brief Opens seat configuration and restores the menu when player input is required.
@@ -541,6 +585,7 @@ void MenuModeConfigureSeats::activate()
 {
     // Loads the corresponding Gui sheet.
     getModeManager().getGui().loadGuiSheet(Gui::guiSheet::configureSeats);
+    translateTexts();
 
     giveFocus();
 
@@ -560,10 +605,10 @@ void MenuModeConfigureSeats::activate()
     CEGUI::WindowManager& winMgr = CEGUI::WindowManager::getSingleton();
     CEGUI::Window* tmpWin = getModeManager().getGui().getGuiSheet(Gui::guiSheet::configureSeats)->getChild("ListPlayers");
     CEGUI::Window* msgWin = getModeManager().getGui().getGuiSheet(Gui::guiSheet::configureSeats)->getChild("LoadingText");
-    msgWin->setText("Loading...");
+    msgWin->setText(Gui::trCegui("mode.menu.loading"));
     msgWin->setVisible(false);
 
-    tmpWin->setText(reinterpret_cast<const CEGUI::utf8*>(std::string("Configure map : " + gameMap->getLevelName()).c_str()));
+    tmpWin->setText(Gui::toCeguiText(Translation::tr("mode.menu.seats.configure", {{"name", gameMap->getLevelName()}})));
 
     // A campaign level is fully predefined: the page is not shown, the game starts
     // as soon as the server is ready (see activatePlayerConfig)
@@ -602,7 +647,8 @@ void MenuModeConfigureSeats::activate()
         Ogre::ColourValue seatColor = seat->getColorValue();
         seatColor.a = 1.0f; // Restore the color opacity
         textSeatId->setArea(CEGUI::UDim(0.3,10), CEGUI::UDim(0,65 + offset), CEGUI::UDim(0,60), CEGUI::UDim(0,30));
-        textSeatId->setText("[colour='" + Helper::getCEGUIColorFromOgreColourValue(seatColor) + "']Seat "  + Helper::toString(seat->getId()));
+        textSeatId->setText(Gui::toCeguiText("[colour='" + Helper::getCEGUIColorFromOgreColourValue(seatColor) + "']"
+            + Translation::tr("mode.menu.seats.seat", {{"id", Helper::toString(seat->getId())}})));
         textSeatId->setProperty("FrameEnabled", "False");
         textSeatId->setProperty("BackgroundEnabled", "False");
 
@@ -996,7 +1042,8 @@ void MenuModeConfigureSeats::activatePlayerConfig()
     mIsActivePlayerConfig = true;
     GameMap* gameMap = ODFrameListener::getSingleton().getClientGameMap();
     CEGUI::Window* listPlayersWindow = getModeManager().getGui().getGuiSheet(Gui::guiSheet::configureSeats)->getChild("ListPlayers");
-    listPlayersWindow->setText("Please configure map : " + gameMap->getLevelName());
+    listPlayersWindow->setText(Gui::toCeguiText(Translation::tr("mode.menu.seats.please_configure",
+        {{"name", gameMap->getLevelName()}})));
     bool enabled = true;
 
     for(int seatId : mSeatIds)
@@ -1182,7 +1229,7 @@ void MenuModeConfigureSeats::refreshSeatConfiguration(ODPacket& packet)
             continue;
 
         mItemStates[skillType] = skillState;
-        itItem->second->setText(itemStateText(skillState));
+        itItem->second->setText(Gui::toCeguiText(itemStateText(skillState)));
     }
     mIsRefreshing = false;
     mSettingsReceived = true;

@@ -26,6 +26,7 @@
 #include "sound/MusicPlayer.h"
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
+#include "utils/Translation.h"
 #include "utils/LogManager.h"
 #include "utils/ResourceManager.h"
 #include "ODApplication.h"
@@ -79,8 +80,8 @@ MenuModeMasterServerJoin::MenuModeMasterServerJoin(ModeManager *modeManager):
         levelSelectList->removeColumn(0);
 
     levelSelectList->setSelectionMode(CEGUI::MultiColumnList::SelectionMode::RowSingle);
-    levelSelectList->addColumn("Creator", 0, CEGUI::UDim(0.45f, 0));
-    levelSelectList->addColumn("Level", 1, CEGUI::UDim(0.45f, 0));
+    levelSelectList->addColumn(Gui::trCegui("mode.menu.join.column_creator"), 0, CEGUI::UDim(0.45f, 0));
+    levelSelectList->addColumn(Gui::trCegui("mode.menu.join.column_level"), 1, CEGUI::UDim(0.45f, 0));
 }
 
 void MenuModeMasterServerJoin::activate()
@@ -107,6 +108,15 @@ void MenuModeMasterServerJoin::activate()
     std::string nickname = config.getGameValue(Config::NICKNAME, std::string(), false);
     if (!nickname.empty())
         editNick->setText(reinterpret_cast<const CEGUI::utf8*>(nickname.c_str()));
+
+    // The captions of the columns were set once, in the language of that moment
+    CEGUI::MultiColumnList* levelSelectList = static_cast<CEGUI::MultiColumnList*>(
+        mainWin->getChild("LevelWindowFrame/LevelSelect"));
+    if(levelSelectList->getColumnCount() >= 2)
+    {
+        levelSelectList->getHeaderSegmentForColumn(0).setText(Gui::trCegui("mode.menu.join.column_creator"));
+        levelSelectList->getHeaderSegmentForColumn(1).setText(Gui::trCegui("mode.menu.join.column_level"));
+    }
 
     refreshList();
 }
@@ -183,7 +193,7 @@ bool MenuModeMasterServerJoin::clientButtonPressed(const CEGUI::EventArgs&)
 
     if(levelSelectList->getSelectedCount() == 0)
     {
-        infoText->setText("Please select a level first.");
+        infoText->setText(Gui::trCegui("mode.menu.select_level_first"));
         return true;
     }
 
@@ -193,12 +203,12 @@ bool MenuModeMasterServerJoin::clientButtonPressed(const CEGUI::EventArgs&)
     CEGUI::String nickCeguiStr = reinterpret_cast<const CEGUI::utf8*>(nick.c_str());
     if (nickCeguiStr.empty())
     {
-        infoText->setText("Please enter a nickname.");
+        infoText->setText(Gui::trCegui("mode.menu.enter_nickname"));
         return true;
     }
     else if (nickCeguiStr.length() > 20)
     {
-        infoText->setText("Please enter a shorter nickname. (20 letters max.)");
+        infoText->setText(Gui::trCegui("mode.menu.nickname_too_long"));
         return true;
     }
 
@@ -220,11 +230,12 @@ bool MenuModeMasterServerJoin::clientButtonPressed(const CEGUI::EventArgs&)
     uint32_t timeout = ConfigManager::getSingleton().getClientConnectionTimeout();
     std::string replayFilename = ResourceManager::getSingleton().getReplayDataPath()
         + ResourceManager::getSingleton().buildReplayFilename();
-    infoText->setText("Loading...");
+    infoText->setText(Gui::trCegui("mode.menu.loading"));
     if(!ODClient::getSingleton().connect(ip, port, timeout, replayFilename))
     {
         // Error while connecting
-        infoText->setText("Could not connect to: " + ip + ", port=" + Helper::toString(port));
+        infoText->setText(Gui::toCeguiText(Translation::tr("mode.menu.join.connect_failed_port",
+        {{"ip", ip}, {"port", Helper::toString(port)}})));
         return true;
     }
 
