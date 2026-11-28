@@ -6457,7 +6457,8 @@ void RenderManager::rrSetObjectAnimationState(MovableGameEntity* curAnimatedObje
         updateClipProp(objectName, anim);
 
     // A seated guest shows no attached weapon: a sword or a staff in the hand would reach through the table. A drinking
-    // guest neither: the mug sits on the same hand bone (decision 863)
+    // guest neither: the mug sits on the same hand bone (decision 863). Nor a creature that lies, sleeps, bathes, relieves
+    // itself, vomits, dances, cheers, stretches or throws (EntityAnimation::hidesWeaponsAtRest)
     if((dropCreature != nullptr) &&
        (EntityAnimation::hidesWeapons(anim) != ((previousState != nullptr) && EntityAnimation::hidesWeapons(previousState->getAnimationName()))))
         CreatureCombatReactions::showWeaponsForClip(dropCreature);
