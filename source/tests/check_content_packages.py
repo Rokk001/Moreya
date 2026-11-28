@@ -94,7 +94,7 @@ def check_static():
           < start.index('startClient();'), 'the game refuses to start before any mode when content is missing')
     main = read('source/main.cpp')
     check('ContentPackages::isStartRefused()' in main and 'return ContentPackages::MISSING_CONTENT_EXIT_CODE;' in main
-          and 'MessageBox(0, message.c_str(), "Moreya"' in main, 'main shows the message and returns exit code 7')
+          and 'MessageBoxW(0, wideMessage.c_str(), L"Moreya"' in main, 'main shows the message and returns exit code 7')
     check(MISSING_TEXT in packages_cpp, 'the message says that the content is missing')
 
     resources = read('source/utils/ResourceManager.cpp')

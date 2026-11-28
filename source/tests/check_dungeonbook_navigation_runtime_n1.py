@@ -109,7 +109,17 @@ struct ODClient {
 };
 //! Uses the local roster fixture so opening does not discard its restored creatures.
 bool useLocalCreatureRoster() { return true; }
-const char* const FILTER_LABELS[] = {"All", "Zivs", "Fighters", "Unhappy"};
+const char* const FILTER_KEYS[] = {"ui.dungeonbook.filter.all", "ui.dungeonbook.filter.zivs",
+    "ui.dungeonbook.filter.fighters", "ui.dungeonbook.filter.unhappy"};
+//! Supplies the English text of a language key of the filter, as the language file lang-en gives it.
+namespace Gui {
+std::string trCegui(const std::string& key) {
+    static const std::map<std::string, std::string> texts = {{"ui.dungeonbook.filter.all", "All"},
+        {"ui.dungeonbook.filter.zivs", "Zivs"}, {"ui.dungeonbook.filter.fighters", "Fighters"},
+        {"ui.dungeonbook.filter.unhappy", "Unhappy"}};
+    return texts.at(key);
+}
+}
 const char* const NAV_BUTTONS[] = {"NavFeed", "NavProfile", "NavValues", "NavInventory"};
 const char* const NAV_SKILLS_BUTTON = "NavSkills";
 const char* const NAV_ICON_ENABLED = "enabled";

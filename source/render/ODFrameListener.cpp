@@ -57,6 +57,7 @@
 #include "utils/LogManager.h"
 #include "utils/RunLevelTest.h"
 #include "utils/MakeUnique.h"
+#include "utils/Translation.h"
 
 #include <OgreCamera.h>
 #include <OgreEntity.h>
@@ -801,7 +802,7 @@ void ODFrameListener::printDebugInfo()
     std::stringstream infoSS;
     if (getModeManager()->getCurrentModeType() == ModeManager::GAME && mGameMap->getTurnNumber() == -1)
     {
-        infoSS << "Waiting for players...\n";
+        infoSS << Translation::tr("ui.waitingforplayers") << "\n";
     }
     if (mShowDebugInfo)
     {

@@ -2107,7 +2107,7 @@ void Gui::keepTooltipInFront()
 
 void Gui::setItemTooltip(CEGUI::Window* window, const ItemInstance& item, const GameMap* map, const Weapon* heldWeapon)
 {
-    window->setTooltipText(describeItemTooltip(item, map, heldWeapon));
+    window->setTooltipText(toCeguiText(describeItemTooltip(item, map, heldWeapon)));
     markItemTooltip(window, ItemInstance::getQualityColour(item.mQuality), std::string());
 }
 
@@ -2117,8 +2117,8 @@ void Gui::showItemTooltipAtCursor(const ItemInstance& item, const GameMap* map)
     if(tooltip == nullptr)
         return;
     const std::string text = describeItemTooltip(item, map, nullptr);
-    if(tooltip->getText() != text)
-        tooltip->setText(text);
+    if(tooltip->getText() != toCeguiText(text))
+        tooltip->setText(toCeguiText(text));
     // Size first, since the place of the card depends on it; the card appears in this frame, with no hover time
     tooltip->sizeSelf();
     const CEGUI::Sizef screen = tooltip->getRootContainerSize();
@@ -2162,7 +2162,7 @@ void Gui::markItemTooltip(CEGUI::Window* window, const std::string& qualityColou
 //! \brief Gives the window a plain tooltip; when the pointer rests on it, the tooltip takes the plain timing again.
 void Gui::setPlainTooltip(CEGUI::Window* window, const std::string& text)
 {
-    window->setTooltipText(text);
+    window->setTooltipText(toCeguiText(text));
     window->setUserString(ITEM_TOOLTIP_USER_STRING, "0");
     applyTooltipTimingOf(window);
 }

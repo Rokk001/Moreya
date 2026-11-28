@@ -274,6 +274,15 @@ public:
     inline double getDeathVanishSeconds() const { return mDeathVanishSeconds; }
     inline const std::string&   getClassName    () const    { return mClassName; }
 
+    //! \brief The key of the language files that holds the name the player sees for a creature class
+    //! (for example "creature.dwarfworker.name" for the class "DwarfWorker").
+    static std::string getDisplayNameKey(const std::string& className);
+    //! \brief The name the player sees for a creature class in the chosen language. A class without an entry in the
+    //! language files (a custom class of a level) shows its class name.
+    static std::string getDisplayNameOf(const std::string& className);
+    //! \brief The name the player sees for this creature class in the chosen language.
+    std::string getDisplayName() const { return getDisplayNameOf(mClassName); }
+
     inline const std::string&   getMeshName     () const    { return mMeshName; }
 
     inline const std::string&   getBedMeshName  () const    { return mBedMeshName; }

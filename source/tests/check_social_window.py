@@ -16,6 +16,7 @@ import sys
 repo = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(repo / 'scripts'))
 import content_packages  # noqa: E402
+from lang_texts import english_texts  # noqa: E402
 
 checks = 0
 
@@ -138,7 +139,7 @@ check('mSocialWindow->update(' in frame and 'PostLog' not in frame, 'the feed is
 
 window = read('source/render/SocialWindow.cpp')
 server = read('source/network/ODServer.cpp')
-check('seat->isAlliedSeat(owner)' in server and 'keeper->getNick()' in server and '"), keeper " + entry->keeper' in window,
+check('seat->isAlliedSeat(owner)' in server and 'keeper->getNick()' in server and 'rowValues["keeper"] = entry->keeper;' in window,
       'the server sends allied creatures with their keeper name')
 check('row->getChild("Button")->setTooltipText(' in window and 'entry->keeper' in window,
       'full name, class and keeper remain available when the name is elided')
@@ -170,7 +171,11 @@ check('getStatsText(' not in window, 'the book does not invent server-only stati
 values_body = window[window.index('void SocialWindow::refreshValues('):window.index('void SocialWindow::refreshInventory(')]
 check('const bool known = !useLocalCreatureRoster();' in values_body and 'known ?' in values_body,
       'replays and older peers show no server-only values')
-check('Known creatures (' in roster_body and 'detailed server statistics are unavailable' in roster_body,
+# The labels are language entries: the code names the keys, lang-en says what the book said before
+english = english_texts(repo)
+check('"ui.dungeonbook.list.local' in roster_body and '"ui.dungeonbook.list.tooltip.local"' in roster_body and
+      (english is None or (english.get('ui.dungeonbook.list.local') == 'Known creatures ({count})' and
+                           'detailed server statistics are unavailable' in english.get('ui.dungeonbook.list.tooltip.local', ''))),
       'local roster is identified as incomplete')
 destructor = window[window.index('SocialWindow::~SocialWindow()'):window.index('void SocialWindow::setTabState')]
 check('connection->disconnect()' in destructor and 'mProfilePage' not in window,

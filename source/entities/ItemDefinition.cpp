@@ -1,6 +1,7 @@
 #include "entities/ItemDefinition.h"
 
 #include "network/ODPacket.h"
+#include "utils/Translation.h"
 
 #include <memory>
 #include <sstream>
@@ -77,6 +78,14 @@ bool readItemQuality(std::stringstream& stream, Quality& quality, ItemQuality& r
 const std::string& qualityName(Quality quality)
 {
     return QUALITY_NAMES.at(static_cast<size_t>(quality));
+}
+
+//! \brief The quality name for the player: the language entry "ui.quality.<lower case catalogue name>".
+std::string qualityDisplayName(Quality quality)
+{
+    static const std::array<std::string, 4> KEYS = {{"ui.quality.poor", "ui.quality.common", "ui.quality.rare",
+        "ui.quality.epic"}};
+    return Translation::tr(KEYS.at(static_cast<size_t>(quality)));
 }
 
 //! \brief Parses the four quality spellings from definition files.

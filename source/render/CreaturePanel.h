@@ -12,6 +12,8 @@
 #include <CEGUI/Size.h>
 #include <array>
 #include <cstddef>
+#include <functional>
+#include <map>
 #include <set>
 #include <string>
 #include <vector>
@@ -51,6 +53,9 @@ private:
         std::string type;
     };
 
+    //! \brief Sets the tooltips of the worker block, the view buttons and the scroll buttons in the chosen language
+    //! and schedules a refresh of the type columns; also called when the language changes
+    void applyTexts();
     //! \brief Creates the windows of one more type column
     void addSlot();
     //! \brief Shows the given view (index into the view buttons) in the type columns
@@ -111,6 +116,8 @@ private:
     bool mHasData = false;
     //! \brief Whether the labels have to be refreshed in the next update()
     bool mDirty = true;
+    //! \brief Id of the listener that calls applyTexts when the language changes (Translation::addListener)
+    unsigned int mLanguageListener = 0;
 };
 
 #endif

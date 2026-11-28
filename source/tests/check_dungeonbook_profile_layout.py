@@ -317,7 +317,7 @@ for fragment in ('while(rest.size() > ATTRIBUTE_LINE_CHARS)', 'std::string::size
     assert fragment in break_value, fragment
 values_fill = function_of(social, 'void SocialWindow::refreshValues(')
 assert 'const char* names[] = {"Strength", "Dexterity", "Life", "Mana"};' in values_fill
-assert ('text << names[i] << "\\n" << (known ? breakAttributeValue(formatProfileValue(values[i])) : std::string("-"));'
+assert ('text << Translation::tr(nameKeys[i]) << "\\n"\n            << (known ? breakAttributeValue(formatProfileValue(values[i])) : std::string("-"));'
         in values_fill), 'the attribute cells show label and rounded value, broken into the lines of the cell'
 
 
@@ -367,7 +367,7 @@ assert not any(re.fullmatch(r'ValuesPage/(Strength|Dexterity|Life|Mana)\w+', n) 
 # path and skills are rows of the profile page (plan INGAME-QS-11 K1)
 assert 'entry.equipment, entry.path, entry.skills' in social and 'fitTextToWindow' not in social
 tiles = function_of(social, 'void SocialWindow::refreshValues(')
-for fragment in ('const std::string tooltip = std::string(tiles[i]) + ": " + value;',
+for fragment in ('tileText["tile"] = Translation::tr(tileKeys[i]);', 'tileText["value"] = value;',
                  'page->getChild(std::string(tiles[i]) + "Tile")->setTooltipText(tooltip);',
                  'page->getChild(std::string(tiles[i]) + "Title")->setTooltipText(tooltip);'):
     assert fragment in tiles, fragment
@@ -399,13 +399,13 @@ profile_range = (social.index('void SocialWindow::refreshProfile('), social.inde
 assert dots and all(fitted_range[0] < d < fitted_range[1] or profile_range[0] < d < profile_range[1] for d in dots), \
     'only the profile shortens its texts'
 assert 'void setFullText(CEGUI::Window* window, const std::string& text)' in social
-assert 'window->setText(escapeMarkup(text));' in function_of(social, 'void setFullText(')
-for call in ('setFullText(home->getChild("CreaturesLabel"), label.str());',
+assert 'window->setText(Gui::toCeguiText(escapeMarkup(text)));' in function_of(social, 'void setFullText(')
+for call in ('setFullText(home->getChild("CreaturesLabel"), Translation::tr(labelKey, labelValues));',
              'setFullText(row->getChild("Name"), profile.getFullName());',
              'setFullText(header->getChild("NameText"), profile.getFullName());',
              'setFullText(valueWindow, line.slots ? countFilledSlots(value) : formatStatisticsNumbers(value));',
-             'head->setText(std::string(FEED_NAME_COLOUR) + escapeMarkup(profile.getFullName()) + FEED_TIME_COLOUR',
-             'textWindow->setText(std::string(FEED_TEXT_COLOUR) + escapeMarkup(text));'):
+             'head->setText(Gui::toCeguiText(std::string(FEED_NAME_COLOUR) + escapeMarkup(profile.getFullName()) +',
+             'textWindow->setText(Gui::toCeguiText(std::string(FEED_TEXT_COLOUR) + escapeMarkup(text)));'):
     assert call in social, call
 assert 'Creature::fillItemSlotWindows(creature, slots, true)' in social
 creature_text = (repo / 'source/entities/Creature.cpp').read_text()

@@ -37,6 +37,7 @@ from PIL import Image, ImageFilter
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import check_menu_sky_below_horizon as scene  # noqa: E402  (numpy mesh reader of the menu scene check)
+from lang_texts import english_texts  # noqa: E402
 sys.path.insert(0, os.path.join(ROOT, "scripts"))
 import content_packages  # noqa: E402
 import language_package_texts  # noqa: E402
@@ -457,6 +458,20 @@ SOURCE_IDENTIFIERS = {
     ("source/social/SocialGenerator.cpp", '"worker"'): 2,
     ("source/render/WorkerExtras.cpp", '"Creatures/Worker/"'): 1,
     ("source/utils/RunLevelTest.cpp", '" workers="'): 1,
+    ("source/render/WorkersWindow.cpp", '"ui.workers.carry.corpses"'): 1,
+    ("source/render/WorkersWindow.cpp", '"ui.workers.carry.enemyknockedout"'): 1,
+    ("source/render/WorkersWindow.cpp", '"ui.workers.carry.giftboxes"'): 1,
+    ("source/render/WorkersWindow.cpp", '"ui.workers.carry.gold"'): 1,
+    ("source/render/WorkersWindow.cpp", '"ui.workers.carry.items"'): 1,
+    ("source/render/WorkersWindow.cpp", '"ui.workers.carry.ownknockedout"'): 1,
+    ("source/render/WorkersWindow.cpp", '"ui.workers.carry.trapsdoors"'): 1,
+    ("source/render/WorkersWindow.cpp", '"ui.workers.job.carry"'): 1,
+    ("source/render/WorkersWindow.cpp", '"ui.workers.job.claimground"'): 1,
+    ("source/render/WorkersWindow.cpp", '"ui.workers.job.claimwall"'): 1,
+    ("source/render/WorkersWindow.cpp", '"ui.workers.job.clean"'): 1,
+    ("source/render/WorkersWindow.cpp", '"ui.workers.job.dig"'): 1,
+    ("source/render/WorkersWindow.cpp", '"ui.workers.job.reload"'): 1,
+    ("source/render/WorkersWindow.cpp", '"ui.workers.working"'): 1,
 }
 #: Player-facing config text that keeps the word by the owner's decision: the display name "Dwarf Worker" of the hero
 #: class DwarfWorker stays (it names a hero class, not the keeper's Ziv). Only this exact line is excepted, and it must
@@ -552,8 +567,8 @@ def check_ziv_names(failures):
         "gui/ModeGame.layout": ('value="Zivs (J)"', 'value="Zivs: fixed Zivs per job, free Zivs, priority and carry order (J)"'),
         "gui/WindowWorkers.layout": ('<Property name="Text" value="Zivs" />', '<Property name="Text" value="Free Zivs" />'),
         "gui/WindowSkillTree.layout": ('value="Spell: Summon Ziv"',),
-        "source/render/SocialWindow.cpp": ('{"All", "Zivs", "Fighters", "Unhappy"}',),
-        "source/render/CreaturePanel.cpp": ('count->setTooltipText("Zivs");',),
+        "source/render/SocialWindow.cpp": ('"ui.dungeonbook.filter.zivs"',),
+        "source/render/CreaturePanel.cpp": ('"ui.panel.zivs"',),
         "source/modes/GameMode.cpp": ('std::make_pair(Gui::BUTTON_CREATURE_WORKER, "Zivs")',),
         "source/game/Player.cpp": ('"You redeemed your Ziv into "', '"You have no Ziv to fulfill your dark wishes."'),
         "source/gamemap/GameMap.cpp": ('"Your Zivs vanished because the mana ran out"',),
@@ -574,6 +589,11 @@ def check_ziv_names(failures):
                 failures.append("the English entry %s is not %r" % (key, expected))
     else:
         content_packages.unchecked(CHECK, sorted(shown_in_language))
+    # The texts of these language keys say Zivs (the language file lang-en holds the English texts of the code)
+    english = english_texts(ROOT)
+    for key, expected in (("ui.dungeonbook.filter.zivs", "Zivs"), ("ui.panel.zivs", "Zivs")):
+        if english is not None and english.get(key) != expected:
+            failures.append("lang-en says %r for %s, expected %r" % (english.get(key), key, expected))
     for path, texts in shown.items():
         if missing_data(path) or missing_own_rows(path):
             content_packages.unchecked(CHECK, [path])

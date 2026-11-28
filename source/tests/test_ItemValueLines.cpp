@@ -20,14 +20,37 @@
 #define BOOST_TEST_MODULE ItemValueLines
 #include "BoostTestTargetConfig.h"
 
+#include <map>
 #include <string>
 #include <vector>
+
+namespace
+{
+//! \brief The English labels of the value lines, as the language file lang-en gives them for the language keys of the
+//! lines; the test fixes them here so that it does not depend on the content.
+std::string englishLabel(const std::string& key)
+{
+    static std::map<std::string, std::string> labels;
+    if(labels.empty())
+    {
+        labels["ui.item.value.physicaldamage"] = "Physical damage";
+        labels["ui.item.value.magicaldamage"] = "Magical damage";
+        labels["ui.item.value.elementaldamage"] = "Elemental damage";
+        labels["ui.item.value.physicaldefence"] = "Physical defence";
+        labels["ui.item.value.magicaldefence"] = "Magical defence";
+        labels["ui.item.value.elementaldefence"] = "Elemental defence";
+        labels["ui.item.value.attackrating"] = "Attack rating";
+        labels["ui.item.value.defencerating"] = "Defence rating";
+    }
+    return labels[key];
+}
+}
 
 //! Checks that a weapon without damage, defence or ratings (the kobold pick) gets no value line at all
 BOOST_AUTO_TEST_CASE(test_weapon_without_values_has_no_line)
 {
     const ItemWeaponValues pick;
-    BOOST_CHECK(ItemValueLines::describeWeapon(pick).empty());
+    BOOST_CHECK(ItemValueLines::describeWeapon(pick, englishLabel).empty());
 }
 
 //! Checks that every damage and defence component is a line of its own with its name, damage as min-max, and that
@@ -41,7 +64,7 @@ BOOST_AUTO_TEST_CASE(test_every_line_names_its_value)
     sword.mElementDamage = 1.0;
     sword.mMagicalDefense = 3.0;
     sword.mAttackRating = 5.0;
-    const std::vector<std::string> lines = ItemValueLines::describeWeapon(sword);
+    const std::vector<std::string> lines = ItemValueLines::describeWeapon(sword, englishLabel);
     BOOST_REQUIRE_EQUAL(lines.size(), 4u);
     BOOST_CHECK_EQUAL(lines[0], "Physical damage: 2-4.5");
     BOOST_CHECK_EQUAL(lines[1], "Elemental damage: 1");
@@ -57,7 +80,7 @@ BOOST_AUTO_TEST_CASE(test_sub_unit_values_keep_their_decimals)
     ItemWeaponValues sword;
     sword.mPhysicalDamageMin = 0.14;
     sword.mPhysicalDamage = 0.2;
-    const std::vector<std::string> lines = ItemValueLines::describeWeapon(sword);
+    const std::vector<std::string> lines = ItemValueLines::describeWeapon(sword, englishLabel);
     BOOST_REQUIRE_EQUAL(lines.size(), 1u);
     BOOST_CHECK_EQUAL(lines[0], "Physical damage: 0.14-0.2");
 }
@@ -68,7 +91,7 @@ BOOST_AUTO_TEST_CASE(test_damage_from_zero_is_shown)
     ItemWeaponValues club;
     club.mPhysicalDamage = 3.0;
     club.mDefenseRating = 1.5;
-    const std::vector<std::string> lines = ItemValueLines::describeWeapon(club);
+    const std::vector<std::string> lines = ItemValueLines::describeWeapon(club, englishLabel);
     BOOST_REQUIRE_EQUAL(lines.size(), 2u);
     BOOST_CHECK_EQUAL(lines[0], "Physical damage: 0-3");
     BOOST_CHECK_EQUAL(lines[1], "Defence rating: 1.5");

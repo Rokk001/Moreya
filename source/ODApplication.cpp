@@ -149,6 +149,10 @@ void ODApplication::startGame(boost::program_options::variables_map& options)
     ContentPackages::discover(resMgr.getGameDataPath());
     if(!ContentPackages::getMissingPackages().empty())
     {
+        // The message of the missing content is shown in the language of the system when its package is there
+        Translation::discover();
+        Translation::setLanguage(Translation::chooseLanguage(std::string(), Translation::getSystemLanguage(),
+            Translation::getLanguageCodes()));
         ContentPackages::setStartRefused(true);
         return;
     }

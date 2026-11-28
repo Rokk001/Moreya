@@ -45,9 +45,9 @@ social = read('source/render/SocialWindow.cpp')
 node = social[social.index('void showSkillTreeNode('):]
 node = node[:node.index('\n}\n')]
 check('bar->setVisible(false);' in node, 'the rank bar is hidden')
-check('rank->setText(skillRankStars(node.mRank, node.mMaxRank, rank->getPixelSize().d_height));' in node,
+check('rank->setText(Gui::toCeguiText(skillRankStars(node.mRank, node.mMaxRank, rank->getPixelSize().d_height)));' in node,
       'the rank label shows the stars')
-check('rank->setTooltipText(escapeMarkup(node.mBarText));' in node, 'the rank text stays in the tooltip')
+check('rank->setTooltipText(Gui::toCeguiText(escapeMarkup(node.mBarText)));' in node, 'the rank text stays in the tooltip')
 check('setProgress(' not in node, 'no rank progress is drawn')
 stars = social[social.index('std::string skillRankStars('):]
 stars = stars[:stars.index('\n}\n')]
