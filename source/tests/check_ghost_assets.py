@@ -425,8 +425,8 @@ def main():
         assert atlas.crop((x,y,x+w,y+h)).convert('RGBA').getbbox() is not None, 'painted icon atlas binding'
     items = ET.parse(data_path('gui/Items.imageset')).getroot()
     # 733 since the wand (16 icons), the Iron Shield of Arms (4 icons) and the crossbow (16 icons) left the atlas
-    # (counted on feature/drop-items-roster; was 769)
-    assert len(items.findall('Image'))==733, 'item atlas count'
+    # (counted on feature/drop-items-roster; was 769); 917 with the icons of the 46 new item lines
+    assert len(items.findall('Image'))==917, 'item atlas count'
     crystal = items.find("Image[@name='soul_crystal']")
     assert crystal is not None
     with Image.open(data_path('gui/'+items.get('imagefile'))) as atlas, Image.open(data_path('gui/potions/soul_crystal.png')) as source:

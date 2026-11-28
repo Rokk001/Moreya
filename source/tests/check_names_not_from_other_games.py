@@ -62,8 +62,8 @@ def main():
     counts.append(len(research_names))
     displays.extend(research_names)
     if with_content:
-        assert counts == [524, 29, 4, 49, 3, 6], "incomplete player-name extraction: " + repr(counts)
-        assert len(displays) == 615
+        assert counts == [662, 29, 4, 49, 3, 6], "incomplete player-name extraction: " + repr(counts)
+        assert len(displays) == 753
     else:
         # the public part of the same fixed counts (effects, rooms, research)
         assert counts == [49, 3, 6], "incomplete player-name extraction: " + repr(counts)

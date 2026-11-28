@@ -13,20 +13,21 @@ KINDS = {"Damage%", "MaxHP%", "CritChance", "Defense%", "AttackRating%", "Defens
          "MoveSpeed%", "Avoid", "Cooldown%", "DamageAttribute", "Life", "Mana", "ManaCost%",
          "Wakefulness%", "Dig%", "Claim%", "Carry%"}
 # Path lines per (Group, Path) of the effect-based assignment to the new roster, counted once on the branch
-# feature/drop-items-roster after the moves of the drop items plan (20 lines to empty places, Iron Shield of Arms gone).
+# feature/drop-items-roster after the moves and the 46 new lines of the drop items plan: one line per path, slot
+# and weapon class that a creature of the path carries.
 PATH_COUNTS = {
-    ("tank", "Ironclad"): 10, ("tank", "Evader"): 7, ("tank", "Regenerator"): 9,
-    ("healer", "Renewer"): 5, ("healer", "Warder"): 4,
-    ("supporter", "Empowerer"): 4, ("supporter", "Blighter"): 1,
-    ("warrior", "Slayer"): 6, ("warrior", "Ravager"): 6, ("warrior", "Reaver"): 2,
-    ("skirmisher", "Assassin"): 6, ("skirmisher", "Venomist"): 6, ("skirmisher", "Whirlwind"): 2,
+    ("tank", "Ironclad"): 10, ("tank", "Evader"): 10, ("tank", "Regenerator"): 10,
+    ("healer", "Renewer"): 6, ("healer", "Mender"): 6, ("healer", "Warder"): 6,
+    ("supporter", "Empowerer"): 6, ("supporter", "Binder"): 6, ("supporter", "Blighter"): 6,
+    ("warrior", "Slayer"): 6, ("warrior", "Ravager"): 6, ("warrior", "Reaver"): 6,
+    ("skirmisher", "Assassin"): 6, ("skirmisher", "Venomist"): 6, ("skirmisher", "Whirlwind"): 6,
     ("marksman", "Sharpshooter"): 5, ("marksman", "Poisoner"): 5, ("marksman", "Barrager"): 5,
-    ("mage", "Pyromancer"): 5, ("mage", "Sparkcaller"): 5,
+    ("mage", "Pyromancer"): 5, ("mage", "Sparkcaller"): 5, ("mage", "Witherer"): 5,
     ("worker", "Delving"): 5, ("worker", "Claiming"): 5, ("worker", "Survival"): 5,
     ("family", "Arcane"): 5, ("family", "Demon"): 5, ("family", "Greenskin"): 8, ("family", "Dwarf"): 6,
-    ("family", "Elf"): 5, ("family", "Human"): 6, ("family", "Undead"): 6, ("family", "Dragonkin"): 5,
-    ("family", "Workfolk"): 5, ("family", "Beastkin"): 4, ("family", "Stonekin"): 5, ("family", "Vermin"): 4,
-    ("family", "Bloodbound"): 1,
+    ("family", "Elf"): 6, ("family", "Human"): 7, ("family", "Undead"): 6, ("family", "Dragonkin"): 5,
+    ("family", "Workfolk"): 5, ("family", "Beastkin"): 5, ("family", "Stonekin"): 5, ("family", "Vermin"): 4,
+    ("family", "Bloodbound"): 5,
 }
 # Weapon and shield lines whose WeaponClass no creature of their group or family spawns with (counted once on the
 # branch feature/drop-items-roster): none, the lines that named a class their path does not carry moved to paths that
@@ -65,7 +66,7 @@ def main():
         content_packages.unchecked("check_items_cfg", ["config/items.cfg"])
         return
     items = blocks(read("config/items.cfg"), "Item")
-    assert len(items) == 178, "expected five Poor and 173 path lines"
+    assert len(items) == 224, "expected five Poor and 219 path lines"
     equipment = {value(block, "Name"): block for block in blocks(read("config/equipments.cfg"), "Equipment")}
     creatures = blocks(read("config/creatures.cfg"), "Creature")
     effects_source = read("source/entities/ItemEffects.cpp")
@@ -131,11 +132,11 @@ def main():
             assert all(effect.split()[0] in effects for effect in actual_effects), item_id
             price = tuple(map(float, value(block, "Price").split()))
             assert price == {"Poor": (20,), "Common": (100,), "Rare": (300, 100), "Epic": (1500, 250)}[quality], item_id
-    assert len(poor) == 5 and len(paths) == 173 and len(displays) == 519
+    assert len(poor) == 5 and len(paths) == 219 and len(displays) == 657
     assert set(poor) == {"POOR_Head", "POOR_Armour", "POOR_Boots", "POOR_Ring", "POOR_Shield"}
     assert path_counts == PATH_COUNTS, sorted(set(path_counts.items()) ^ set(PATH_COUNTS.items()))
     assert unwearable == UNWEARABLE, sorted(unwearable ^ UNWEARABLE)
-    print("equipment catalogue: 178 lines, 519 distinct path displays, %d group/family paths, %d unwearable weapon lines,"
+    print("equipment catalogue: 224 lines, 657 distinct path displays, %d group/family paths, %d unwearable weapon lines,"
           " ranges/effects/prices/weapons passed" % (len(PATH_COUNTS), len(UNWEARABLE)))
 
 
