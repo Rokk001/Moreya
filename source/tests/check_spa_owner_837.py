@@ -185,7 +185,7 @@ assert 'const Ogre::Vector3 TOWARDS_CHAIR(0.0f, -1.0f, 0.0f);' in attendant_cpp 
 assert attendant_cpp.count('setAnimationState(PoolAttendantPose::climb, true, TOWARDS_CHAIR, false);') == 2
 springboard, _ = read_mesh(room_file('models/SpaSpringboard.mesh'))
 board = [q for material, points in springboard if material == 'SpaSpringboardMeshy' for q in points]
-stone = [q for q in board if abs(q[0]) > 0.22]  # the stone base is wider than the board
+stone = [q for q in board if q[2] < 0.2]  # the stone base lies under the board (the board is at 0.24 to 0.29)
 assert span(board, 1)[1] > 1.3 and span(stone, 1)[1] < 0.47, 'the board of SpaSpringboard reaches out on +y (180: over the pool)'
 # The lifebuoy of variant 1 hangs on the +x side of the chair, outside the frame and below the seat
 ring = [q for q in wood if q[0] > 0.34]  # nothing but the lifebuoy reaches that far out

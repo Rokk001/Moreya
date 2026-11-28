@@ -237,9 +237,9 @@ const Ogre::Real POUR_JUG_HEIGHT_SHARE = 0.17f;
 const Ogre::Vector3 POUR_JUG_GRIP(0.40f, 0.0f, 0.32f);
 const Ogre::Real POUR_JUG_PALM_REACH = 0.07f;
 //! The base ring of the jug (centre x, centre y, radius in mesh units) never goes below the counter top,
-//! which lies this share of the innkeeper's height above the floor (TavernCounter.mesh, 0.4093 of 0.7859)
+//! which lies this share of the innkeeper's height above the floor (TavernCounter.mesh, 0.3740 of 0.7859)
 const Ogre::Vector3 POUR_JUG_BASE_RING(-0.09f, 0.0f, 0.365f);
-const Ogre::Real POUR_JUG_COUNTER_SHARE = 0.5208f;
+const Ogre::Real POUR_JUG_COUNTER_SHARE = 0.4758f;
 //! Points on the base ring that are tested against the counter top
 const int POUR_JUG_RING_POINTS = 12;
 //! RattleShake: the right hand of the infirmary shaman holds the rattle by its handle (this point in mesh units of the
