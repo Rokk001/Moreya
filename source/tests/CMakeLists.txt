@@ -299,6 +299,7 @@ add_boost_test(00-CreatureSkillTreeView
         ${SRC}/creatureskill/CreatureSkillTreeView.h
         ${SRC}/creatureskill/CreatureSkillTreeView.cpp
         ${SRC}/creatureskill/CreatureSkillTree.cpp
+        ${SRC}/utils/Translation.cpp
         ${SRC}/tests/mocks/ConfigManagerSingleton.cpp
         ${SRC}/utils/Helper.cpp
         ${SRC}/render/FrameStatistics.cpp
@@ -313,16 +314,32 @@ add_boost_test(00-CreatureSkillTreeView
 add_boost_test(00-Campaign
         SOURCES
         test_Campaign.cpp
+        EnglishTestTexts.h
         ${SRC}/game/Campaign.h
         ${SRC}/game/Campaign.cpp
-        ${SRC}/game/CampaignWorld.cpp)
+        ${SRC}/game/CampaignWorld.cpp
+        ${SRC}/utils/Translation.cpp
+        ${SRC}/utils/LogManager.cpp
+        LIBRARIES
+        ${OGRE_LIBRARIES}
+        ${Boost_FILESYSTEM_LIBRARY_RELEASE}
+        ${Boost_SYSTEM_LIBRARY_RELEASE}
+        Threads::Threads)
 
 add_boost_test(00-CampaignLevels
         SOURCES
         test_CampaignLevels.cpp
+        EnglishTestTexts.h
         ${SRC}/game/Campaign.h
         ${SRC}/game/Campaign.cpp
-        ${SRC}/game/CampaignWorld.cpp)
+        ${SRC}/game/CampaignWorld.cpp
+        ${SRC}/utils/Translation.cpp
+        ${SRC}/utils/LogManager.cpp
+        LIBRARIES
+        ${OGRE_LIBRARIES}
+        ${Boost_FILESYSTEM_LIBRARY_RELEASE}
+        ${Boost_SYSTEM_LIBRARY_RELEASE}
+        Threads::Threads)
 
 add_boost_test(00-HandLimitRules
         SOURCES
@@ -440,6 +457,7 @@ add_boost_test(aa-LaunchGame
         ${SRC}/tests/mocks/ConfigManagerRoomDefaults.cpp
         ${SRC}/game/SeatData.cpp
         ${SRC}/game/SkillType.cpp
+        ${SRC}/utils/Translation.cpp
         ${SRC}/network/ClientNotification.cpp
         ${SRC}/network/NetTransport.cpp
         ${SRC}/network/ODPacket.cpp
@@ -467,6 +485,7 @@ add_boost_test(aa-TestCreatures
         ${SRC}/tests/mocks/ConfigManagerRoomDefaults.cpp
         ${SRC}/game/SeatData.cpp
         ${SRC}/game/SkillType.cpp
+        ${SRC}/utils/Translation.cpp
         ${SRC}/network/ClientNotification.cpp
         ${SRC}/network/NetTransport.cpp
         ${SRC}/network/ODPacket.cpp
@@ -494,6 +513,7 @@ add_boost_test(aa-TestRooms
         ${SRC}/tests/mocks/ConfigManagerRoomDefaults.cpp
         ${SRC}/game/SeatData.cpp
         ${SRC}/game/SkillType.cpp
+        ${SRC}/utils/Translation.cpp
         ${SRC}/network/ClientNotification.cpp
         ${SRC}/network/NetTransport.cpp
         ${SRC}/network/ODPacket.cpp
@@ -522,6 +542,7 @@ add_boost_test(aa-TestRoomSplit
         ${SRC}/tests/mocks/ConfigManagerRoomDefaults.cpp
         ${SRC}/game/SeatData.cpp
         ${SRC}/game/SkillType.cpp
+        ${SRC}/utils/Translation.cpp
         ${SRC}/network/ClientNotification.cpp
         ${SRC}/network/NetTransport.cpp
         ${SRC}/network/ODPacket.cpp
@@ -550,6 +571,7 @@ add_boost_test(ab-TestTraps
         ${SRC}/tests/mocks/ConfigManagerRoomDefaults.cpp
         ${SRC}/game/SeatData.cpp
         ${SRC}/game/SkillType.cpp
+        ${SRC}/utils/Translation.cpp
         ${SRC}/network/ClientNotification.cpp
         ${SRC}/network/NetTransport.cpp
         ${SRC}/network/ODPacket.cpp

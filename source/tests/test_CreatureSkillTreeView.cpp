@@ -4,6 +4,7 @@
  */
 #define BOOST_TEST_MODULE CreatureSkillTreeView
 #include "BoostTestTargetConfig.h"
+#include "EnglishTestTexts.h"
 #include "creatureskill/CreatureSkillTreeView.h"
 
 #include <boost/filesystem.hpp>
@@ -193,6 +194,8 @@ BOOST_AUTO_TEST_CASE(orc_tooltips)
     SkillTreeConfig config;
     if(!requireConfig(config))
         return;
+    // The tooltip texts are language entries (ability.*) of the English package of the content
+    BOOST_REQUIRE_MESSAGE(EnglishTestTexts::load(), "the English language package is missing although the content is present");
     SkillBuild build;
     build.mRanks["TNK_A1"] = 3;
     build.mRanks["TNK_A2"] = 2;

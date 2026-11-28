@@ -18,6 +18,7 @@
 #define BOOST_TEST_MODULE Campaign
 #include "BoostTestTargetConfig.h"
 
+#include "EnglishTestTexts.h"
 #include "game/Campaign.h"
 #include "game/CampaignWorld.h"
 
@@ -604,15 +605,21 @@ BOOST_AUTO_TEST_CASE(test_world_map)
     BOOST_CHECK(guild.mRaid);
     BOOST_CHECK_EQUAL(guild.mBanner, "banners/b23.png");
     BOOST_CHECK_EQUAL(guild.mPortrait, "portraits/p23.png");
-    BOOST_CHECK_EQUAL(CampaignWorld::getRaidSizeText(guild), "two raids of 10");
+    // The texts come from the language entries campaign.code.*; without the content packages they are the keys
+    const bool english = EnglishTestTexts::load();
+    BOOST_CHECK_EQUAL(CampaignWorld::getRaidSizeText(guild),
+        EnglishTestTexts::expected(english, "two raids of 10", "campaign.code.size_raid_two"));
     BOOST_CHECK_EQUAL(CampaignWorld::getGuildDetailsText(guild),
-        "Leader: Leader 23\nRaid size: two raids of 10\nOrigin: Origin 23");
+        EnglishTestTexts::expected(english, "Leader: Leader 23\nRaid size: two raids of 10\nOrigin: Origin 23",
+            "campaign.code.leader\ncampaign.code.raid_size\ncampaign.code.origin"));
     const CampaignWorldGuild& group = campaign.getLevel(campaign.findLevelByFile("campaign/W1L1.level")).mGuild;
-    BOOST_CHECK_EQUAL(CampaignWorld::getRaidSizeText(group), "one group of 5");
+    BOOST_CHECK_EQUAL(CampaignWorld::getRaidSizeText(group),
+        EnglishTestTexts::expected(english, "one group of 5", "campaign.code.size_group_one"));
     const CampaignWorldGuild& kingsRaid = campaign.getLevel(campaign.findLevelByFile("campaign/W6L3.level")).mGuild;
     BOOST_CHECK_EQUAL(kingsRaid.mFirstLeader, "First Leader");
     BOOST_CHECK_EQUAL(CampaignWorld::getGuildDetailsText(kingsRaid),
-        "Leaders: First Leader and Leader 63\nRaid size: two raids of 30\nOrigin: Origin 63");
+        EnglishTestTexts::expected(english, "Leaders: First Leader and Leader 63\nRaid size: two raids of 30\nOrigin: Origin 63",
+            "campaign.code.leaders\ncampaign.code.raid_size\ncampaign.code.origin"));
 
     // Another number of wings or story caves or a broken file are rejected and leave the map empty
     std::istringstream fiveWings(moreyaMap(5, 3));
