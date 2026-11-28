@@ -272,7 +272,11 @@ def check_mug_code():
     scales = [float(v) for v in re.findall(r', ([0-9.]+)f \}', table)]
     assert len(scales) == 6 and min(scales) >= MIN_LIMB_MUG_SCALE, scales
     entity = read('source/entities/MovableGameEntity.h')
-    assert 'return isSeatClip(clip) || (clip == drink_anim);' in extract(entity, 'inline bool hidesWeapons(')
+    assert 'return isSeatClip(clip) || (clip == drink_anim) || hidesWeaponsAtRest(clip);' in extract(entity, 'inline bool hidesWeapons(')
+    at_rest = extract(entity, 'inline bool hidesWeaponsAtRest(')
+    hidden = re.findall(r'clip == (\w+)\)', at_rest)
+    assert hidden == ['ambient_lie_anim', 'sleep_anim', 'bathe_anim', 'relieve_pit_anim', 'vomit_anim', 'dance_anim',
+                      'happy_anim', 'stretch_anim', 'throw_anim'], hidden
     reactions = read('source/render/CreatureCombatReactions.cpp')
     assert 'EntityAnimation::hidesWeapons(animState->getAnimationName())' in extract(reactions, 'bool playsSeatClip(')
     state = extract(render, 'void RenderManager::rrSetObjectAnimationState(')
