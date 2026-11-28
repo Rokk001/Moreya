@@ -27,8 +27,10 @@
 namespace NetworkProtocol
 {
     //! Network record schema; checked by the existing hello before any level data. wire-6: hello and loadLevel carry
-    //! the room package names, clientRejected the missing ones (ContentPackageCheck.h).
-    static const std::string WIRE_SCHEMA_SUFFIX = " / wire-6";
+    //! the room package names, clientRejected the missing ones (ContentPackageCheck.h). wire-7: the texts that the
+    //! server sends to the clients (chat notices, event messages, objectives) are text references that each client
+    //! resolves in its own language (Translation::makeReference); a wire-6 client would show them as they are.
+    static const std::string WIRE_SCHEMA_SUFFIX = " / wire-7";
 }
 
 /*! \brief This class is an utility class to transfer data through ODSocketClient.
