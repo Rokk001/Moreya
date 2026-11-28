@@ -91,6 +91,20 @@ static RoomRegister reg(new RoomMerchantFactory);
 double setting(const std::string& key)
 { return ConfigManager::getSingleton().getRoomConfigDouble(key); }
 
+//! \brief The name of a traded item as a text reference that each client shows in its own language: the keys
+//! ui.item.soulcrystal, potion.<id>.name and item.<id>.<quality>.name, with the given name as fallback.
+std::string itemNameReference(const ItemInstance& item, const std::string& name)
+{
+    if(item.mSoulCrystal)
+        return Translation::makeNameReference("ui.item.soulcrystal", name);
+    if(!item.mPotionId.empty())
+        return Translation::makeNameReference("potion." + Translation::toKeyPart(item.mPotionId) + ".name", name);
+    if(!item.mDefinitionId.empty())
+        return Translation::makeNameReference("item." + Translation::toKeyPart(item.mDefinitionId) + "." +
+            Translation::toKeyPart(qualityName(item.mQuality)) + ".name", name);
+    return name;
+}
+
 //! \brief Reads the margin as a fractional share.
 double margin(const Seat* seat)
 { return seat->getMerchantMargin() / PERCENT; }
@@ -613,7 +627,9 @@ void RoomMerchant::reserveGoods()
         }
 }
 
-//! \brief Records the approved twenty-deal history and plays the merchant's reaction.
+//! \brief Records the approved twenty-deal history and plays the merchant's reaction. The history travels to the
+//! clients, so the item name is a text reference (itemNameReference) that each client shows in its own language;
+//! "bought" and "sold" are tokens of the record, not shown text.
 void RoomMerchant::recordDeal(const std::string& creature, const ItemInstance& item, double price, bool bought)
 {
     std::ostringstream line;
@@ -621,7 +637,8 @@ void RoomMerchant::recordDeal(const std::string& creature, const ItemInstance& i
     line << getGameMap()->getTurnNumber() << '\t' << creature << '\t'
         << (actor == nullptr ? "" : actor->getDefinition()->getClassName()) << '\t'
         << (actor != nullptr && actor->getDefinition()->isWorker()) << '\t'
-        << (bought ? "bought" : "sold") << '\t' << item.getDisplayName(getGameMap()) << '\t' << price;
+        << (bought ? "bought" : "sold") << '\t' << itemNameReference(item, item.getDisplayName(getGameMap())) << '\t'
+        << price;
     getSeat()->recordMerchantDeal(line.str(), item.mPotionId, bought);
     if(getSeat()->getMerchant() != nullptr) getSeat()->getMerchant()->onDeal();
     if(getCentralTile() != nullptr) fireRoomSound(*getCentralTile(), "Merchant/Deal");
