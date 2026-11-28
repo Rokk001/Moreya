@@ -1715,15 +1715,17 @@ void SocialWindow::refreshValues(const social::DungeonbookEntry& entry)
     page->getChild("Portrait")->setTooltipText(Gui::toCeguiText(escapeMarkup(
         Translation::tr("ui.dungeonbook.values.level", portraitValues))));
 
-    // The column of the former statistics page: window, label in the statistics text, how the value is shown
+    // The column of the former statistics page: window, id of the label in the statistics text (Creature::statsLabel,
+    // the same in every language), how the value is shown
     struct StatisticsLine { const char* window; const char* label; bool slots; };
     const StatisticsLine lines[] = {
-        {"Experience", "Experience", false}, {"HitPoints", "HP", false}, {"Gold", "Gold", false},
-        {"SightRadius", "Sight radius", false}, {"Potions", "Potions", true}, {"Inventory", "Inventory", true},
-        {"DamagePerSecond", "Raw damage per second", false}, {"SkillPoints", "Skill points earned / spent", false}};
+        {"Experience", "experience", false}, {"HitPoints", "hp", false}, {"Gold", "gold", false},
+        {"SightRadius", "sight_radius", false}, {"Potions", "potions", true}, {"Inventory", "inventory", true},
+        {"DamagePerSecond", "damage_per_second", false}, {"SkillPoints", "skill_points", false}};
     for(const StatisticsLine& line : lines)
     {
-        const std::string value = known ? findStatisticsValue(entry.stats, line.label) : std::string();
+        const std::string value = known ? findStatisticsValue(entry.stats, Creature::statsLabel(line.label)) :
+            std::string();
         CEGUI::Window* valueWindow = page->getChild(std::string(line.window) + "Value");
         // The item names of the potion and inventory slots and the meaning of the skill points stay readable
         std::string tooltip = value;

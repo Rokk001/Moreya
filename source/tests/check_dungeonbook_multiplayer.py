@@ -111,7 +111,7 @@ assert 'mServerState != ServerState::StateGame' in request
 assert request.index('clientSocket->getPlayer() == nullptr') < request.index('clientSocket->getPlayer()->getSeat()')
 assert 'mSeatsWithVisionNotified' not in roster and 'getIsOnMap()' not in roster
 assert 'keeper->getNick()' in roster and 'getStatsText(owner)' in roster
-assert 'stats.erase(debug,' in roster and 'stats.find("\\nMood: ", debug)' in roster, 'keep mood values without developer details'
+assert 'stats.erase(debug,' in roster and 'stats.find("\\n" + Creature::statsLabel("mood") + ": ", debug)' in roster, 'keep mood values without developer details'
 assert 'owner->getPlayer() != nullptr' in roster, 'non-player seats are excluded'
 server_fields = ('creature->getName()', 'creature->getDefinition()->getClassName()', 'keeperName',
                  'CreatureAppearanceLogic::toToken(creature->getAppearance())', '<< stats',

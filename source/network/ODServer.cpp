@@ -148,16 +148,20 @@ namespace
             const std::string::size_type debug = stats.find(debugTitle);
             if(debug != std::string::npos)
             {
-                const std::string::size_type mood = stats.find("\nMood: ", debug);
+                const std::string::size_type mood = stats.find("\n" + Creature::statsLabel("mood") + ": ", debug);
                 stats.erase(debug, mood == std::string::npos ? std::string::npos : mood - debug);
             }
-            // Rounded to two decimals like the other values of the statistics text (owner decision 830)
-            stats += "Attack rating: " + Creature::formatRoundedNumber(creature->getAttackRating()) + "\n";
-            stats += "Defense rating: " + Creature::formatRoundedNumber(creature->getDefenseRating()) + "\n";
-            stats += "Raw damage per second: " + Creature::formatRoundedNumber(creature->getRawDamagePerSecond()) + "\n";
-            stats += "Sight radius: " + Helper::toString(creature->getTileSightRadius()) + "\n";
-            stats += "Skill points earned / spent: " + Helper::toString(creature->getSkillPointsEarned()) + " / " +
-                Helper::toString(creature->getSkillPointsSpent()) + "\n";
+            // Rounded to two decimals like the other values of the statistics text (owner decision 830); the labels
+            // are text references that each client shows in its own language (Creature::statsLabel)
+            stats += Creature::statsLabel("attack_rating") + ": " +
+                Creature::formatRoundedNumber(creature->getAttackRating()) + "\n";
+            stats += Creature::statsLabel("defense_rating") + ": " +
+                Creature::formatRoundedNumber(creature->getDefenseRating()) + "\n";
+            stats += Creature::statsLabel("damage_per_second") + ": " +
+                Creature::formatRoundedNumber(creature->getRawDamagePerSecond()) + "\n";
+            stats += Creature::statsLabel("sight_radius") + ": " + Helper::toString(creature->getTileSightRadius()) + "\n";
+            stats += Creature::statsLabel("skill_points") + ": " + Helper::toString(creature->getSkillPointsEarned()) +
+                " / " + Helper::toString(creature->getSkillPointsSpent()) + "\n";
             notification->mPacket << creature->getName() << creature->getDefinition()->getClassName() << keeperName
                 << CreatureAppearanceLogic::toToken(creature->getAppearance())
                 << stats << static_cast<uint32_t>(creature->getLevel())

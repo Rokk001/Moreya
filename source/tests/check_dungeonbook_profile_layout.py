@@ -17,6 +17,7 @@ import xml.etree.ElementTree as ET
 repo = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(repo / 'scripts'))
 import content_packages  # noqa: E402
+import language_package_texts  # noqa: E402
 import room_packages  # noqa: E402
 
 gui = (repo / 'source/render/Gui.cpp').read_text()
@@ -216,10 +217,20 @@ assert 'gui/DungeonbookIcons.png' in room_packages.credits_text(repo)
 
 # Code: real game data only, every value of today kept, rounded to at most two decimals (owner decision 830: no raw
 # float sums such as 51.59700000000005), and the slots filled by the creature code
-for label in ('"Experience"', '"HP"', '"Gold"', '"Sight radius"', '"Potions"', '"Inventory"', '"Raw damage per second"',
-              '"Skill points earned / spent"'):
-    assert label in social, label
-assert 'findStatisticsValue(entry.stats, line.label)' in social
+# The labels of the statistics text are the text references "@creature.stats.<id>" (Creature::statsLabel), the same in
+# every language; their English texts are the labels of before
+STATISTICS_LABELS = (('experience', 'Experience'), ('hp', 'HP'), ('gold', 'Gold'), ('sight_radius', 'Sight radius'),
+                     ('potions', 'Potions'), ('inventory', 'Inventory'), ('damage_per_second', 'Raw damage per second'),
+                     ('skill_points', 'Skill points earned / spent'))
+for label, _ in STATISTICS_LABELS:
+    assert '"%s"' % label in social, label
+assert 'findStatisticsValue(entry.stats, Creature::statsLabel(line.label))' in social
+if content_packages.has_content(repo):
+    english_labels = language_package_texts.english(repo)
+    for label, text in STATISTICS_LABELS:
+        assert english_labels.get('creature.stats.' + label) == text, label
+else:
+    content_packages.unchecked('check_dungeonbook_profile_layout', ['English labels of the statistics text'])
 for field in ('critical', 'attackRating', 'defenseRating', 'physicalDefense', 'magicalDefense', 'elementDefense'):
     assert 'formatProfileValue(entry.%s)' % field in social, field
 assert 'formatProfileValue(values[i])' in social
@@ -255,9 +266,9 @@ for fragment in ('stream << std::fixed;', 'stream << std::scientific;', 'if(std:
     assert fragment in rounded, fragment
 assert re.search(r'ROUNDED_DECIMALS = 2;', creature_cpp) and re.search(r'ROUNDED_FIXED_MAX = 1e15;', creature_cpp)
 stats_text = function_of(creature_cpp, 'std::string Creature::getStatsText(const Seat* viewer)')
-for fragment in ('"Experience: " << formatRoundedNumber(mExp)',
-                 '"HP: " << formatRoundedNumber(getHP()) << " / " << formatRoundedNumber(mMaxHP)',
-                 '"Gold: " << formatRoundedNumber(mGoldCarried)'):
+for fragment in ('statsLabel("experience") << ": " << formatRoundedNumber(mExp)',
+                 'statsLabel("hp") << ": " << formatRoundedNumber(getHP()) << " / " << formatRoundedNumber(mMaxHP)',
+                 'statsLabel("gold") << ": " << formatRoundedNumber(mGoldCarried)'):
     assert fragment in stats_text, fragment
 server_text = (repo / 'source/network/ODServer.cpp').read_text()
 for getter in ('getAttackRating', 'getDefenseRating', 'getRawDamagePerSecond'):

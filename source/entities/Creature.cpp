@@ -8147,7 +8147,14 @@ std::string Creature::getStatsText()
     return getStatsText(getSeat());
 }
 
-//! \brief Builds statistics while masking new private item fields for foreign viewing seats.
+std::string Creature::statsLabel(const std::string& id)
+{
+    return Translation::makeReference("creature.stats." + id);
+}
+
+//! \brief Builds statistics while masking new private item fields for foreign viewing seats. The labels of the
+//! player values are text references (statsLabel), so every client reads them in its own language; the developer
+//! section "Debugging information" stays English like a log.
 std::string Creature::getStatsText(const Seat* viewer)
 {
     // The creatures are not refreshed at each turn so this information is relevant in the server
@@ -8157,18 +8164,18 @@ std::string Creature::getStatsText(const Seat* viewer)
     const bool showPrivateItems = viewer == getSeat();
 
     std::stringstream tempSS;
-    tempSS << formatTitleOn << "Characteristics" << formatTitleOff << std::endl;
+    tempSS << formatTitleOn << statsLabel("characteristics") << formatTitleOff << std::endl;
     if(getDefinition()->isChampion())
-        tempSS << "Level: " << CHAMPION_CROWN_MARKUP << std::endl;
+        tempSS << statsLabel("level") << ": " << CHAMPION_CROWN_MARKUP << std::endl;
     else
-        tempSS << "Level: " << getLevel() << std::endl;
-    tempSS << "Strength / Dexterity / Life / Mana: " << formatDisplayNumber(getStrength()) << " / "
+        tempSS << statsLabel("level") << ": " << getLevel() << std::endl;
+    tempSS << statsLabel("attributes") << ": " << formatDisplayNumber(getStrength()) << " / "
         << formatDisplayNumber(getDexterity()) << " / " << formatDisplayNumber(getLife()) << " / "
         << formatDisplayNumber(getMana()) << std::endl;
-    tempSS << "Critical chance: " << formatFixedNumber(getCritChance()) << " %" << std::endl;
-    tempSS << "Mana: " << formatDisplayNumber(getCurrentMana()) << " / " << formatDisplayNumber(getMaxMana())
+    tempSS << statsLabel("critical_chance") << ": " << formatFixedNumber(getCritChance()) << " %" << std::endl;
+    tempSS << statsLabel("mana") << ": " << formatDisplayNumber(getCurrentMana()) << " / " << formatDisplayNumber(getMaxMana())
         << std::endl;
-    tempSS << "Equipment: ";
+    tempSS << statsLabel("equipment") << ": ";
     for(std::size_t index = 0; index < mEquipment.size(); ++index)
     {
         if(index != 0)
@@ -8177,7 +8184,7 @@ std::string Creature::getStatsText(const Seat* viewer)
             mEquipment[index].get() : nullptr;
         tempSS << getItemSlotDisplayText(item, getGameMap()) << formatTitleOff;
     }
-    tempSS << std::endl << "Potions: ";
+    tempSS << std::endl << statsLabel("potions") << ": ";
     for(std::size_t index = 0; index < mPotionSlots.size(); ++index)
     {
         if(index != 0)
@@ -8185,7 +8192,7 @@ std::string Creature::getStatsText(const Seat* viewer)
         tempSS << getItemSlotDisplayText(showPrivateItems ? mPotionSlots[index].get() : nullptr, getGameMap())
             << formatTitleOff;
     }
-    tempSS << std::endl << "Inventory: ";
+    tempSS << std::endl << statsLabel("inventory") << ": ";
     for(std::size_t index = 0; index < mInventory.size(); ++index)
     {
         if(index != 0)
@@ -8194,51 +8201,53 @@ std::string Creature::getStatsText(const Seat* viewer)
             << formatTitleOff;
     }
     tempSS << std::endl;
-    tempSS << "Path: " << getSkillPathText() << std::endl;
-    tempSS << "Skills: " << getSkillListText() << std::endl;
+    tempSS << statsLabel("path") << ": " << getSkillPathText() << std::endl;
+    tempSS << statsLabel("skills") << ": " << getSkillListText() << std::endl;
     // Rounded to two decimals (owner decision 830), the Dungeonbook shows these values as they are written here
-    tempSS << "Experience: " << formatRoundedNumber(mExp) << std::endl;
-    tempSS << "HP: " << formatRoundedNumber(getHP()) << " / " << formatRoundedNumber(mMaxHP) << std::endl;
-    tempSS << "Gold: " << formatRoundedNumber(mGoldCarried) << std::endl;
+    tempSS << statsLabel("experience") << ": " << formatRoundedNumber(mExp) << std::endl;
+    tempSS << statsLabel("hp") << ": " << formatRoundedNumber(getHP()) << " / " << formatRoundedNumber(mMaxHP) << std::endl;
+    tempSS << statsLabel("gold") << ": " << formatRoundedNumber(mGoldCarried) << std::endl;
     for(Room* room : getGameMap()->getRoomsByTypeAndSeat(RoomType::infirmary, getSeat()))
     {
         RoomInfirmary* infirmary = static_cast<RoomInfirmary*>(room);
         const RoomInfirmary::PatientInfo* patient = infirmary->getPatient(*this);
         if(patient != nullptr && patient->creature == this)
         {
-            tempSS << "Infirmary: " << formatFixedNumber(getHP() * 100.0 / getMaxHp()) << " % -> "
+            tempSS << statsLabel("infirmary") << ": " << formatFixedNumber(getHP() * 100.0 / getMaxHp()) << " % -> "
                 << infirmary->getDischargeThreshold() << " %" << std::endl;
             break;
         }
     }
     if (!getDefinition()->isWorker())
     {
-        tempSS << "Wakefulness: " << mWakefulness << std::endl;
-        tempSS << "Hunger: " << mHunger << std::endl;
-        tempSS << "Thirst: " << mThirst << std::endl;
-        tempSS << "Drunk: " << mDrunk << std::endl;
-        tempSS << "Hangover: " << mHangoverTurns << std::endl;
-        tempSS << "Urge: " << mUrge << std::endl;
-        tempSS << "Dirt: " << mCreatureDirt << std::endl;
+        tempSS << statsLabel("wakefulness") << ": " << mWakefulness << std::endl;
+        tempSS << statsLabel("hunger") << ": " << mHunger << std::endl;
+        tempSS << statsLabel("thirst") << ": " << mThirst << std::endl;
+        tempSS << statsLabel("drunk") << ": " << mDrunk << std::endl;
+        tempSS << statsLabel("hangover") << ": " << mHangoverTurns << std::endl;
+        tempSS << statsLabel("urge") << ": " << mUrge << std::endl;
+        tempSS << statsLabel("dirt") << ": " << mCreatureDirt << std::endl;
     }
-    tempSS << "Move speed (G/W/L): " << getMoveSpeedGround() << " / "
+    tempSS << statsLabel("move_speed") << ": " << getMoveSpeedGround() << " / "
         << getMoveSpeedWater() << " / " << getMoveSpeedLava() << std::endl;
-    tempSS << "Weapons:" << std::endl;
+    tempSS << statsLabel("weapons") << ":" << std::endl;
     if(mWeaponL == nullptr)
-        tempSS << " - Left: none" << std::endl;
+        tempSS << " - " << statsLabel("weapon_left") << ": " << statsLabel("none") << std::endl;
     else
-        tempSS << " - Left: " << mWeaponL->getName() << " | Damage (P/M/E): " << mWeaponL->getPhysicalDamage()
+        tempSS << " - " << statsLabel("weapon_left") << ": " << mWeaponL->getName() << " | " << statsLabel("damage")
+               << ": " << mWeaponL->getPhysicalDamage()
                << " / " << mWeaponL->getMagicalDamage() << " / " << mWeaponL->getElementDamage() << std::endl;
     if(mWeaponR == nullptr)
-        tempSS << " - Right: none" << std::endl;
+        tempSS << " - " << statsLabel("weapon_right") << ": " << statsLabel("none") << std::endl;
     else
-        tempSS << " - Right: " << mWeaponR->getName() << " | Damage (P/M/E): " << mWeaponR->getPhysicalDamage()
+        tempSS << " - " << statsLabel("weapon_right") << ": " << mWeaponR->getName() << " | " << statsLabel("damage")
+               << ": " << mWeaponR->getPhysicalDamage()
                << " / " << mWeaponR->getMagicalDamage() << " / " << mWeaponR->getElementDamage() << std::endl;
-    tempSS << "Defense (P/M/E): " << getPhysicalDefense() << " / " << getMagicalDefense() << " / " << getElementDefense() << std::endl;
+    tempSS << statsLabel("defense") << ": " << getPhysicalDefense() << " / " << getMagicalDefense() << " / " << getElementDefense() << std::endl;
     if (getDefinition()->isWorker())
     {
-        tempSS << "Dig rate: " << getDigRate() << std::endl;
-        tempSS << "Dance rate: " << getClaimRate() << std::endl;
+        tempSS << statsLabel("dig_rate") << ": " << getDigRate() << std::endl;
+        tempSS << statsLabel("dance_rate") << ": " << getClaimRate() << std::endl;
     }
 
     tempSS << formatTitleOn << "\nDebugging information" << formatTitleOff << std::endl;
@@ -8265,8 +8274,8 @@ std::string Creature::getStatsText(const Seat* viewer)
         ++nbDestinations;
     }
     tempSS << std::endl;
-    tempSS << "Mood: " << CreatureMood::toString(mMoodValue) << std::endl;
-    tempSS << "Mood points: " << Helper::toString(mMoodPoints) << std::endl;
+    tempSS << statsLabel("mood") << ": " << CreatureMood::toString(mMoodValue) << std::endl;
+    tempSS << statsLabel("mood_points") << ": " << Helper::toString(mMoodPoints) << std::endl;
     return tempSS.str();
 }
 
