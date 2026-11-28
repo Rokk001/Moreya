@@ -94,6 +94,12 @@ private:
     std::vector<CEGUI::Window*> mCustomVideoComboBoxes;
     std::vector<CEGUI::Window*> mCustomVideoTexts;
 
+    //! \brief Id of the language change listener (Translation::addListener), 0 when none is registered.
+    unsigned int mLanguageListener = 0;
+
+    //! \brief Writes the texts set from code again after the language changed.
+    void onLanguageChanged();
+
     //! \brief Updates the page title when another settings tab is selected (in game window).
     bool onSelectedTabChanged(const CEGUI::EventArgs&);
 

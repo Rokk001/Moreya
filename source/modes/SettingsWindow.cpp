@@ -95,16 +95,96 @@ static const float GAME_MUSIC_SLIDER_BOTTOM = 104.0f;
 //! Distance between the bottom of the tab control and the bottom of the settings window (pixels).
 static const float PAGE_TABS_BOTTOM_MARGIN = 108.0f;
 
-//! \brief Returns the title shown above the settings page with the given tab name.
-static std::string getPageTitle(const std::string& tabName)
+//! \brief Returns the title shown above the settings page with the given tab name, in the chosen language.
+static CEGUI::String getPageTitle(const std::string& tabName)
 {
     if(tabName == "Video")
-        return "Graphics Options";
+        return Gui::trCegui("mode.settings.title.video");
     if(tabName == "Audio")
-        return "Sound Options";
+        return Gui::trCegui("mode.settings.title.audio");
     if(tabName == "Input")
-        return "Control Options";
-    return "Game Options";
+        return Gui::trCegui("mode.settings.title.input");
+    return Gui::trCegui("mode.settings.title.game");
+}
+
+//! The values of the three-step settings (creature reactions, treasury detail, room ambience) as saved in the
+//! configuration; the combo box item id is the index in this list, the shown text comes from the language files.
+static const char* const STEP_VALUES[3] = {"full", "reduced", "off"};
+
+//! Language keys of the shown texts of STEP_VALUES.
+static const char* const STEP_KEYS[3] = {"mode.settings.level.full", "mode.settings.level.reduced",
+    "mode.settings.level.off"};
+
+//! \brief Returns the shown text of the setting step with the given index (0 to 2), in the chosen language.
+static CEGUI::String getStepText(uint32_t index)
+{
+    return Gui::trCegui(STEP_KEYS[index]);
+}
+
+//! \brief Returns the index (0 to 2) of a saved step value; an unknown value gives 0 (full).
+static uint32_t getStepIndex(const std::string& value)
+{
+    for(uint32_t i = 0; i < 3; ++i)
+    {
+        if(value == STEP_VALUES[i])
+            return i;
+    }
+    return 0;
+}
+
+//! \brief Returns the saved value of the selected item of a three-step combo box, "full" when nothing is selected.
+static std::string getSelectedStepValue(CEGUI::Combobox* combo)
+{
+    CEGUI::ListboxItem* item = combo->getSelectedItem();
+    if(item == nullptr)
+        return std::string("full");
+    return std::string(STEP_VALUES[std::min<uint32_t>(item->getID(), 2)]);
+}
+
+//! \brief Returns the shown label of a video option: the translated name of the options this game names, else the
+//! name given by the render system.
+static CEGUI::String getVideoOptionLabel(const std::string& optionName)
+{
+    if(optionName == OPTION_VSYNC_INTERVAL)
+        return Gui::trCegui("mode.settings.option.vsync_interval");
+    if(optionName == OPTION_REVERSED_Z_BUFFER)
+        return Gui::trCegui("mode.settings.option.reversed_z_buffer");
+    if(optionName == OPTION_SEPARATE_SHADER_OBJECTS)
+        return Gui::trCegui("mode.settings.option.separate_shader_objects");
+    if(optionName == OPTION_DEBUG_LAYER)
+        return Gui::trCegui("mode.settings.option.debug_layer");
+    return Gui::toCeguiText(optionName);
+}
+
+//! \brief Fills a three-step combo box with the shown texts and selects the item of the given saved value.
+static void fillStepCombo(CEGUI::Combobox* combo, const CEGUI::Image* selImg, const std::string& current)
+{
+    combo->resetList();
+    const uint32_t currentIndex = getStepIndex(current);
+    for(uint32_t i = 0; i < 3; ++i)
+    {
+        CEGUI::ListboxTextItem* item = new CEGUI::ListboxTextItem(getStepText(i), i);
+        item->setSelectionBrushImage(selImg);
+        combo->addItem(item);
+        if(i == currentIndex)
+        {
+            combo->setText(item->getText());
+            combo->setItemSelectState(item, true);
+        }
+    }
+}
+
+//! \brief Writes the shown texts of the items of a three-step combo box again, keeping the selection.
+static void relabelStepCombo(CEGUI::Combobox* combo)
+{
+    for(size_t i = 0; i < combo->getItemCount(); ++i)
+    {
+        CEGUI::ListboxTextItem* item = static_cast<CEGUI::ListboxTextItem*>(combo->getListboxItemFromIndex(i));
+        item->setText(getStepText(std::min<uint32_t>(item->getID(), 2)));
+        if(item->isSelected())
+            combo->setText(item->getText());
+    }
+    combo->invalidate();
 }
 
 //! \brief Loads the settings window into the given root: as a centred window in the frame of the chosen menu sheet for
@@ -272,10 +352,64 @@ SettingsWindow::SettingsWindow(CEGUI::Window* rootWindow, Gui& gui, bool menuPag
 
     initConfig();
     mGui.registerWindowHierarchy(mApplyWindow);
+    mLanguageListener = Translation::addListener(std::bind(&SettingsWindow::onLanguageChanged, this));
+}
+
+//! \brief Writes the texts set from code again after the language changed: page title, the shown values of the
+//! three-step combo boxes, the texts of the sliders and the labels of the video options. The saved values and the
+//! selections stay as they are.
+void SettingsWindow::onLanguageChanged()
+{
+    if((mSettingsWindow == nullptr) || (mRootWindow == nullptr))
+        return;
+
+    if(mSettingsWindow->isChild("PageTitle") && mSettingsWindow->isChild("MainTabControl"))
+    {
+        CEGUI::TabControl* tabs = static_cast<CEGUI::TabControl*>(mSettingsWindow->getChild("MainTabControl"));
+        if(tabs->getTabCount() > 0)
+        {
+            const std::string name = tabs->getTabContentsAtIndex(tabs->getSelectedTabIndex())->getName().c_str();
+            mSettingsWindow->getChild("PageTitle")->setText(getPageTitle(name));
+        }
+    }
+
+    const char* const stepCombos[3] = {
+        "SettingsWindow/MainTabControl/Game/GameSP/CreatureReactions",
+        "SettingsWindow/MainTabControl/Game/GameSP/TreasuryDetail",
+        "SettingsWindow/MainTabControl/Audio/AudioSP/RoomAmbience"};
+    for(uint32_t i = 0; i < 3; ++i)
+        relabelStepCombo(static_cast<CEGUI::Combobox*>(mRootWindow->getChild(stepCombos[i])));
+
+    std::map<std::string, std::string> values;
+    CEGUI::Slider* musicSlider = static_cast<CEGUI::Slider*>(
+        mRootWindow->getChild("SettingsWindow/MainTabControl/Audio/AudioSP/MusicSlider"));
+    values["value"] = Helper::toString(static_cast<int32_t>(musicSlider->getCurrentValue()));
+    mRootWindow->getChild("SettingsWindow/MainTabControl/Audio/AudioSP/MusicText")->setText(
+        Gui::toCeguiText(Translation::tr("mode.settings.music", values)));
+    CEGUI::Slider* panSpeedSlider = static_cast<CEGUI::Slider*>(
+        mRootWindow->getChild("SettingsWindow/MainTabControl/Input/InputSP/PanSpeedSlider"));
+    values["value"] = Helper::toString(static_cast<int32_t>(10.0f + panSpeedSlider->getCurrentValue()));
+    mRootWindow->getChild("SettingsWindow/MainTabControl/Input/InputSP/PanSpeedText")->setText(
+        Gui::toCeguiText(Translation::tr("mode.settings.pan_speed", values)));
+    CEGUI::Slider* lightSlider = static_cast<CEGUI::Slider*>(
+        mRootWindow->getChild("SettingsWindow/MainTabControl/Game/GameSP/LightSlider"));
+    values["value"] = Helper::toString(static_cast<int32_t>(lightSlider->getCurrentValue()));
+    mRootWindow->getChild("SettingsWindow/MainTabControl/Game/GameSP/LightText")->setText(
+        Gui::toCeguiText(Translation::tr("mode.settings.ambient_light", values)));
+
+    const std::string textSuffix = "_Text";
+    for(CEGUI::Window* label : mCustomVideoTexts)
+    {
+        std::string name = label->getName().c_str();
+        if(name.size() > textSuffix.size())
+            name.erase(name.size() - textSuffix.size());
+        label->setText(getVideoOptionLabel(name) + ": ");
+    }
 }
 
 SettingsWindow::~SettingsWindow()
 {
+    Translation::removeListener(mLanguageListener);
     // Disconnects all event connections.
     for(CEGUI::Event::Connection& c : mEventConnections)
         c->disconnect();
@@ -373,48 +507,14 @@ void SettingsWindow::initConfig()
 
     CEGUI::Combobox* creatureReactions = static_cast<CEGUI::Combobox*>(
             mRootWindow->getChild("SettingsWindow/MainTabControl/Game/GameSP/CreatureReactions"));
-    creatureReactions->resetList();
     std::string reactionsCurrent = CreatureReactions::modeToString(CreatureReactions::modeFromString(
         config.getGameValue(Config::CREATURE_REACTIONS, "full", false)));
-    std::vector<std::string> reactionModes;
-    reactionModes.push_back("full");
-    reactionModes.push_back("reduced");
-    reactionModes.push_back("off");
-    uint32_t cptReactionMode = 0;
-    for(const std::string& reactionMode : reactionModes)
-    {
-        CEGUI::ListboxTextItem* item = new CEGUI::ListboxTextItem(reactionMode, cptReactionMode);
-        item->setSelectionBrushImage(selImg);
-        creatureReactions->addItem(item);
-        if(reactionMode == reactionsCurrent)
-        {
-            creatureReactions->setText(item->getText());
-            creatureReactions->setItemSelectState(item, true);
-        }
-        ++cptReactionMode;
-    }
+    fillStepCombo(creatureReactions, selImg, reactionsCurrent);
     CEGUI::Combobox* treasuryDetail = static_cast<CEGUI::Combobox*>(
             mRootWindow->getChild("SettingsWindow/MainTabControl/Game/GameSP/TreasuryDetail"));
-    treasuryDetail->resetList();
     std::string treasuryDetailCurrent = TreasuryGoldMesh::detailToString(TreasuryGoldMesh::detailFromString(
         config.getGameValue(Config::TREASURY_DETAIL, "full", false)));
-    std::vector<std::string> treasuryDetailModes;
-    treasuryDetailModes.push_back("full");
-    treasuryDetailModes.push_back("reduced");
-    treasuryDetailModes.push_back("off");
-    uint32_t cptTreasuryDetail = 0;
-    for(const std::string& treasuryDetailMode : treasuryDetailModes)
-    {
-        CEGUI::ListboxTextItem* item = new CEGUI::ListboxTextItem(treasuryDetailMode, cptTreasuryDetail);
-        item->setSelectionBrushImage(selImg);
-        treasuryDetail->addItem(item);
-        if(treasuryDetailMode == treasuryDetailCurrent)
-        {
-            treasuryDetail->setText(item->getText());
-            treasuryDetail->setItemSelectState(item, true);
-        }
-        ++cptTreasuryDetail;
-    }
+    fillStepCombo(treasuryDetail, selImg, treasuryDetailCurrent);
     CEGUI::ToggleButton* bloodEffectsCheckbox = static_cast<CEGUI::ToggleButton*>(
         mRootWindow->getChild("SettingsWindow/MainTabControl/Game/GameSP/BloodEffectsCheckbox"));
     bloodEffectsCheckbox->setSelected(
@@ -422,26 +522,9 @@ void SettingsWindow::initConfig()
     syncKoCreaturesSetting();
     CEGUI::Combobox* roomAmbience = static_cast<CEGUI::Combobox*>(
             mRootWindow->getChild("SettingsWindow/MainTabControl/Audio/AudioSP/RoomAmbience"));
-    roomAmbience->resetList();
     std::string ambienceCurrent = RoomAmbience::modeToString(RoomAmbience::modeFromString(
         config.getGameValue(Config::ROOM_AMBIENCE, "full", false)));
-    std::vector<std::string> ambienceModes;
-    ambienceModes.push_back("full");
-    ambienceModes.push_back("reduced");
-    ambienceModes.push_back("off");
-    uint32_t cptAmbienceMode = 0;
-    for(const std::string& ambienceMode : ambienceModes)
-    {
-        CEGUI::ListboxTextItem* item = new CEGUI::ListboxTextItem(ambienceMode, cptAmbienceMode);
-        item->setSelectionBrushImage(selImg);
-        roomAmbience->addItem(item);
-        if(ambienceMode == ambienceCurrent)
-        {
-            roomAmbience->setText(item->getText());
-            roomAmbience->setItemSelectState(item, true);
-        }
-        ++cptAmbienceMode;
-    }
+    fillStepCombo(roomAmbience, selImg, ambienceCurrent);
 
     std::string panSpeedStr = config.getInputValue(Config::PAN_SPEED, "100", false);
     float panSpeedPercent = panSpeedStr.empty() ? 100.0f : Helper::toFloat(panSpeedStr);
@@ -609,7 +692,7 @@ void SettingsWindow::initConfig()
         CEGUI::DefaultWindow* videoCbText = static_cast<CEGUI::DefaultWindow*>(videoTab->createChild("OD/StaticText", optionName + "_Text"));
         videoCbText->setArea(CEGUI::UDim(0, 20), CEGUI::UDim(0, CUSTOM_VIDEO_OPTIONS_TOP + offset), CEGUI::UDim(0.4, 0),
                              CEGUI::UDim(0, CUSTOM_VIDEO_LABEL_HEIGHT));
-        videoCbText->setText(optionName + ": ");
+        videoCbText->setText(getVideoOptionLabel(optionName) + ": ");
         videoCbText->setProperty("FrameEnabled", "False");
         videoCbText->setProperty("BackgroundEnabled", "False");
 
@@ -690,17 +773,13 @@ bool SettingsWindow::saveConfig()
 
     CEGUI::Combobox* creatureReactions = static_cast<CEGUI::Combobox*>(
             mRootWindow->getChild("SettingsWindow/MainTabControl/Game/GameSP/CreatureReactions"));
-    CEGUI::ListboxItem* creatureReactionsItem = creatureReactions->getSelectedItem();
-    std::string reactionMode = (creatureReactionsItem != nullptr) ?
-        std::string(creatureReactionsItem->getText().c_str()) : std::string("full");
+    std::string reactionMode = getSelectedStepValue(creatureReactions);
     config.setGameValue(Config::CREATURE_REACTIONS, reactionMode);
     if(CreatureReactions::getSingletonPtr() != nullptr)
         CreatureReactions::getSingleton().setMode(CreatureReactions::modeFromString(reactionMode));
     CEGUI::Combobox* treasuryDetail = static_cast<CEGUI::Combobox*>(
             mRootWindow->getChild("SettingsWindow/MainTabControl/Game/GameSP/TreasuryDetail"));
-    CEGUI::ListboxItem* treasuryDetailItem = treasuryDetail->getSelectedItem();
-    std::string treasuryDetailMode = (treasuryDetailItem != nullptr) ?
-        std::string(treasuryDetailItem->getText().c_str()) : std::string("full");
+    std::string treasuryDetailMode = getSelectedStepValue(treasuryDetail);
     config.setGameValue(Config::TREASURY_DETAIL, treasuryDetailMode);
     const TreasuryGoldMesh::Detail previousTreasuryDetail = TreasuryGoldMesh::getDetail();
     TreasuryGoldMesh::setDetail(TreasuryGoldMesh::detailFromString(treasuryDetailMode));
@@ -720,9 +799,7 @@ bool SettingsWindow::saveConfig()
     }
     CEGUI::Combobox* roomAmbience = static_cast<CEGUI::Combobox*>(
             mRootWindow->getChild("SettingsWindow/MainTabControl/Audio/AudioSP/RoomAmbience"));
-    CEGUI::ListboxItem* roomAmbienceItem = roomAmbience->getSelectedItem();
-    std::string ambienceMode = (roomAmbienceItem != nullptr) ?
-        std::string(roomAmbienceItem->getText().c_str()) : std::string("full");
+    std::string ambienceMode = getSelectedStepValue(roomAmbience);
     config.setGameValue(Config::ROOM_AMBIENCE, ambienceMode);
     if(RoomAmbience::getSingletonPtr() != nullptr)
         RoomAmbience::getSingleton().setMode(RoomAmbience::modeFromString(ambienceMode));
@@ -1036,7 +1113,9 @@ void SettingsWindow::setMusicVolumeValue(float volume)
 
     // Set the music volume text
     CEGUI::Window* volumeText = mRootWindow->getChild("SettingsWindow/MainTabControl/Audio/AudioSP/MusicText");
-    volumeText->setText("Music: " + Helper::toString(static_cast<int32_t>(volume)) + "%");
+    std::map<std::string, std::string> musicValues;
+    musicValues["value"] = Helper::toString(static_cast<int32_t>(volume));
+    volumeText->setText(Gui::toCeguiText(Translation::tr("mode.settings.music", musicValues)));
 }
 
 bool SettingsWindow::onPanSpeedChanged(const CEGUI::EventArgs&)
@@ -1063,7 +1142,9 @@ void SettingsWindow::setPanSpeedValue(float panSpeedPercent)
     panSpeedSlider->setCurrentValue(panSpeedPercent - 10.0f);
 
     CEGUI::Window* panSpeedText = mRootWindow->getChild("SettingsWindow/MainTabControl/Input/InputSP/PanSpeedText");
-    panSpeedText->setText("Camera pan speed: " + Helper::toString(static_cast<int32_t>(panSpeedPercent)) + "%");
+    std::map<std::string, std::string> panValues;
+    panValues["value"] = Helper::toString(static_cast<int32_t>(panSpeedPercent));
+    panSpeedText->setText(Gui::toCeguiText(Translation::tr("mode.settings.pan_speed", panValues)));
 }
 
 bool SettingsWindow::onLightFactorChanged(const CEGUI::EventArgs&)
@@ -1087,5 +1168,7 @@ void SettingsWindow::setLightFactorValue(float lightFactor)
 
     // Set the light factor text
     CEGUI::Window* lightFactorText = mRootWindow->getChild("SettingsWindow/MainTabControl/Game/GameSP/LightText");
-    lightFactorText->setText("Ambient Light: +" + Helper::toString(static_cast<int32_t>(lightFactor)) + "%");
+    std::map<std::string, std::string> lightValues;
+    lightValues["value"] = Helper::toString(static_cast<int32_t>(lightFactor));
+    lightFactorText->setText(Gui::toCeguiText(Translation::tr("mode.settings.ambient_light", lightValues)));
 }
