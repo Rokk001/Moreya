@@ -135,7 +135,8 @@ def briefing_layout_errors(layout, mode, gui):
         errors.append("briefing scaling must retain registered design areas")
     if any(reference not in mode for reference in ("Goals::loadGoalFromStream", "goal->getDescription(player)",
                                                     "script.importFromStream(level)", "LevelScriptActionType::objective",
-                                                     'descriptions += "\\n[image=\'GoalStatus/Open\'] " + action.mText')):
+                                                     'descriptions += "\\n[image=\'GoalStatus/Open\'] " + '
+                                                     'LevelText::display(action.mText)')):
         errors.append("briefing must read actual goal descriptions and parsed script objectives")
     debriefing = mode.split("void MenuModeCampaign::showDebriefing()", 1)[-1].split(
         "void MenuModeCampaign::fitDebriefingPanel()", 1)[0]
@@ -212,7 +213,7 @@ def compact_goal_fit_errors(root):
         text = (root / ("source/goals/Goal" + kind + ".cpp")).read_text(encoding="utf-8")
         descriptions[kind] = re.search(r"getDescription\([^)]*\)\s*\{\s*return \"([^\"]+)\";", text)[1]
     for entry in campaign_packages.entries(root):
-        text = entry["_path"].read_text(encoding="utf-8")
+        text = campaign_packages.read_level_file(root, entry["_path"])
         classic = [descriptions[row.split()[0]] for row in text.split("[Goals]", 1)[1].split("[/Goals]", 1)[0].splitlines() if row.strip() and not row.lstrip().startswith("#")]
         objectives = [row.split(None, 4)[4] for row in text.splitlines() if row.startswith("Action\tobjectiveid\t")]
         hints = [row.split(None, 3)[3] for row in text.splitlines() if row.startswith("Action\thint\t")]

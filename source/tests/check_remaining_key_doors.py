@@ -32,7 +32,7 @@ def check_map(name, bounds, door, front, owner, key, event, observer, expected_c
     if not level_file.is_file() and not content_packages.has_content(root):
         content_packages.unchecked("check_remaining_key_doors", ["levels/campaign/" + name + ".level"])
         return
-    text = level_file.read_text(encoding="utf-8")
+    text = campaign_packages.read_level_file(root, level_file)
     level = campaign.parse_level(text)
     digest = lambda value: hashlib.sha256(value.encode()).hexdigest()
     minerals = "\n".join(line.strip() for line in campaign.section(text, "Tiles").splitlines()

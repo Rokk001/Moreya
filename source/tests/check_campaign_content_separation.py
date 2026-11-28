@@ -84,7 +84,9 @@ def texts_of(entries, level_files):
         for key in TEXT_KEYS:
             lines |= sentences(entry.get(key, ""))
     for path in level_files:
-        for match in SCRIPT_TEXT.finditer(path.read_text(encoding="utf-8", errors="replace").replace("\r", "")):
+        # The script texts are references to the English language texts: the check reads the texts the game shows
+        level_text = campaign_packages.resolve_level_text(ROOT, path.read_text(encoding="utf-8", errors="replace"))
+        for match in SCRIPT_TEXT.finditer(level_text.replace("\r", "")):
             # The text is the last field; seat and objective id before it are no text
             lines |= sentences(match.group(1).split("\t")[-1])
     return names, lines
@@ -159,11 +161,13 @@ if content is not None:
     public_names, public_lines = texts_of(public_entries, [entry["_path"] for entry in public_entries])
     # Texts the public game ships itself (the public levels and the public configuration) are public: a name or
     # sentence that also stands there is no paid text
-    shipped = [(ROOT / name).read_text(encoding="utf-8", errors="replace").replace("\r", "").replace("\\n", " ")
+    shipped = [campaign_packages.resolve_level_text(
+                   ROOT, (ROOT / name).read_text(encoding="utf-8", errors="replace")).replace("\r", "").replace("\\n", " ")
                for name in public_files if name.startswith(PUBLIC_GAME_DATA)]
     # The game data moved from the public tree into the content and room packages (config/, gui/, levels/ there)
     # is still the game data the game ships; the wing packages have no such folder
-    shipped += [path.read_text(encoding="utf-8", errors="replace").replace("\r", "").replace("\\n", " ")
+    shipped += [campaign_packages.resolve_level_text(
+                    ROOT, path.read_text(encoding="utf-8", errors="replace")).replace("\r", "").replace("\\n", " ")
                 for package in content_packages.package_roots(ROOT) for folder in PUBLIC_GAME_DATA
                 for path in sorted((package / folder).rglob("*")) if path.is_file()]
     shipped += [entry.get(key, "") for entry in public_entries for key in TEXT_KEYS]
