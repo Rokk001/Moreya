@@ -3294,8 +3294,9 @@ bool EditorMode::launchNewLevelPressed(const CEGUI::EventArgs&)
     if(ODServer::getSingleton().isConnected())
         ODServer::getSingleton().stopServer();
 
-    
-    mRootWindow->getChild("LevelWindowFrame/LevelMessageText")->setText(Gui::trCegui("editor.loading"));
+
+    // The text LoadingScreen looks for in LevelMessageText (findLoadingText compares with ui.loading)
+    mRootWindow->getChild("LevelWindowFrame/LevelMessageText")->setText(Gui::trCegui("ui.loading"));
     LoadingScreen loading;
 
     // Create the level before opening it.
