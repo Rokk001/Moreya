@@ -30,6 +30,7 @@
 #include "sound/MusicPlayer.h"
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
+#include "utils/Translation.h"
 #include "utils/LevelFileNameInput.h"
 #include "utils/LogManager.h"
 #include "utils/MapSizeInput.h"
@@ -43,6 +44,26 @@ const std::string BUTTON_LAUNCH = "LevelWindowFrame/LaunchEditorButton";
 const std::string BUTTON_BACK = "LevelWindowFrame/BackButton";
 const std::string LIST_LEVEL_TYPES = "LevelWindowFrame/LevelTypeSelect";
 
+namespace
+{
+    //! \brief Writes the texts of the items of the Level type combo box in the chosen language. The items are found
+    //! by their id (0 and 1), so that the selection stays when the language changes.
+    void translateLevelTypeItems(CEGUI::Combobox* levelTypeCb)
+    {
+        static const char* const KEYS[2] = {"editor.leveltype.skirmish", "editor.leveltype.multiplayer"};
+        for(size_t i = 0; i < levelTypeCb->getItemCount(); ++i)
+        {
+            CEGUI::ListboxItem* item = levelTypeCb->getListboxItemFromIndex(i);
+            if(item->getID() >= 2)
+                continue;
+            item->setText(Gui::trCegui(KEYS[item->getID()]));
+            if(item->isSelected())
+                levelTypeCb->setText(item->getText());
+        }
+        levelTypeCb->invalidate();
+    }
+}
+
 MenuModeEditorNew::MenuModeEditorNew(ModeManager* modeManager):
     AbstractApplicationMode(modeManager, ModeManager::MENU_EDITOR_NEW)
 {
@@ -53,13 +74,15 @@ MenuModeEditorNew::MenuModeEditorNew(ModeManager* modeManager):
     CEGUI::Combobox* levelTypeCb = static_cast<CEGUI::Combobox*>(window->getChild(LIST_LEVEL_TYPES));
     levelTypeCb->resetList();
 
-    CEGUI::ListboxTextItem* item = new CEGUI::ListboxTextItem("Skirmish Level", 0);
+    CEGUI::ListboxTextItem* item = new CEGUI::ListboxTextItem(Gui::trCegui("editor.leveltype.skirmish"), 0);
     item->setSelectionBrushImage(selImg);
     levelTypeCb->addItem(item);
 
-    item = new CEGUI::ListboxTextItem("Multiplayer Level", 1);
+    item = new CEGUI::ListboxTextItem(Gui::trCegui("editor.leveltype.multiplayer"), 1);
     item->setSelectionBrushImage(selImg);
     levelTypeCb->addItem(item);
+
+    translateLevelTypeItems(levelTypeCb);
 
     addEventConnection(
         window->getChild(Gui::EDM_BUTTON_LAUNCH)->subscribeEvent(
@@ -110,7 +133,7 @@ bool MenuModeEditorNew::launchSelectedButtonPressed(const CEGUI::EventArgs&)
 {
     CEGUI::Window* window = getModeManager().getGui().getGuiSheet(Gui::guiSheet::editorNewMenu);
 
-    window->getChild(TEXT_LOADING)->setText("Creating Map...");
+    window->getChild(TEXT_LOADING)->setText(Gui::trCegui("editor.new.creating"));
 
     // Creating the filename
     CEGUI::Combobox* levelTypeCb = static_cast<CEGUI::Combobox*>(getModeManager().getGui().
@@ -131,13 +154,13 @@ bool MenuModeEditorNew::launchSelectedButtonPressed(const CEGUI::EventArgs&)
     std::string level = editWin->getText().c_str();
     Helper::trim(level);
     if (level.empty()) {
-        window->getChild(TEXT_LOADING)->setText("Please set a level filename.");
+        window->getChild(TEXT_LOADING)->setText(Gui::trCegui("editor.new.filename_missing"));
         return true;
     }
     // The map is made in the user level folder: a name with a folder or ".." could put it anywhere else
     if(!LevelFileNameInput::isPlainFileName(level))
     {
-        window->getChild(TEXT_LOADING)->setText("The level filename must be a plain file name, without folders.");
+        window->getChild(TEXT_LOADING)->setText(Gui::trCegui("editor.new.filename_plain"));
         return true;
     }
 
@@ -152,7 +175,7 @@ bool MenuModeEditorNew::launchSelectedButtonPressed(const CEGUI::EventArgs&)
         level.append(MapHandler::USER_MAP_EXTENSION);
     }
     if (boost::filesystem::exists(level)) {
-        window->getChild(TEXT_LOADING)->setText("The level filename already exists.\nPlease set a different filename.");
+        window->getChild(TEXT_LOADING)->setText(Gui::trCegui("editor.new.filename_exists"));
         return true;
     }
 
@@ -164,12 +187,12 @@ bool MenuModeEditorNew::launchSelectedButtonPressed(const CEGUI::EventArgs&)
     int32_t width = 0;
     int32_t height = 0;
     if (!MapSizeInput::parse(widthStr, width) || !MapSizeInput::parse(heightStr, height)) {
-        window->getChild(TEXT_LOADING)->setText("Invalid map size. Width and height must be whole numbers from 1 to "
-            + Helper::toString(MapSizeInput::MAX_SIZE) + ".");
+        window->getChild(TEXT_LOADING)->setText(Gui::toCeguiText(Translation::tr("editor.new.size_invalid",
+            {{"max", Helper::toString(MapSizeInput::MAX_SIZE)}})));
         return true;
     }
 
-    window->getChild(TEXT_LOADING)->setText("Loading...");
+    window->getChild(TEXT_LOADING)->setText(Gui::trCegui("editor.loading"));
     LoadingScreen loading;
 
     // Create the level before opening it.
@@ -179,14 +202,14 @@ bool MenuModeEditorNew::launchSelectedButtonPressed(const CEGUI::EventArgs&)
     if(!gameMap->createNewMap(width, height))
     {
         OD_LOG_WRN("Couldn't create a new map of size " + Helper::toString(width) + "x" + Helper::toString(height));
-        window->getChild(TEXT_LOADING)->setText("Couldn't create a map of this size.");
+        window->getChild(TEXT_LOADING)->setText(Gui::trCegui("editor.new.create_failed"));
         return true;
     }
     gameMap->setLevelFileName(level);
     editWin = static_cast<CEGUI::Editbox*>(window->getChild("LevelWindowFrame/LevelTitleEdit"));
     std::string levelTitle = editWin->getText().c_str();
     if (levelTitle.empty()) {
-        window->getChild(TEXT_LOADING)->setText("Please set a level title.");
+        window->getChild(TEXT_LOADING)->setText(Gui::trCegui("editor.new.title_missing"));
         return true;
     }
     gameMap->setLevelName(levelTitle);
@@ -209,13 +232,13 @@ bool MenuModeEditorNew::launchSelectedButtonPressed(const CEGUI::EventArgs&)
     {
         OD_LOG_WRN("Couldn't add seat id=" + Helper::toString(seat->getId()));
         delete seat;
-        window->getChild(TEXT_LOADING)->setText("Invalid seat data...");
+        window->getChild(TEXT_LOADING)->setText(Gui::trCegui("editor.new.seat_invalid"));
         return true;
     }
 
     if (!MapHandler::writeGameMapToFile(level, *gameMap)) {
         OD_LOG_WRN("Couldn't write new map before loading: " + level);
-        window->getChild(TEXT_LOADING)->setText("Couldn't write new map before loading.\nPlease check logs.");
+        window->getChild(TEXT_LOADING)->setText(Gui::trCegui("editor.new.write_failed"));
         return true;
     }
 
@@ -225,7 +248,7 @@ bool MenuModeEditorNew::launchSelectedButtonPressed(const CEGUI::EventArgs&)
     if(!ODServer::getSingleton().startServer(nickname, level, ServerMode::ModeEditor, false))
     {
         OD_LOG_ERR("Could not start server for editor!");
-        window->getChild(TEXT_LOADING)->setText("ERROR: Could not start server for editor!");
+        window->getChild(TEXT_LOADING)->setText(Gui::trCegui("editor.new.server_failed"));
         return true;
     }
 
@@ -236,10 +259,10 @@ bool MenuModeEditorNew::launchSelectedButtonPressed(const CEGUI::EventArgs&)
     if(!ODClient::getSingleton().connect("localhost", port, timeout, replayFilename))
     {
         OD_LOG_ERR("Could not connect to server for editor!");
-        window->getChild(TEXT_LOADING)->setText("Error: Couldn't connect to local server!");
+        window->getChild(TEXT_LOADING)->setText(Gui::trCegui("editor.connect_failed"));
         return true;
     }
-    window->getChild(TEXT_LOADING)->setText("The level was created successfully.");
+    window->getChild(TEXT_LOADING)->setText(Gui::trCegui("editor.new.created"));
     loading.continueLoading();
     return true;
 }
