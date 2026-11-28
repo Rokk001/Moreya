@@ -33,11 +33,12 @@
 #include "utils/LogManager.h"
 #include "utils/MakeUnique.h"
 #include "utils/Random.h"
+#include "utils/Translation.h"
 
 #include <algorithm>
 
 const std::string RoomDormitoryName = "Dormitory";
-const std::string RoomDormitoryNameDisplay = "Dormitory room";
+const std::string RoomDormitoryNameKey = "room.dormitory.name";
 const RoomType RoomDormitory::mRoomType = RoomType::dormitory;
 const TileVisual RoomDormitory::mRoomVisual= TileVisual::dormitoryRoom;
 
@@ -55,8 +56,9 @@ class RoomDormitoryFactory : public RoomFactory
     const std::string& getName() const override
     { return RoomDormitoryName; }
 
-    const std::string& getNameReadable() const override
-    { return RoomDormitoryNameDisplay; }
+    //! \brief The name shown to the player, in the chosen language.
+    std::string getNameReadable() const override
+    { return Translation::tr(RoomDormitoryNameKey); }
 
     int getCostPerTile() const override
     { return ConfigManager::getSingleton().getRoomConfigInt32("DormitoryCostPerTile"); }

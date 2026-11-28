@@ -131,7 +131,7 @@ for relative, signature in (("source/modes/MenuModeCampaign.cpp", "bool MenuMode
     check("CampaignPackages::loadCampaign(" in body(read(relative), signature),
           relative + " must read the campaign with the package loader")
 packages_cpp = read("source/game/CampaignPackages.cpp")
-check('MISSING_WING_TEXT = "%s"' % campaign_packages.MISSING_WING_TEXT in packages_cpp
+check('Translation::tr("campaign.code.missing_wing")' in packages_cpp
       and 'CONTENT_VARIABLE = "%s"' % campaign_packages.CONTENT_VARIABLE in packages_cpp
       and 'GAME_PACKAGE_FOLDER = "levels/campaign/"' in packages_cpp, "the game must name packages as the checks do")
 level_test = body(read("source/utils/RunLevelTest.cpp"), "void RunLevelTest::prepareCampaignLevel(")

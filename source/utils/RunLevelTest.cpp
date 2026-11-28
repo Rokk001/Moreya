@@ -668,7 +668,7 @@ void RunLevelTest::onCampaignMapShown(bool levelWon)
     {
         // Every story level of the packages there is won; the next wing has no package and is locked on the map
         emitResult(codePass, "PASS " + sLevelName + " : " + sWinDescription
-            + ", victory message shown, campaign map shows the next wing locked (" + CampaignPackages::MISSING_WING_TEXT
+            + ", victory message shown, campaign map shows the next wing locked (" + CampaignPackages::getMissingWingText()
             + ")");
         return;
     }

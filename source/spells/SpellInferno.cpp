@@ -34,11 +34,12 @@
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
+#include "utils/Translation.h"
 
 #include <cmath>
 
 const std::string SpellInfernoName = "inferno";
-const std::string SpellInfernoNameDisplay = "Inferno";
+const std::string SpellInfernoNameKey = "spell.inferno.name";
 const std::string SpellInfernoCooldownKey = "InfernoCooldown";
 const SpellType SpellInferno::mSpellType = SpellType::inferno;
 
@@ -55,8 +56,9 @@ class SpellInfernoFactory : public SpellFactory
     const std::string& getCooldownKey() const override
     { return SpellInfernoCooldownKey; }
 
-    const std::string& getNameReadable() const override
-    { return SpellInfernoNameDisplay; }
+    //! \brief The name shown to the player, in the chosen language.
+    std::string getNameReadable() const override
+    { return Translation::tr(SpellInfernoNameKey); }
 
     virtual void checkSpellCast(GameMap* gameMap, const InputManager& inputManager, InputCommand& inputCommand) const override
     { SpellInferno::checkSpellCast(gameMap, inputManager, inputCommand); }

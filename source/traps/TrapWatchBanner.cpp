@@ -33,11 +33,12 @@
 #include "traps/TrapManager.h"
 #include "utils/ConfigManager.h"
 #include "utils/LogManager.h"
+#include "utils/Translation.h"
 
 #include <cmath>
 
 const std::string TrapWatchBannerName = "WatchBanner";
-const std::string TrapWatchBannerNameDisplay = "Watch banner";
+const std::string TrapWatchBannerNameKey = "trap.watchbanner.name";
 const TrapType TrapWatchBanner::mTrapType = TrapType::watchBanner;
 
 namespace
@@ -50,8 +51,9 @@ class TrapWatchBannerFactory : public TrapFactory
     const std::string& getName() const override
     { return TrapWatchBannerName; }
 
-    const std::string& getNameReadable() const override
-    { return TrapWatchBannerNameDisplay; }
+    //! \brief The name shown to the player, in the chosen language.
+    std::string getNameReadable() const override
+    { return Translation::tr(TrapWatchBannerNameKey); }
 
     int getCostPerTile() const override
     { return ConfigManager::getSingleton().getTrapConfigInt32("WatchBannerCostPerTile"); }

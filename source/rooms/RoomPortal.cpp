@@ -37,6 +37,7 @@
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 #include "utils/Random.h"
+#include "utils/Translation.h"
 
 #include <cmath>
 #include <iomanip>
@@ -58,7 +59,7 @@ static double getResearchedCooldown(const Seat* seat, const std::string& key)
 }
 
 const std::string RoomPortalName = "Portal";
-const std::string RoomPortalNameDisplay = "Portal room";
+const std::string RoomPortalNameKey = "room.portal.name";
 const RoomType RoomPortal::mRoomType = RoomType::portal;
 const TileVisual RoomPortal::mRoomVisual= TileVisual::portalRoom;
 
@@ -77,8 +78,9 @@ class RoomPortalFactory : public RoomFactory
     const std::string& getName() const override
     { return RoomPortalName; }
 
-    const std::string& getNameReadable() const override
-    { return RoomPortalNameDisplay; }
+    //! \brief The name shown to the player, in the chosen language.
+    std::string getNameReadable() const override
+    { return Translation::tr(RoomPortalNameKey); }
 
     int getCostPerTile() const override
     { return 0; }

@@ -39,11 +39,12 @@
 #include "utils/LogManager.h"
 #include "utils/MakeUnique.h"
 #include "utils/Random.h"
+#include "utils/Translation.h"
 
 #include <cmath>
 
 const std::string RoomTortureName = "Torture";
-const std::string RoomTortureNameDisplay = "Torture room";
+const std::string RoomTortureNameKey = "room.torture.name";
 const RoomType RoomTorture::mRoomType = RoomType::torture;
 const TileVisual RoomTorture::mRoomVisual= TileVisual::tortureRoom;
 
@@ -62,8 +63,9 @@ class RoomTortureFactory : public RoomFactory
     const std::string& getName() const override
     { return RoomTortureName; }
 
-    const std::string& getNameReadable() const override
-    { return RoomTortureNameDisplay; }
+    //! \brief The name shown to the player, in the chosen language.
+    std::string getNameReadable() const override
+    { return Translation::tr(RoomTortureNameKey); }
 
     int getCostPerTile() const override
     { return ConfigManager::getSingleton().getRoomConfigInt32("TortureCostPerTile"); }

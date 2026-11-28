@@ -27,12 +27,13 @@
 #include "traps/TrapManager.h"
 #include "utils/ConfigManager.h"
 #include "utils/LogManager.h"
+#include "utils/Translation.h"
 
 #include <algorithm>
 #include <cmath>
 
 const std::string TrapAlarmName = "Alarm";
-const std::string TrapAlarmNameDisplay = "Alarm trap";
+const std::string TrapAlarmNameKey = "trap.alarm.name";
 const TrapType TrapAlarm::mTrapType = TrapType::alarm;
 
 namespace
@@ -45,8 +46,9 @@ class TrapAlarmFactory : public TrapFactory
     const std::string& getName() const override
     { return TrapAlarmName; }
 
-    const std::string& getNameReadable() const override
-    { return TrapAlarmNameDisplay; }
+    //! \brief The name shown to the player, in the chosen language.
+    std::string getNameReadable() const override
+    { return Translation::tr(TrapAlarmNameKey); }
 
     int getCostPerTile() const override
     { return ConfigManager::getSingleton().getTrapConfigInt32("AlarmCostPerTile"); }

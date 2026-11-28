@@ -29,11 +29,12 @@
 #include "utils/ConfigManager.h"
 #include "utils/LogManager.h"
 #include "utils/Random.h"
+#include "utils/Translation.h"
 
 #include <algorithm>
 
 const std::string TrapLightningName = "Lightning";
-const std::string TrapLightningNameDisplay = "Lightning trap";
+const std::string TrapLightningNameKey = "trap.lightning.name";
 const TrapType TrapLightning::mTrapType = TrapType::lightning;
 
 
@@ -47,8 +48,9 @@ class TrapLightningFactory : public TrapFactory
     const std::string& getName() const override
     { return TrapLightningName; }
 
-    const std::string& getNameReadable() const override
-    { return TrapLightningNameDisplay; }
+    //! \brief The name shown to the player, in the chosen language.
+    std::string getNameReadable() const override
+    { return Translation::tr(TrapLightningNameKey); }
 
     int getCostPerTile() const override
     { return ConfigManager::getSingleton().getTrapConfigInt32("LightningCostPerTile"); }

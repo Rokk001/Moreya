@@ -35,11 +35,12 @@
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 #include "utils/Random.h"
+#include "utils/Translation.h"
 
 #include <algorithm>
 
 const std::string RoomTempleName = "Temple";
-const std::string RoomTempleNameDisplay = "Temple";
+const std::string RoomTempleNameKey = "room.temple.name";
 const RoomType RoomTemple::mRoomType = RoomType::temple;
 const TileVisual RoomTemple::mRoomVisual = TileVisual::templeRoom;
 
@@ -64,8 +65,9 @@ class RoomTempleFactory : public RoomFactory
     { return RoomTempleName; }
 
     //! \brief Returns the name shown to the player
-    const std::string& getNameReadable() const override
-    { return RoomTempleNameDisplay; }
+    //! \brief The name shown to the player, in the chosen language.
+    std::string getNameReadable() const override
+    { return Translation::tr(RoomTempleNameKey); }
 
     //! \brief Returns the gold price of one temple tile from the room config
     int getCostPerTile() const override

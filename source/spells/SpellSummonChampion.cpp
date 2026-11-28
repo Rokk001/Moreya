@@ -30,9 +30,10 @@
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
+#include "utils/Translation.h"
 
 const std::string SpellSummonChampionName = "summonChampion";
-const std::string SpellSummonChampionNameDisplay = "Summon champion";
+const std::string SpellSummonChampionNameKey = "spell.summonchampion.name";
 const std::string SpellSummonChampionCooldownKey = "SummonChampionCooldown";
 const std::string SpellSummonChampionCreatureClass = "Champion";
 const SpellType SpellSummonChampion::mSpellType = SpellType::summonChampion;
@@ -55,8 +56,9 @@ class SpellSummonChampionFactory : public SpellFactory
     const std::string& getCooldownKey() const override
     { return SpellSummonChampionCooldownKey; }
 
-    const std::string& getNameReadable() const override
-    { return SpellSummonChampionNameDisplay; }
+    //! \brief The name shown to the player, in the chosen language.
+    std::string getNameReadable() const override
+    { return Translation::tr(SpellSummonChampionNameKey); }
 
     virtual void checkSpellCast(GameMap* gameMap, const InputManager& inputManager, InputCommand& inputCommand) const override
     { SpellSummonChampion::checkSpellCast(gameMap, inputManager, inputCommand); }

@@ -13,6 +13,7 @@ root = Path(__file__).resolve().parents[2]
 import sys
 sys.path.insert(0, str(root / 'scripts'))
 import content_packages  # noqa: E402
+import language_package_texts  # noqa: E402
 import room_packages  # noqa: E402
 
 #: The assets of the toilet come from its room package (scripts/room_packages.py); without the package only the code
@@ -58,7 +59,9 @@ assert rooms.count('toilet') == 1
 # 2. The room class, factory, names and registration in the build
 room_cpp = read('source/rooms/RoomToilet.cpp')
 assert 'const std::string RoomToiletName = "Toilet";' in room_cpp
-assert 'const std::string RoomToiletNameDisplay = "Toilet room";' in room_cpp
+assert 'const std::string RoomToiletNameKey = "room.toilet.name";' in room_cpp
+if WITH_CONTENT:
+    assert language_package_texts.english(root).get('room.toilet.name') == 'Toilet room'
 assert 'const RoomType RoomToilet::mRoomType = RoomType::toilet;' in room_cpp
 assert 'const TileVisual RoomToilet::mRoomVisual = TileVisual::toiletRoom;' in room_cpp
 assert 'class RoomToiletFactory : public RoomFactory' in room_cpp and 'RoomRegister' in room_cpp

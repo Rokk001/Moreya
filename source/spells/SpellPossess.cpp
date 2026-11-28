@@ -35,9 +35,10 @@
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
+#include "utils/Translation.h"
 
 const std::string SpellPossessName = "possess";
-const std::string SpellPossessNameDisplay = "Possess";
+const std::string SpellPossessNameKey = "spell.possess.name";
 const std::string SpellPossessCooldownKey = "PossessCooldown";
 const SpellType SpellPossess::mSpellType = SpellType::possess;
 
@@ -59,8 +60,9 @@ class SpellPossessFactory : public SpellFactory
     { return SpellPossessCooldownKey; }
 
     //! \brief Returns the name shown to the player
-    const std::string& getNameReadable() const override
-    { return SpellPossessNameDisplay; }
+    //! \brief The name shown to the player, in the chosen language.
+    std::string getNameReadable() const override
+    { return Translation::tr(SpellPossessNameKey); }
 
     //! \brief Checks on the client whether the spell can be cast and prepares the input command
     virtual void checkSpellCast(GameMap* gameMap, const InputManager& inputManager, InputCommand& inputCommand) const override
@@ -94,7 +96,7 @@ void SpellPossess::checkSpellCast(GameMap* gameMap, const InputManager& inputMan
 
     if(player->isPossessing())
     {
-        inputCommand.displayText(Ogre::ColourValue::Red, "Already possessing a creature");
+        inputCommand.displayText(Ogre::ColourValue::Red, Translation::tr("spell.hint.already_possessing"));
         return;
     }
 

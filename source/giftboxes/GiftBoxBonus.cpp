@@ -29,6 +29,7 @@
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 #include "utils/Random.h"
+#include "utils/Translation.h"
 
 #include <cmath>
 #include <iostream>
@@ -51,69 +52,69 @@ GiftBoxBonus::GiftBoxBonus(GameMap* gameMap, GiftBoxType type) :
 {
 }
 
-//! \brief Returns the name of the bonus of the given type
+//! \brief Returns the name of the bonus of the given type, in the chosen language
 std::string GiftBoxBonus::getDisplayName(GiftBoxType type)
 {
     switch(type)
     {
         case GiftBoxType::mana:
-            return "Mana Boost";
+            return Translation::tr("gift.mana.name");
         case GiftBoxType::gold:
-            return "Increase Gold";
+            return Translation::tr("gift.gold.name");
         case GiftBoxType::revealMap:
-            return "Reveal Map";
+            return Translation::tr("gift.revealmap.name");
         case GiftBoxType::levelUp:
-            return "Increase Level";
+            return Translation::tr("gift.levelup.name");
         case GiftBoxType::healAll:
-            return "Heal All";
+            return Translation::tr("gift.healall.name");
         case GiftBoxType::makeSafe:
-            return "Make Safe";
+            return Translation::tr("gift.makesafe.name");
         case GiftBoxType::weakenWalls:
-            return "Weaken Walls";
+            return Translation::tr("gift.weakenwalls.name");
         case GiftBoxType::stunWorkers:
-            return "Stun Zivs";
+            return Translation::tr("gift.stunworkers.name");
         case GiftBoxType::receiveWorkers:
-            return "Receive Zivs";
+            return Translation::tr("gift.receiveworkers.name");
         case GiftBoxType::makeHappy:
-            return "Make Happy";
+            return Translation::tr("gift.makehappy.name");
         case GiftBoxType::makeUnhappy:
-            return "Make Unhappy";
+            return Translation::tr("gift.makeunhappy.name");
         case GiftBoxType::killCreatures:
-            return "Kill Creatures";
+            return Translation::tr("gift.killcreatures.name");
         default:
-            return "Special";
+            return Translation::tr("gift.default.name");
     }
 }
 
-//! \brief Returns a short text saying what the bonus of the given type does
+//! \brief Returns a short text saying what the bonus of the given type does, in the chosen language
 std::string GiftBoxBonus::getDescription(GiftBoxType type)
 {
     switch(type)
     {
         case GiftBoxType::mana:
-            return "Gives a large amount of mana.";
+            return Translation::tr("gift.mana.description");
         case GiftBoxType::gold:
-            return "Gives a large amount of gold.";
+            return Translation::tr("gift.gold.description");
         case GiftBoxType::revealMap:
-            return "Reveals the whole map.";
+            return Translation::tr("gift.revealmap.description");
         case GiftBoxType::levelUp:
-            return "All your creatures gain a level.";
+            return Translation::tr("gift.levelup.description");
         case GiftBoxType::healAll:
-            return "Heals all your creatures completely.";
+            return Translation::tr("gift.healall.description");
         case GiftBoxType::makeSafe:
-            return "Reinforces the walls around your dungeon.";
+            return Translation::tr("gift.makesafe.description");
         case GiftBoxType::weakenWalls:
-            return "Turns the reinforced walls of the enemy back to earth.";
+            return Translation::tr("gift.weakenwalls.description");
         case GiftBoxType::stunWorkers:
-            return "Stuns all enemy Zivs for a few seconds.";
+            return Translation::tr("gift.stunworkers.description");
         case GiftBoxType::receiveWorkers:
-            return "Gives you free Zivs.";
+            return Translation::tr("gift.receiveworkers.description");
         case GiftBoxType::makeHappy:
-            return "Sets the mood of all your creatures to the maximum.";
+            return Translation::tr("gift.makehappy.description");
         case GiftBoxType::makeUnhappy:
-            return "Makes all enemy creatures unhappy.";
+            return Translation::tr("gift.makeunhappy.description");
         case GiftBoxType::killCreatures:
-            return "Kills an enemy creature you can see.";
+            return Translation::tr("gift.killcreatures.description");
         default:
             return "";
     }

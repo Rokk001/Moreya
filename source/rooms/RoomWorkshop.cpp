@@ -45,10 +45,11 @@
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 #include "utils/Random.h"
+#include "utils/Translation.h"
 #include <sstream>
 
 const std::string RoomWorkshopName = "Workshop";
-const std::string RoomWorkshopNameDisplay = "Workshop room";
+const std::string RoomWorkshopNameKey = "room.workshop.name";
 const RoomType RoomWorkshop::mRoomType = RoomType::workshop;
 const TileVisual RoomWorkshop::mRoomVisual= TileVisual::workshopRoom;
 
@@ -67,8 +68,9 @@ class RoomWorkshopFactory : public RoomFactory
     const std::string& getName() const override
     { return RoomWorkshopName; }
 
-    const std::string& getNameReadable() const override
-    { return RoomWorkshopNameDisplay; }
+    //! \brief The name shown to the player, in the chosen language.
+    std::string getNameReadable() const override
+    { return Translation::tr(RoomWorkshopNameKey); }
 
     int getCostPerTile() const override
     { return ConfigManager::getSingleton().getRoomConfigInt32("WorkshopCostPerTile"); }

@@ -28,6 +28,7 @@
 #include <iterator>
 #include "utils/MakeUnique.h"
 #include "utils/Random.h"
+#include "utils/Translation.h"
 #include <algorithm>
 #include <cmath>
 #include <istream>
@@ -47,8 +48,8 @@ class RoomAlchemyLabFactory : public RoomFactory
     TileVisual getVisualType() const override { return RoomAlchemyLab::mRoomVisual; }
     //! \brief Returns the configuration name.
     const std::string& getName() const override { static const std::string name = "AlchemyLab"; return name; }
-    //! \brief Returns the approved room label.
-    const std::string& getNameReadable() const override { static const std::string name = "Alchemy lab"; return name; }
+    //! \brief Returns the name shown to the player, in the chosen language.
+    std::string getNameReadable() const override { return Translation::tr("room.alchemylab.name"); }
     //! \brief Reads the configured tile price.
     int getCostPerTile() const override { return ConfigManager::getSingleton().getRoomConfigInt32("AlchemyLabCostPerTile"); }
     //! \brief Uses the existing room-placement validation.

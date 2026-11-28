@@ -17,6 +17,7 @@
 #include "utils/ConfigManager.h"
 #include "utils/MakeUnique.h"
 #include "utils/Random.h"
+#include "utils/Translation.h"
 #include <algorithm>
 #include <istream>
 #include <ostream>
@@ -34,8 +35,8 @@ class RoomHerbGardenFactory : public RoomFactory
     TileVisual getVisualType() const override { return RoomHerbGarden::mRoomVisual; }
     //! \brief Returns the configuration name.
     const std::string& getName() const override { static const std::string name = "HerbGarden"; return name; }
-    //! \brief Returns the approved room label.
-    const std::string& getNameReadable() const override { static const std::string name = "Herb garden"; return name; }
+    //! \brief Returns the name shown to the player, in the chosen language.
+    std::string getNameReadable() const override { return Translation::tr("room.herbgarden.name"); }
     //! \brief Reads the configured tile price.
     int getCostPerTile() const override { return ConfigManager::getSingleton().getRoomConfigInt32("HerbGardenCostPerTile"); }
     //! \brief Uses the existing room-placement validation.

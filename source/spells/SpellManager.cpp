@@ -30,6 +30,7 @@
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
+#include "utils/Translation.h"
 
 const std::string EMPTY_STRING;
 
@@ -123,8 +124,8 @@ bool SpellManager::checkSpellCooldown(GameMap* gameMap, SpellType type, InputCom
     if(cooldown <= 0)
         return false;
 
-    std::string errorStr = getSpellReadableName(type)
-        + " is cooling down (" + Helper::toString(cooldown, 2) + " s remaining).";
+    std::string errorStr = Translation::tr("spell.hint.cooldown",
+        {{"name", getSpellReadableName(type)}, {"seconds", Helper::toString(cooldown, 2)}});
 
     inputCommand.displayText(Ogre::ColourValue::Red, errorStr);
     return true;
@@ -211,7 +212,7 @@ const std::string& SpellManager::getSpellNameFromSpellType(SpellType type)
     return factory.getName();
 }
 
-const std::string& SpellManager::getSpellReadableName(SpellType type)
+std::string SpellManager::getSpellReadableName(SpellType type)
 {
     std::vector<const SpellFactory*>& factories = getFactories();
     uint32_t index = static_cast<uint32_t>(type);

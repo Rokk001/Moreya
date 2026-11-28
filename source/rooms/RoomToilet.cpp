@@ -30,12 +30,13 @@
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
+#include "utils/Translation.h"
 
 #include <algorithm>
 #include <cmath>
 
 const std::string RoomToiletName = "Toilet";
-const std::string RoomToiletNameDisplay = "Toilet room";
+const std::string RoomToiletNameKey = "room.toilet.name";
 const RoomType RoomToilet::mRoomType = RoomType::toilet;
 const TileVisual RoomToilet::mRoomVisual = TileVisual::toiletRoom;
 
@@ -58,8 +59,9 @@ class RoomToiletFactory : public RoomFactory
     const std::string& getName() const override
     { return RoomToiletName; }
 
-    const std::string& getNameReadable() const override
-    { return RoomToiletNameDisplay; }
+    //! \brief The name shown to the player, in the chosen language.
+    std::string getNameReadable() const override
+    { return Translation::tr(RoomToiletNameKey); }
 
     int getCostPerTile() const override
     { return ConfigManager::getSingleton().getRoomConfigInt32("ToiletCostPerTile"); }

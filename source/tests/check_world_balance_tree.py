@@ -12,6 +12,7 @@ from pathlib import Path
 repo = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(repo / "scripts"))
 import content_packages  # noqa: E402
+import language_package_texts  # noqa: E402
 
 #: The mixed files of config/ and gui/ come with their own rows only with the content (scripts/content_packages.py)
 WITH_CONTENT = content_packages.has_content(repo)
@@ -204,7 +205,10 @@ assert skill_type_h.index("spellSummonChampion") < skill_type_h.index("keeperDom
 skill_type_cpp = read("source/game/SkillType.cpp")
 for name, (button, title, tab) in KEEPERS.items():
     assert 'return "%s";' % name in skill_type_cpp, "toString name of " + name
-    assert 'return "%s";' % title in skill_type_cpp, "player visible name of " + name
+    # the player visible name is the entry research.<skill>.name of the English language package
+    assert 'return Translation::tr("research.%s.name");' % name.lower() in skill_type_cpp, "player visible name of " + name
+    if content_packages.has_content(repo):
+        assert language_package_texts.english(repo).get("research.%s.name" % name.lower()) == title, "player visible name of " + name
 assert "enum class SkillTab" in read("source/game/SkillManager.h")
 header = read("source/game/SkillManager.h")
 assert re.search(r"spells,\s*keeper,\s*nb", header), "SkillFamily::keeper stands before nb"
@@ -212,8 +216,11 @@ assert "case SkillFamily::keeper:" in manager
 keeper_class = manager[manager.index("class SkillDefKeeper"):manager.index("static Skill* createSkill(")]
 assert "return SkillFamily::keeper;" in keeper_class
 assert 'return "";' in keeper_class and "static const std::string guiPath;" in keeper_class
-for title in ("Dominion", "Heart Fortitude", "Heart Mending", "Mana Flow"):
-    assert 'KEEPER_TITLE' in manager and '"%s"' % title in manager
+for key, title in (("dominion", "Dominion"), ("heartfortitude", "Heart Fortitude"), ("heartmending", "Heart Mending"),
+                   ("manaflow", "Mana Flow")):
+    assert 'KEEPER_TITLE' in manager and '"research.keeper.%s.title"' % key in manager
+    if content_packages.has_content(repo):
+        assert language_package_texts.english(repo).get("research.keeper.%s.title" % key) == title, key
 
 # a skill without an action bar button gets an empty cast button name and is skipped where that matters
 assert 'skill->getGuiPath().empty() ? "" :' in manager

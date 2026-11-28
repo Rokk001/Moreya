@@ -77,6 +77,9 @@ probe = r'''
 #include "spells/SpellType.h"
 #include "network/ODPacket.h"
 #include "utils/NameAliases.h"
+#include "utils/Translation.h"
+//! \brief Stand-in of the language texts: the probe does not look at the research names, so a text is its key.
+std::string Translation::tr(const std::string& key) { return key; }
 #include <algorithm>
 #include <cmath>
 #include <fstream>

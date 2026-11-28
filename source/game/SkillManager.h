@@ -172,8 +172,8 @@ public:
     //! \brief The tier (row 1 to 4, top to bottom) of the skill in its tab
     static uint32_t getSkillTier(SkillType resType);
 
-    //! \brief The title of a tab of the research tree window
-    static const std::string& getTabTitle(SkillTab tab);
+    //! \brief The title of a tab of the research tree window, in the chosen language
+    static std::string getTabTitle(SkillTab tab);
 
     //! \brief The path of the research button of the skill inside SkillTreeWindow/Skills
     static std::string getTreeButtonPath(SkillType resType);

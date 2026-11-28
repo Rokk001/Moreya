@@ -35,11 +35,12 @@
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
+#include "utils/Translation.h"
 
 #include <cmath>
 
 const std::string SpellTremorName = "tremor";
-const std::string SpellTremorNameDisplay = "Tremor";
+const std::string SpellTremorNameKey = "spell.tremor.name";
 const std::string SpellTremorCooldownKey = "TremorCooldown";
 const SpellType SpellTremor::mSpellType = SpellType::tremor;
 
@@ -56,8 +57,9 @@ class SpellTremorFactory : public SpellFactory
     const std::string& getCooldownKey() const override
     { return SpellTremorCooldownKey; }
 
-    const std::string& getNameReadable() const override
-    { return SpellTremorNameDisplay; }
+    //! \brief The name shown to the player, in the chosen language.
+    std::string getNameReadable() const override
+    { return Translation::tr(SpellTremorNameKey); }
 
     virtual void checkSpellCast(GameMap* gameMap, const InputManager& inputManager, InputCommand& inputCommand) const override
     { SpellTremor::checkSpellCast(gameMap, inputManager, inputCommand); }

@@ -18,6 +18,7 @@
 #include "game/Campaign.h"
 
 #include "ai/KeeperAIType.h"
+#include "utils/Translation.h"
 
 #include <algorithm>
 #include <cstdlib>
@@ -114,7 +115,11 @@ Campaign::Campaign():
 {
 }
 
-const std::string Campaign::CAMPAIGN_END_MESSAGE = "Moreya stands. The campaign is complete.";
+//! \brief The end message of the campaign (language key campaign.code.end), in the chosen language.
+std::string Campaign::getEndMessage()
+{
+    return Translation::tr("campaign.code.end");
+}
 
 Campaign& Campaign::getSingleton()
 {

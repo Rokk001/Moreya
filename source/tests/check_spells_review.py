@@ -26,6 +26,7 @@ import xml.etree.ElementTree as ET
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, os.path.join(ROOT, "scripts"))
 import content_packages  # noqa: E402
+import language_package_texts  # noqa: E402
 import room_packages  # noqa: E402
 
 problems = []
@@ -145,7 +146,10 @@ for cls, (name, display, cooldown, price, skill, button) in SPELLS.items():
     sources[cls] = read("source", "spells", cls + ".cpp")
     code = sources[cls]
     need('const std::string %sName = "%s";' % (cls, name) in code, "%s saves as %s" % (cls, name))
-    need('const std::string %sNameDisplay = "%s";' % (cls, display) in code, "%s is shown as %s" % (cls, display))
+    # The name shown is the entry spell.<name>.name of the English language package
+    need('const std::string %sNameKey = "spell.%s.name";' % (cls, name.lower()) in code, "%s asks for its name by key" % cls)
+    if content_packages.has_content(ROOT):
+        need(language_package_texts.english(ROOT).get("spell.%s.name" % name.lower()) == display, "%s is shown as %s" % (cls, display))
     need('const std::string %sCooldownKey = "%s";' % (cls, cooldown) in code, "%s cools down with %s" % (cls, cooldown))
     need("static SpellRegister reg(new %sFactory);" % cls in code, "%s registers its factory" % cls)
     need(('"%s"' % price) in code, "%s reads %s" % (cls, price))
@@ -437,7 +441,9 @@ need(math.ceil(24 / 2.0) == math.ceil(len([n for n in rooms if n != "DestroyRoom
 cost = body(manager, "std::string getCostText(GameMap* gameMap) const override\n    {\n        if(mSpellType")
 for cls, (name, display, cooldown, price, skill, button) in SPELLS.items():
     need('case SpellType::%s: key = "%s"; break;' % (name, price) in cost, "the tooltip shows the price of %s" % display)
-need("mSpellType == SpellType::revealEnemy) ?\n            \" mana\"" in cost, "the six spells cost mana per cast")
+need("mSpellType == SpellType::revealEnemy) ?\n            \"research.cost.mana\"" in cost, "the six spells cost mana per cast")
+if content_packages.has_content(ROOT):
+    need(language_package_texts.english(ROOT).get("research.cost.mana") == "{value} mana", "the price line of the six spells reads {value} mana")
 
 # ---------------------------------------------------------------------------------------------------------------------
 # N8 Sounds and looks: spell source, effect name, sound family

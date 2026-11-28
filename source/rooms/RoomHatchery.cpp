@@ -52,9 +52,10 @@
 #include "utils/LogManager.h"
 #include "utils/MakeUnique.h"
 #include "utils/Random.h"
+#include "utils/Translation.h"
 
 const std::string RoomHatcheryName = "Hatchery";
-const std::string RoomHatcheryNameDisplay = "Hatchery room";
+const std::string RoomHatcheryNameKey = "room.hatchery.name";
 const RoomType RoomHatchery::mRoomType = RoomType::hatchery;
 const TileVisual RoomHatchery::mRoomVisual= TileVisual::hatcheryRoom;
 
@@ -116,8 +117,9 @@ class RoomHatcheryFactory : public RoomFactory
     const std::string& getName() const override
     { return RoomHatcheryName; }
 
-    const std::string& getNameReadable() const override
-    { return RoomHatcheryNameDisplay; }
+    //! \brief The name shown to the player, in the chosen language.
+    std::string getNameReadable() const override
+    { return Translation::tr(RoomHatcheryNameKey); }
 
     int getCostPerTile() const override
     { return ConfigManager::getSingleton().getRoomConfigInt32("HatcheryCostPerTile"); }
