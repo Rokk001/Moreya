@@ -25,6 +25,7 @@
 #include "utils/Random.h"
 #include "utils/LogManager.h"
 #include "utils/MakeUnique.h"
+#include "utils/Translation.h"
 #include <functional>
 #include <algorithm>
 #include <cmath>
@@ -37,7 +38,7 @@
 namespace
 {
 const std::string roomName = "GhostRoom";
-const std::string readableName = "Ghost room";
+const std::string readableNameKey = "room.ghostroom.name";
 //! \brief Orders tiles by increasing y, then x, independently of pointers.
 bool tileOrder(Tile* a, Tile* b)
 { return std::make_pair(a->getY(),a->getX()) < std::make_pair(b->getY(),b->getX()); }
@@ -53,8 +54,8 @@ class RoomGhostRoomFactory : public RoomFactory
     TileVisual getVisualType() const override { return TileVisual::ghostRoom; }
     //! \brief Returns the configuration name.
     const std::string& getName() const override { return roomName; }
-    //! \brief Returns the player-facing room name.
-    const std::string& getNameReadable() const override { return readableName; }
+    //! \brief Returns the player-facing room name, in the chosen language.
+    std::string getNameReadable() const override { return Translation::tr(readableNameKey); }
     //! \brief Reads the prescribed gold price per tile.
     int getCostPerTile() const override { return ConfigManager::getSingleton().getRoomConfigInt32("GhostRoomCostPerTile"); }
     //! \brief Previews the ordinary room selection.

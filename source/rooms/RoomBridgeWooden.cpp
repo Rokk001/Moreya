@@ -28,9 +28,10 @@
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
+#include "utils/Translation.h"
 
 const std::string RoomBridgeWoodenName = "WoodenBridge";
-const std::string RoomBridgeWoodenNameDisplay = "Wooden Bridge room";
+const std::string RoomBridgeWoodenNameKey = "room.woodenbridge.name";
 const RoomType RoomBridgeWooden::mRoomType = RoomType::bridgeWooden;
 const TileVisual RoomBridgeWooden::mRoomVisual= TileVisual::nullTileVisual;
 
@@ -51,8 +52,9 @@ class RoomBridgeWoodenFactory : public BridgeRoomFactory
     const std::string& getName() const override
     { return RoomBridgeWoodenName; }
 
-    const std::string& getNameReadable() const override
-    { return RoomBridgeWoodenNameDisplay; }
+    //! \brief The name shown to the player, in the chosen language.
+    std::string getNameReadable() const override
+    { return Translation::tr(RoomBridgeWoodenNameKey); }
 
     int getCostPerTile() const override
     { return ConfigManager::getSingleton().getRoomConfigInt32("WoodenBridgeCostPerTile"); }

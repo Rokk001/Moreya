@@ -48,7 +48,8 @@ public:
 
 
     virtual const std::string& getName() const = 0;
-    virtual const std::string& getNameReadable() const = 0;
+    //! \brief The name shown to the player, in the chosen language
+    virtual std::string getNameReadable() const = 0;
     virtual int getCostPerTile() const = 0;
 
     virtual void checkBuildRoom(GameMap* gameMap, const InputManager& inputManager, InputCommand& inputCommand) const = 0;
@@ -60,6 +61,7 @@ public:
     virtual Room* createRoom(GameMap* gameMap) const = 0;
     virtual bool buildRoomOnTiles(GameMap* gameMap, Player* player, const std::vector<Tile*>& tiles, bool noFee ) const = 0;
 
+    //! \brief The cursor hint to build a room: its name and the price, in the chosen language
     std::string formatBuildRoom(RoomType type, uint32_t price) const;
     //! \brief Computes the room cost by checking the buildable tiles according to the given inputManager
     //! and updates the inputCommand with (price/buildable tiles)
@@ -121,8 +123,8 @@ public:
     //! \brief Gets the room identification name
     static const std::string& getRoomNameFromRoomType(RoomType type);
 
-    //! \brief Gets the room readable name
-    static const std::string& getRoomReadableName(RoomType type);
+    //! \brief Gets the room name shown to the player, in the chosen language
+    static std::string getRoomReadableName(RoomType type);
 
     static RoomType getRoomTypeFromRoomName(const std::string& name);
 

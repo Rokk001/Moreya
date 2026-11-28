@@ -35,10 +35,11 @@
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
+#include "utils/Translation.h"
 
 
 const std::string SpellHexenHenName = "hexenhen";
-const std::string SpellHexenHenNameDisplay = "Hexen Hen";
+const std::string SpellHexenHenNameKey = "spell.hexenhen.name";
 const std::string SpellHexenHenCooldownKey = "HexenHenCooldown";
 const SpellType SpellHexenHen::mSpellType = SpellType::hexenHen;
 
@@ -55,8 +56,9 @@ class SpellHexenHenFactory : public SpellFactory
     const std::string& getCooldownKey() const override
     { return SpellHexenHenCooldownKey; }
 
-    const std::string& getNameReadable() const override
-    { return SpellHexenHenNameDisplay; }
+    //! \brief The name shown to the player, in the chosen language.
+    std::string getNameReadable() const override
+    { return Translation::tr(SpellHexenHenNameKey); }
 
     virtual void checkSpellCast(GameMap* gameMap, const InputManager& inputManager, InputCommand& inputCommand) const override
     { SpellHexenHen::checkSpellCast(gameMap, inputManager, inputCommand); }

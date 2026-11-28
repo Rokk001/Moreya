@@ -30,13 +30,14 @@
 #include "traps/TrapManager.h"
 #include "utils/ConfigManager.h"
 #include "utils/LogManager.h"
+#include "utils/Translation.h"
 
 #include <algorithm>
 #include <cmath>
 
 
 const std::string TrapFearName = "Fear";
-const std::string TrapFearNameDisplay = "Fear trap";
+const std::string TrapFearNameKey = "trap.fear.name";
 const TrapType TrapFear::mTrapType = TrapType::fear;
 
 namespace
@@ -49,8 +50,9 @@ class TrapFearFactory : public TrapFactory
     const std::string& getName() const override
     { return TrapFearName; }
 
-    const std::string& getNameReadable() const override
-    { return TrapFearNameDisplay; }
+    //! \brief The name shown to the player, in the chosen language.
+    std::string getNameReadable() const override
+    { return Translation::tr(TrapFearNameKey); }
 
     int getCostPerTile() const override
     { return ConfigManager::getSingleton().getTrapConfigInt32("FearCostPerTile"); }

@@ -38,12 +38,13 @@
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 #include "utils/Random.h"
+#include "utils/Translation.h"
 
 #include <iomanip>
 #include <cmath>
 
 const std::string RoomLibraryName = "Library";
-const std::string RoomLibraryNameDisplay = "Library room";
+const std::string RoomLibraryNameKey = "room.library.name";
 const RoomType RoomLibrary::mRoomType = RoomType::library;
 const TileVisual RoomLibrary::mRoomVisual = TileVisual::libraryRoom;
 
@@ -62,8 +63,9 @@ class RoomLibraryFactory : public RoomFactory
     const std::string& getName() const override
     { return RoomLibraryName; }
 
-    const std::string& getNameReadable() const override
-    { return RoomLibraryNameDisplay; }
+    //! \brief The name shown to the player, in the chosen language.
+    std::string getNameReadable() const override
+    { return Translation::tr(RoomLibraryNameKey); }
 
     int getCostPerTile() const override
     { return ConfigManager::getSingleton().getRoomConfigInt32("LibraryCostPerTile"); }

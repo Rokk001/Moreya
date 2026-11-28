@@ -31,9 +31,10 @@
 #include "game/SkillType.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
+#include "utils/Translation.h"
 
 const std::string SpellCallToWarName = "callToWar";
-const std::string SpellCallToWarNameDisplay = "Call to war";
+const std::string SpellCallToWarNameKey = "spell.calltowar.name";
 const std::string SpellCallToWarCooldownKey = "CallToWarCooldown";
 const SpellType SpellCallToWar::mSpellType = SpellType::callToWar;
 
@@ -50,8 +51,9 @@ class SpellCallToWarFactory : public SpellFactory
     const std::string& getCooldownKey() const override
     { return SpellCallToWarCooldownKey; }
 
-    const std::string& getNameReadable() const override
-    { return SpellCallToWarNameDisplay; }
+    //! \brief The name shown to the player, in the chosen language.
+    std::string getNameReadable() const override
+    { return Translation::tr(SpellCallToWarNameKey); }
 
     virtual void checkSpellCast(GameMap* gameMap, const InputManager& inputManager, InputCommand& inputCommand) const override
     { SpellCallToWar::checkSpellCast(gameMap, inputManager, inputCommand); }
@@ -110,7 +112,7 @@ void SpellCallToWar::checkSpellCast(GameMap* gameMap, const InputManager& inputM
     Tile* tile = gameMap->getTile(inputManager.mXPos, inputManager.mYPos);
     if(tile == nullptr)
     {
-        inputCommand.displayText(Ogre::ColourValue::Red, "Point at a tile inside the map.");
+        inputCommand.displayText(Ogre::ColourValue::Red, Translation::tr("spell.hint.point_at_tile"));
         return;
     }
 
@@ -118,8 +120,7 @@ void SpellCallToWar::checkSpellCast(GameMap* gameMap, const InputManager& inputM
     int32_t price = ConfigManager::getSingleton().getSpellConfigInt32("CallToWarPrice");
     if(playerMana < price)
     {
-        inputCommand.displayText(Ogre::ColourValue::Red, "Not enough mana. " +
-            formatCastSpell(SpellType::callToWar, price));
+        inputCommand.displayText(Ogre::ColourValue::Red, Translation::tr("spell.hint.not_enough_mana", {{"text", formatCastSpell(SpellType::callToWar, price)}}));
         return;
     }
     inputCommand.displayText(Ogre::ColourValue::White, formatCastSpell(SpellType::callToWar, price));

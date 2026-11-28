@@ -23,6 +23,7 @@
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 #include "utils/MakeUnique.h"
+#include "utils/Translation.h"
 
 #include <algorithm>
 #include <cmath>
@@ -34,7 +35,7 @@ const TileVisual RoomMerchant::mRoomVisual = TileVisual::merchantRoom;
 namespace
 {
 static const std::string ROOM_NAME = "Merchant";
-static const std::string ROOM_DISPLAY = "Merchant room";
+static const std::string ROOM_DISPLAY_KEY = "room.merchant.name";
 static const double PERCENT = 100.0;
 static uint32_t nextGoodsIndex = 1;
 
@@ -47,8 +48,8 @@ class RoomMerchantFactory : public RoomFactory
     TileVisual getVisualType() const override { return RoomMerchant::mRoomVisual; }
     //! \brief Returns its configuration name.
     const std::string& getName() const override { return ROOM_NAME; }
-    //! \brief Returns the approved player-facing room name.
-    const std::string& getNameReadable() const override { return ROOM_DISPLAY; }
+    //! \brief Returns the approved player-facing room name, in the chosen language.
+    std::string getNameReadable() const override { return Translation::tr(ROOM_DISPLAY_KEY); }
     //! \brief Reads the approved build cost.
     int getCostPerTile() const override { return ConfigManager::getSingleton().getRoomConfigInt32("MerchantCostPerTile"); }
     //! \brief Previews ordinary room construction.

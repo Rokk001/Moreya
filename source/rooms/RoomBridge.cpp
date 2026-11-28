@@ -30,6 +30,7 @@
 #include "rooms/RoomManager.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
+#include "utils/Translation.h"
 
 #include <algorithm>
 
@@ -154,14 +155,14 @@ void BridgeRoomFactory::checkBuildBridge(RoomType type, GameMap* gameMap, Seat* 
         {
             Tile* tile = gameMap->getTile(inputManager.mXPos, inputManager.mYPos);
             if(tile == nullptr)
-                inputCommand.displayText(Ogre::ColourValue::Red, "Point at a tile inside the map.");
+                inputCommand.displayText(Ogre::ColourValue::Red, Translation::tr("room.hint.point_at_tile"));
             else if(tile->getHasBridge())
-                inputCommand.displayText(Ogre::ColourValue::Red, "A bridge already occupies this tile.");
+                inputCommand.displayText(Ogre::ColourValue::Red, Translation::tr("room.hint.bridge_occupied"));
             else if(std::find(allowedTilesVisual.begin(), allowedTilesVisual.end(), tile->getTileVisual()) == allowedTilesVisual.end())
                 inputCommand.displayText(Ogre::ColourValue::Red, allowedTilesVisual.size() == 1 ?
-                    "A wooden bridge needs water." : "A stone bridge needs water or lava.");
+                    Translation::tr("room.hint.bridge_wooden_needs_water") : Translation::tr("room.hint.bridge_stone_needs_water"));
             else
-                inputCommand.displayText(Ogre::ColourValue::Red, "Connect the bridge to your claimed ground.");
+                inputCommand.displayText(Ogre::ColourValue::Red, Translation::tr("room.hint.bridge_connect"));
         }
         return;
     }
@@ -172,7 +173,7 @@ void BridgeRoomFactory::checkBuildBridge(RoomType type, GameMap* gameMap, Seat* 
         if(playerGold < priceTotal)
         {
             std::string txt = formatBuildRoom(type, priceTotal);
-            inputCommand.displayText(Ogre::ColourValue::Red, "Not enough gold. " + txt);
+            inputCommand.displayText(Ogre::ColourValue::Red, Translation::tr("room.hint.not_enough_gold", {{"text", txt}}));
             inputCommand.displayPointerText(Ogre::ColourValue::Red, "$" + Helper::toString(priceTotal));
             return;
         }

@@ -37,9 +37,10 @@
 #include "utils/LogManager.h"
 #include "utils/MakeUnique.h"
 #include "utils/Random.h"
+#include "utils/Translation.h"
 
 const std::string RoomArenaName = "Arena";
-const std::string RoomArenaNameDisplay = "Arena room";
+const std::string RoomArenaNameKey = "room.arena.name";
 const RoomType RoomArena::mRoomType = RoomType::arena;
 const TileVisual RoomArena::mRoomVisual = TileVisual::arenaRoom;
 
@@ -56,8 +57,9 @@ class RoomArenaFactory : public RoomFactory
     TileVisual getVisualType() const override
     { return RoomArena::mRoomVisual; }
     
-    const std::string& getNameReadable() const override
-    { return RoomArenaNameDisplay; }
+    //! \brief The name shown to the player, in the chosen language.
+    std::string getNameReadable() const override
+    { return Translation::tr(RoomArenaNameKey); }
 
     int getCostPerTile() const override
     { return ConfigManager::getSingleton().getRoomConfigInt32("ArenaCostPerTile"); }

@@ -35,9 +35,10 @@
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 #include "utils/Random.h"
+#include "utils/Translation.h"
 
 const std::string SpellCreatureExplosionName = "creatureExplosion";
-const std::string SpellCreatureExplosionNameDisplay = "Creature explosion";
+const std::string SpellCreatureExplosionNameKey = "spell.creatureexplosion.name";
 const std::string SpellCreatureExplosionCooldownKey = "CreatureExplosionCooldown";
 const SpellType SpellCreatureExplosion::mSpellType = SpellType::creatureExplosion;
 
@@ -54,8 +55,9 @@ class SpellCreatureExplosionFactory : public SpellFactory
     const std::string& getCooldownKey() const override
     { return SpellCreatureExplosionCooldownKey; }
 
-    const std::string& getNameReadable() const override
-    { return SpellCreatureExplosionNameDisplay; }
+    //! \brief The name shown to the player, in the chosen language.
+    std::string getNameReadable() const override
+    { return Translation::tr(SpellCreatureExplosionNameKey); }
 
     virtual void checkSpellCast(GameMap* gameMap, const InputManager& inputManager, InputCommand& inputCommand) const override
     { SpellCreatureExplosion::checkSpellCast(gameMap, inputManager, inputCommand); }
@@ -86,14 +88,13 @@ void SpellCreatureExplosion::checkSpellCast(GameMap* gameMap, const InputManager
 
     if(targets.empty())
     {
-        inputCommand.displayText(Ogre::ColourValue::Red, "Select an enemy creature on your claimed ground.");
+        inputCommand.displayText(Ogre::ColourValue::Red, Translation::tr("spell.hint.select_enemy_on_claimed_ground"));
         return;
     }
 
     if(playerMana < pricePerTarget)
     {
-        inputCommand.displayText(Ogre::ColourValue::Red, "Not enough mana. " +
-            formatCastSpell(SpellType::creatureExplosion, pricePerTarget));
+        inputCommand.displayText(Ogre::ColourValue::Red, Translation::tr("spell.hint.not_enough_mana", {{"text", formatCastSpell(SpellType::creatureExplosion, pricePerTarget)}}));
         return;
     }
 

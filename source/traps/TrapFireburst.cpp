@@ -29,12 +29,13 @@
 #include "utils/ConfigManager.h"
 #include "utils/LogManager.h"
 #include "utils/Random.h"
+#include "utils/Translation.h"
 
 #include <algorithm>
 #include <cmath>
 
 const std::string TrapFireburstName = "Fireburst";
-const std::string TrapFireburstNameDisplay = "Fireburst trap";
+const std::string TrapFireburstNameKey = "trap.fireburst.name";
 const TrapType TrapFireburst::mTrapType = TrapType::fireburst;
 
 namespace
@@ -47,8 +48,9 @@ class TrapFireburstFactory : public TrapFactory
     const std::string& getName() const override
     { return TrapFireburstName; }
 
-    const std::string& getNameReadable() const override
-    { return TrapFireburstNameDisplay; }
+    //! \brief The name shown to the player, in the chosen language.
+    std::string getNameReadable() const override
+    { return Translation::tr(TrapFireburstNameKey); }
 
     int getCostPerTile() const override
     { return ConfigManager::getSingleton().getTrapConfigInt32("FireburstCostPerTile"); }

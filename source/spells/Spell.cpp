@@ -35,6 +35,7 @@
 #include "spells/SpellType.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
+#include "utils/Translation.h"
 
 #include "ODApplication.h"
 #include <algorithm>
@@ -231,7 +232,7 @@ std::string Spell::getSpellStreamFormat()
 
 std::string Spell::formatCastSpell(SpellType type, uint32_t price)
 {
-    return "Cast " + SpellManager::getSpellReadableName(type) + " [" + Helper::toString(price)+ " Mana]";
+    return Translation::tr("spell.hint.cast", {{"name", SpellManager::getSpellReadableName(type)}, {"price", Helper::toString(price)}});
 }
 
 //! \brief True if the seat is among the seats with vision on the tile.

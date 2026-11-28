@@ -33,6 +33,7 @@
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
+#include "utils/Translation.h"
 
 static const std::string EMPTY_STRING;
 
@@ -47,7 +48,7 @@ namespace
 
 std::string TrapFactory::formatBuildTrap(TrapType type, uint32_t price) const
 {
-    return "Build " + TrapManager::getTrapReadableName(type) + " [" + Helper::toString(price)+ " gold]";
+    return Translation::tr("trap.hint.build", {{"name", TrapManager::getTrapReadableName(type)}, {"price", Helper::toString(price)}});
 }
 
 void TrapFactory::checkBuildTrapDefault(GameMap* gameMap, TrapType type, const InputManager& inputManager, InputCommand& inputCommand) const
@@ -74,7 +75,7 @@ void TrapFactory::checkBuildTrapDefault(GameMap* gameMap, TrapType type, const I
     if(playerGold < priceTotal)
     {
         std::string txt = formatBuildTrap(type, priceTotal);
-        inputCommand.displayText(Ogre::ColourValue::Red, "Not enough gold. " + txt);
+        inputCommand.displayText(Ogre::ColourValue::Red, Translation::tr("trap.hint.not_enough_gold", {{"text", txt}}));
         inputCommand.displayPointerText(Ogre::ColourValue::Red, Helper::toString(priceTotal));
         return;
     }
@@ -487,7 +488,7 @@ const std::string& TrapManager::getTrapNameFromTrapType(TrapType type)
     return factory.getName();
 }
 
-const std::string& TrapManager::getTrapReadableName(TrapType type)
+std::string TrapManager::getTrapReadableName(TrapType type)
 {
     std::vector<const TrapFactory*>& factories = getFactories();
     uint32_t index = static_cast<uint32_t>(type);
@@ -546,7 +547,7 @@ void TrapManager::checkSellTrapTiles(GameMap* gameMap, const InputManager& input
     if(sellTiles.empty())
     {
         inputCommand.unselectAllTiles();
-        inputCommand.displayText(Ogre::ColourValue::Red, "Select a trap owned by you to sell.");
+        inputCommand.displayText(Ogre::ColourValue::Red, Translation::tr("trap.hint.select_trap_to_sell"));
         return;
     }
 
@@ -660,7 +661,7 @@ void TrapManager::checkSellTrapTilesEditor(GameMap* gameMap, const InputManager&
 {
     if(inputManager.mCommandState == InputCommandState::infoOnly)
     {
-        inputCommand.displayText(Ogre::ColourValue::White, "Remove tiles");
+        inputCommand.displayText(Ogre::ColourValue::White, Translation::tr("trap.hint.remove_tiles"));
         inputCommand.selectSquaredTiles(inputManager.mXPos, inputManager.mYPos, inputManager.mXPos, inputManager.mYPos);
         return;
     }
@@ -679,7 +680,7 @@ void TrapManager::checkSellTrapTilesEditor(GameMap* gameMap, const InputManager&
     if(inputManager.mCommandState == InputCommandState::building)
     {
         inputCommand.selectTiles(sellTiles);
-        inputCommand.displayText(Ogre::ColourValue::White, "Remove tiles");
+        inputCommand.displayText(Ogre::ColourValue::White, Translation::tr("trap.hint.remove_tiles"));
         return;
     }
 

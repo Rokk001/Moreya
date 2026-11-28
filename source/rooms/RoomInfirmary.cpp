@@ -16,6 +16,7 @@
 #include "network/ODServer.h"
 #include "utils/ConfigManager.h"
 #include "utils/MakeUnique.h"
+#include "utils/Translation.h"
 #include <algorithm>
 #include <limits>
 #include <queue>
@@ -38,8 +39,8 @@ class RoomInfirmaryFactory : public RoomFactory
     TileVisual getVisualType() const override { return TileVisual::infirmaryRoom; }
     //! \brief Returns the configuration name.
     const std::string& getName() const override { return roomName; }
-    //! \brief Returns the player name.
-    const std::string& getNameReadable() const override { return roomName; }
+    //! \brief Returns the player name, in the chosen language.
+    std::string getNameReadable() const override { return Translation::tr("room.infirmary.name"); }
     //! \brief Returns the configured tile price.
     int getCostPerTile() const override { return ConfigManager::getSingleton().getRoomConfigInt32("InfirmaryCostPerTile"); }
     //! \brief Previews the normal build selection.

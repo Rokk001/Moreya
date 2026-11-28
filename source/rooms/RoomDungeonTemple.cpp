@@ -50,6 +50,7 @@
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 #include "utils/Random.h"
+#include "utils/Translation.h"
 
 #include <algorithm>
 #include <cmath>
@@ -58,7 +59,7 @@
 #include <set>
 
 const std::string RoomDungeonTempleName = "DungeonTemple";
-const std::string RoomDungeonTempleNameDisplay = "Dungeon temple room";
+const std::string RoomDungeonTempleNameKey = "room.dungeontemple.name";
 const RoomType RoomDungeonTemple::mRoomType = RoomType::dungeonTemple;
 const TileVisual RoomDungeonTemple::mRoomVisual = TileVisual::dungeonTempleRoom;
 
@@ -288,8 +289,9 @@ class RoomDungeonTempleFactory : public RoomFactory
     const std::string& getName() const override
     { return RoomDungeonTempleName; }
 
-    const std::string& getNameReadable() const override
-    { return RoomDungeonTempleNameDisplay; }
+    //! \brief The name shown to the player, in the chosen language.
+    std::string getNameReadable() const override
+    { return Translation::tr(RoomDungeonTempleNameKey); }
 
     int getCostPerTile() const override
     { return 0; }

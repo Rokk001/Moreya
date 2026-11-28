@@ -30,12 +30,13 @@
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
+#include "utils/Translation.h"
 
 #include <algorithm>
 #include <cmath>
 
 const std::string SpellRevealEnemyName = "revealEnemy";
-const std::string SpellRevealEnemyNameDisplay = "Reveal Enemy";
+const std::string SpellRevealEnemyNameKey = "spell.revealenemy.name";
 const std::string SpellRevealEnemyCooldownKey = "RevealEnemyCooldown";
 const SpellType SpellRevealEnemy::mSpellType = SpellType::revealEnemy;
 
@@ -53,8 +54,9 @@ class SpellRevealEnemyFactory : public SpellFactory
     const std::string& getCooldownKey() const override
     { return SpellRevealEnemyCooldownKey; }
 
-    const std::string& getNameReadable() const override
-    { return SpellRevealEnemyNameDisplay; }
+    //! \brief The name shown to the player, in the chosen language.
+    std::string getNameReadable() const override
+    { return Translation::tr(SpellRevealEnemyNameKey); }
 
     virtual void checkSpellCast(GameMap* gameMap, const InputManager& inputManager, InputCommand& inputCommand) const override
     { SpellRevealEnemy::checkSpellCast(gameMap, inputManager, inputCommand); }
@@ -108,7 +110,7 @@ void SpellRevealEnemy::checkSpellCast(GameMap* gameMap, const InputManager& inpu
     Tile* tile = gameMap->getTile(inputManager.mXPos, inputManager.mYPos);
     if(tile == nullptr)
     {
-        inputCommand.displayText(Ogre::ColourValue::Red, "Point at a tile inside the map.");
+        inputCommand.displayText(Ogre::ColourValue::Red, Translation::tr("spell.hint.point_at_tile"));
         return;
     }
 
@@ -121,14 +123,13 @@ void SpellRevealEnemy::checkSpellCast(GameMap* gameMap, const InputManager& inpu
 
     if(!tile->getLocalPlayerHasVision() || !isValidTile(*tile, player->getSeat()))
     {
-        inputCommand.displayText(Ogre::ColourValue::Red, "Select a tile claimed by an enemy keeper that you can see.");
+        inputCommand.displayText(Ogre::ColourValue::Red, Translation::tr("spell.hint.select_enemy_tile"));
         return;
     }
 
     if(playerMana < price)
     {
-        inputCommand.displayText(Ogre::ColourValue::Red, "Not enough mana. " +
-            formatCastSpell(SpellType::revealEnemy, price));
+        inputCommand.displayText(Ogre::ColourValue::Red, Translation::tr("spell.hint.not_enough_mana", {{"text", formatCastSpell(SpellType::revealEnemy, price)}}));
         return;
     }
 
