@@ -138,6 +138,80 @@ static bool parseNumberList(const std::string& text, std::vector<double>& number
     return true;
 }
 
+//! \brief The rank property tokens of the keys Rank1, Rank3, Rank5 and Properties (documented in the header of
+//! creatureSkills.cfg, where every token is described with the numbers it takes).
+static const char* const PROPERTY_TOKENS[] =
+{
+    "AREA", "EXTRA_TARGETS", "JUMP_TARGETS", "LONGER", "LARGER_RADIUS", "LONGER_RANGE", "FASTER_CAST", "STACK",
+    "LESS_DAMAGE_DEALT", "LESS_DAMAGE_TAKEN", "REFLECT", "BLOCK", "SURVIVE_DEADLY", "CONTROL_IMMUNE",
+    "STUN", "KNOCK_DOWN", "STAGGER", "FEAR", "PUSH", "PULL", "LOSE_TARGET", "HOLD", "SLOW", "WEAKEN", "SHATTER",
+    "CLEANSE", "CLEANSE_ALL", "SPREAD", "SPREAD_DOT", "SPREAD_ON_DEATH", "HEAL_REDUCTION", "BLEED_ON_HIT",
+    "MAGIC", "ALLIES_NEAR", "DEFENSE", "DEFENSE_BOOST", "HEAL_ON_BREAK", "HASTE", "MORE_PER_ATTACKER",
+    "MORE_ON_LOW", "BURST_ON_LOW", "EXTEND_ON_HIT", "REGEN",
+    "MANA_REFUND", "MANA_REGEN", "MANA_DRAIN", "MANA_DISCOUNT", "MANA_REFUND_ON_KILL", "FREE_ON_LOW",
+    "FREE_ON_DEBUFFED", "FREE_AREA_CAST", "COOLDOWN_PER_HIT", "DOUBLE_CAST", "DOUBLE_CAST_ONCE", "RESET_ON_KILL",
+    "COUNTER", "DODGE_HASTE", "DODGE_COOLDOWN", "DODGE_TAUNT_RESET", "DODGE_AREA",
+    "CRIT_DAMAGE", "HASTE_ON_CRIT", "SLOW_ON_CRIT", "PIERCE", "CRIT_BEHIND", "CAN_CRIT", "EXECUTE", "ARMOR_PIERCE",
+    "BONUS_VS_DOT", "BONUS_VS_SLOWED", "BONUS_VS_FROZEN", "BONUS_VS_FLEEING", "BONUS_VS_BACKLINE", "IGNORE_DODGE",
+    "AURA_LINGER", "AURA_DOUBLE", "FOCUS_TARGET", "BURNING_GROUND", "CHASE", "DASH"
+};
+
+//! \brief Parses the cell of a key Rank1, Rank3, Rank5 or Properties: property tokens, each followed by its numbers,
+//! or "-" for none.
+//! \param text The cell.
+//! \param properties Receives the properties in the order written.
+//! \param error Receives the token that is neither a number nor a property token.
+//! \return false when a token is unknown or a number comes before the first token.
+static bool parseRankProperties(const std::string& text, std::vector<RankProperty>& properties, std::string& error)
+{
+    properties.clear();
+    const std::vector<std::string> tokens = splitTokens(text);
+    if(tokens.size() == 1 && tokens[0] == UNUSED_CELL)
+        return true;
+    for(std::vector<std::string>::const_iterator it = tokens.begin(); it != tokens.end(); ++it)
+    {
+        double value = 0.0;
+        if(parseNumber(*it, value))
+        {
+            if(properties.empty())
+            {
+                error = *it;
+                return false;
+            }
+            properties.back().mValues.push_back(value);
+            continue;
+        }
+        if(!isPropertyToken(*it))
+        {
+            error = *it;
+            return false;
+        }
+        RankProperty property;
+        property.mToken = *it;
+        properties.push_back(property);
+    }
+    return true;
+}
+
+//! \brief Adds the properties to the list; a token that is in the list already gets the numbers of the new one.
+static void mergeProperties(std::vector<RankProperty>& merged, const std::vector<RankProperty>& added)
+{
+    for(std::vector<RankProperty>::const_iterator it = added.begin(); it != added.end(); ++it)
+    {
+        bool replaced = false;
+        for(std::vector<RankProperty>::iterator old = merged.begin(); old != merged.end(); ++old)
+        {
+            if(old->mToken != it->mToken)
+                continue;
+            *old = *it;
+            replaced = true;
+            break;
+        }
+        if(!replaced)
+            merged.push_back(*it);
+    }
+}
+
 //! \brief Returns a base line cell as an empty text when it is "-".
 static std::string parseBaseLine(const std::string& text)
 {
@@ -373,8 +447,60 @@ static bool getKindSpec(const std::string& kind, KindSpec& spec)
         spec.mReplace.push_back(3);
         spec.mNeedsBase = true;
     }
+    else if(kind == "CHAIN_LIGHTNING")
+    {
+        // The line of a guided bolt; the jumps come from the JUMP_TARGETS property
+        spec.mClass = "ChainLightning";
+        spec.mCount = 20;
+        spec.mRange = 2;
+        spec.mLevelMin = 4;
+        for(int column = 8; column <= 13; ++column)
+            spec.mMultiply.push_back(column);
+        for(int column = 14; column < static_cast<int>(spec.mCount); ++column)
+            spec.mMultiply.push_back(column);
+        spec.mNeedsBase = true;
+    }
+    else if(kind == "FLURRY")
+    {
+        // "Flurry cooldown warmup LevelMin Range Radius Blows Factor": the value is a "blows/factor" pair
+        spec.mClass = "Flurry";
+        spec.mCount = 7;
+        spec.mLevelMin = 2;
+        spec.mRange = 3;
+        spec.mRadius = 4;
+        spec.mReplace.push_back(5);
+        spec.mReplace.push_back(6);
+        spec.mPair = true;
+    }
     else
+    {
+        // The new kinds of the role groups share one line layout:
+        // "Class cooldown warmup LevelMin Range Radius Duration Value"
+        static const char* const NEW_KINDS[][2] =
+        {
+            {"TAUNT", "Taunt"}, {"PARRY_COUNTER", "ParryCounter"}, {"AURA_ALLY_Defense", "AuraAllyDefense"},
+            {"BUFF_ALLY_Defense", "BuffAllyDefense"}, {"SHIELD_ALLY", "ShieldAlly"}, {"SHIELD_AREA", "ShieldArea"},
+            {"HEAL_INSTANT", "HealInstant"}, {"HOT_AREA", "HotArea"}, {"HOT_SELF", "HotSelf"},
+            {"CURSE_DOT", "CurseDot"}, {"MARK", "Mark"}, {"HOLD", "Hold"}, {"BLEED", "Bleed"}, {"POISON", "Poison"},
+            {"BURN_DOT", "BurnDot"}, {"DRAIN_HEAL_ALLIES", "DrainHealAllies"}
+        };
+        const size_t nbKinds = sizeof(NEW_KINDS) / sizeof(NEW_KINDS[0]);
+        for(size_t i = 0; i < nbKinds; ++i)
+        {
+            if(kind != NEW_KINDS[i][0])
+                continue;
+
+            spec.mClass = NEW_KINDS[i][1];
+            spec.mCount = 7;
+            spec.mLevelMin = 2;
+            spec.mRange = 3;
+            spec.mRadius = 4;
+            spec.mDuration = 5;
+            spec.mReplace.push_back(6);
+            return true;
+        }
         return false;
+    }
 
     return true;
 }
@@ -444,7 +570,8 @@ static std::vector<std::string> pathIds(const SkillTreeConfig& config, const std
 }
 }
 
-//! \brief Loads skill definitions including per-skill ally thresholds.
+//! \brief Loads skill definitions including per-skill ally thresholds and the rank properties (Rank1, Rank3, Rank5
+//! and Properties); an unknown property token is an error.
 bool SkillTreeConfig::load(std::istream& is, std::string& error)
 {
     mSkills.clear();
@@ -595,6 +722,17 @@ bool SkillTreeConfig::load(std::istream& is, std::string& error)
                 ok = parseSkillNumber(rest, skill.mRange);
             else if(key == "BaseLine")
                 skill.mBaseLine = parseBaseLine(rest);
+            else if(key == "Rank1" || key == "Rank3" || key == "Rank5")
+            {
+                std::vector<RankProperty>& properties = (key == "Rank1") ? skill.mRank1 :
+                    ((key == "Rank3") ? skill.mRank3 : skill.mRank5);
+                std::string token;
+                if(!parseRankProperties(rest, properties, token))
+                {
+                    error = where.str() + "unknown rank property '" + token + "' in " + skill.mId;
+                    return false;
+                }
+            }
             else
                 ok = false;
         }
@@ -620,6 +758,15 @@ bool SkillTreeConfig::load(std::istream& is, std::string& error)
                 ok = parseSkillNumber(rest, tierFour.mRange);
             else if(key == "BaseLine")
                 tierFour.mBaseLine = parseBaseLine(rest);
+            else if(key == "Properties")
+            {
+                std::string token;
+                if(!parseRankProperties(rest, tierFour.mProperties, token))
+                {
+                    error = where.str() + "unknown property '" + token + "' in " + tierFour.mCreature;
+                    return false;
+                }
+            }
             else
                 ok = false;
         }
@@ -1016,6 +1163,60 @@ double rankValue(const SkillDef& skill, uint32_t rank)
     if(!parsePair(skill.mValues[index], first, second))
         return 0.0;
     return first;
+}
+
+//! \brief True when the token is one of PROPERTY_TOKENS.
+bool isPropertyToken(const std::string& token)
+{
+    const size_t nbTokens = sizeof(PROPERTY_TOKENS) / sizeof(PROPERTY_TOKENS[0]);
+    for(size_t i = 0; i < nbTokens; ++i)
+    {
+        if(token == PROPERTY_TOKENS[i])
+            return true;
+    }
+    return false;
+}
+
+//! \brief Merges the properties of the ranks the skill reached (Rank1, then Rank3, then Rank5).
+std::vector<RankProperty> propertiesAtRank(const SkillDef& skill, uint32_t rank)
+{
+    std::vector<RankProperty> merged;
+    if(rank >= 1)
+        mergeProperties(merged, skill.mRank1);
+    if(rank >= 3)
+        mergeProperties(merged, skill.mRank3);
+    if(rank >= 5)
+        mergeProperties(merged, skill.mRank5);
+    return merged;
+}
+
+//! \brief Searches the properties of every ranked skill of the build, the tier 4 skill included.
+bool findBuildProperty(const SkillTreeConfig& config, const SkillBuild& build, const std::string& token,
+    RankProperty& found)
+{
+    for(std::map<std::string, uint32_t>::const_iterator it = build.mRanks.begin(); it != build.mRanks.end(); ++it)
+    {
+        if(it->second == 0)
+            continue;
+
+        std::vector<RankProperty> properties;
+        const TierFourDef* tierFour = config.findTierFourById(it->first);
+        const SkillDef* skill = config.findSkill(it->first);
+        if(tierFour != nullptr)
+            properties = tierFour->mProperties;
+        else if(skill != nullptr)
+            properties = propertiesAtRank(*skill, it->second);
+
+        for(std::vector<RankProperty>::const_iterator property = properties.begin(); property != properties.end();
+            ++property)
+        {
+            if(property->mToken != token)
+                continue;
+            found = *property;
+            return true;
+        }
+    }
+    return false;
 }
 
 double passiveSum(const SkillTreeConfig& config, const SkillBuild& build, const std::string& stat)

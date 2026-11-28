@@ -85,8 +85,9 @@ for gone in ("NbTurnsFuriousMax", "UnpaidWagesLeave", "UnpaidWagesStopWork"):
 check("mNbTurnFurious" not in creature_cpp and "mNbTurnFurious" not in creature_h and "getNbTurnFurious" not in creature_h,
       "rogue_rule: the counter of the turns Furious is gone")
 
-# chances per type: default (flanker and the others) 50/30/20, brute (blocker, blitzer) 35/45/20, ranged (archer, caster) 50/15/35
-CHANCES = {"blocker": (35, 45, 20), "blitzer": (35, 45, 20), "archer": (50, 15, 35), "caster": (50, 15, 35)}
+# chances per type: default (skirmisher, healer, supporter and the others) 50/30/20, brute (tank, warrior) 35/45/20,
+# ranged (marksman, mage) 50/15/35 (Roster change (CREATURE-ROSTER W4a): the role groups replace blocker, blitzer, flanker, archer, caster)
+CHANCES = {"tank": (35, 45, 20), "warrior": (35, 45, 20), "marksman": (50, 15, 35), "mage": (50, 15, 35)}
 typed = 0
 if WITH_CONTENT:
     for block in re.findall(r"(?ms)^\[Creature\]\s*$(.*?)^\[/Creature\]", creatures):

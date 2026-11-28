@@ -195,15 +195,15 @@ struct Weapon {
 };
 namespace CreatureSkillTree {
 //! \brief Supplies creature group/family identity to the real drop and rating methods.
-struct TypeInfo { std::string mGroup="blocker", mFamily="human"; };
+struct TypeInfo { std::string mGroup="tank", mFamily="human"; };
 //! \brief Holds the fixture's real catalogue primary path.
-struct TemplateDef { std::string mPrimary="Arms"; };
+struct TemplateDef { std::string mPrimary="Ironclad"; };
 //! \brief Supplies world-selected paths; path scoring itself remains production code.
 struct SkillTreeConfig {
     TemplateDef primary;
     //! \brief Gives the fixed fixture template used for the primary-path comparison.
     const TemplateDef* findTemplate(const std::string&, const std::string&) const { return &primary; }
-    //! \brief Supplies valid paths for the blocker fixture to the actual outfit method.
+    //! \brief Supplies the primary path and the family paths of the tank fixture to the actual outfit and rating methods.
     std::vector<std::string> getPathNames(const TypeInfo& type) const;
 };
 }
@@ -247,12 +247,15 @@ struct ConfigManager {
     const CreatureSkillTree::SkillTreeConfig& getCreatureSkillTree() const { return tree; }
 };
 //! \brief Derives valid fixture paths from real catalogue metadata without reproducing drop selection.
+//! \details A type with a group gets the template primary path (its catalogue lines cover every armed slot of the
+//! fixture) and its family paths; a family-only type gets the family paths alone.
 std::vector<std::string> CreatureSkillTree::SkillTreeConfig::getPathNames(const TypeInfo& type) const {
     std::set<std::string> paths;
+    if(!type.mGroup.empty()) paths.insert(primary.mPrimary);
     for(const std::pair<const std::string,std::unique_ptr<ItemDefinition>>& entry:ConfigManager::getSingleton().items) {
         const ItemDefinition& item=*entry.second; std::string family=item.getPath();
         for(char& letter:family) letter=static_cast<char>(std::tolower(static_cast<unsigned char>(letter)));
-        if(item.getGroup()==type.mGroup || (item.getGroup()=="family"&&family==type.mFamily)) paths.insert(item.getPath());
+        if(item.getGroup()=="family"&&family==type.mFamily) paths.insert(item.getPath());
     }
     return std::vector<std::string>(paths.begin(),paths.end());
 }
@@ -392,7 +395,7 @@ struct TileData {
 static CreatureRoomAffinity EMPTY_AFFINITY(RoomType::nullRoomType,0,0);
 //! \brief Supplies creature identity while using the actual room-affinity lookup.
 struct CreatureDefinition {
-    std::string group="blocker",family="human"; bool worker=false;
+    std::string group="tank",family="human"; bool worker=false;
     std::vector<CreatureRoomAffinity> mRoomAffinity;
     //! \brief Returns the fixture skill group.
     const std::string& getSkillGroup() const { return group; }
@@ -519,6 +522,7 @@ bool GameMap::withdrawFromTreasuries(int32_t amount,Seat* seat) { if(seat->treas
     fixture += function(definitions, "const CreatureRoomAffinity& CreatureDefinition::getRoomAffinity(")
     equipment = source("source/entities/CreatureEquipmentAI.cpp")
     fixture += "\n" + function(equipment, "bool sameItemPath(")
+    fixture += "\n" + function(equipment, "bool isFamilyItemPath(")
     for signature in ("int32_t Creature::getItemEquipmentSlot(", "bool Creature::isItemEquippable(",
                       "double Creature::rateItem(", "bool Creature::acceptItem(", "void Creature::decideEquipment(", "void Creature::dropItems("):
         fixture += "\n" + function(equipment, signature)

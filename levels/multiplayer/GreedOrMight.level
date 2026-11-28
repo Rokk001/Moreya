@@ -2389,7 +2389,7 @@ MineNGold	50
     FightIdleDist	1
     FeeBase	0
     FeePerLevel	0
-    SkillDamageFactor	0.6029
+    SkillDamageFactor	0.4871
     SleepHeal	1
     TurnsStunDropped	0
     WeaponSpawnL	none
@@ -2411,7 +2411,7 @@ MineNGold	50
     LifePerLevel	1
     ManaPerLevel	1
     ManaPerPoint	1.5
-    SkillGroup	blitzer
+    SkillGroup	warrior
     SkillFamily	dragonkin
     PreSkill	DRK_1
     TierFourSkill	T4_Dragon
@@ -2428,7 +2428,7 @@ MineNGold	50
     [/XP]
     [CreatureSkills]
     # SkillName	CooldownNbTurns	WarmupNbTurns	LevelMin	PhyAtk	PhyAtkPerLvl	MagAtk	MagAtkPerLvl	EleAtk	EleAtkPerLvl	PhyMin	PhyMax	MagMin	MagMax	EleMin	EleMax
-    Melee	5	2	1	13	1	7	0	0	0	41.9	62.82	20.95	31.41	0	0
+    Melee	5	2	1	13	1	7	0	0	0	33.85	50.76	16.93	25.38	0	0
     [/CreatureSkills]
     [CreatureBehaviours]
     # BehaviourName

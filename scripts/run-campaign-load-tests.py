@@ -125,7 +125,8 @@ def capture_base(repo, base, output):
     output.write_text(json.dumps({'base': baseline, 'tip': tip}) + '\n', encoding='utf-8')
 
 
-# Select Mossgate and surviving changed maps using only the immutable build range.
+# Select Mossgate only (owner decision 2026-11-28: one test level, changed maps are not loaded in addition), checked
+# against the immutable build range.
 def integration_levels(repo, base_file):
     saved = json.loads(base_file.read_text(encoding='utf-8'))
     base, tip = saved.get('base', ''), saved.get('tip', '')
@@ -134,15 +135,11 @@ def integration_levels(repo, base_file):
     if git_output(repo, 'rev-parse', 'HEAD') != tip:
         raise RuntimeError('Saved integration tip differs from the deployed worktree')
     git_output(repo, 'merge-base', '--is-ancestor', base, tip)
-    changed = git_output(repo, 'diff', '--name-only', '-z', '--no-renames',
-                         '--diff-filter=AM', base, tip, '--', 'levels')
     # Mossgate of the public wing 1 package, or at its former path in a tree of an older layout; in the current layout
     # (no public campaign) Mossgate of the wing 1 content package
     smoke = next((name for name in ('levels/campaign/wing1/Mossgate.level', 'levels/campaign/Mossgate.level')
                   if (repo / name).is_file()), 'levels/campaign/wing1/Mossgate.level')
     names = [smoke]
-    names.extend(name for name in changed.split('\0')
-                 if name.endswith('.level') and name not in names)
     if packages_module().has_public_campaign(repo):
         levels = [repo / name for name in names]
         for level in levels:
@@ -183,7 +180,7 @@ def main():
     parser.add_argument('--output', type=Path, required=True)
     selection = parser.add_mutually_exclusive_group(required=True)
     selection.add_argument('--capture-base', help='Freeze the integration base before the push')
-    selection.add_argument('--base-file', type=Path, help='Mossgate plus changed maps in this saved range')
+    selection.add_argument('--base-file', type=Path, help='Mossgate only, checked against this saved range')
     selection.add_argument('--deployment-selection', type=Path, help='Verified deployment receipt range and selected maps')
     selection.add_argument('--all-campaign', action='store_true', help='Explicit full campaign test')
     # Match run-level-test.py's 2 * seconds + 400 wall-clock budget for --seconds 1.

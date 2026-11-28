@@ -70,7 +70,7 @@ bool CreatureSkillDrain::canBeUsedBy(const Creature* creature) const
     return true;
 }
 
-//! \brief Drains the target's health, including the caster's Hero Bane damage bonus.
+//! \brief Drains the target's health, including the caster's Hero Bane damage bonus; with MANA_DRAIN also its mana.
 bool CreatureSkillDrain::tryUseFight(GameMap& gameMap, Creature* creature, float range,
         GameEntity* attackedObject, Tile* attackedTile, bool ko, bool notifyPlayerIfHit) const
 {
@@ -87,6 +87,8 @@ bool CreatureSkillDrain::tryUseFight(GameMap& gameMap, Creature* creature, float
     const double damageDone = attackedCreature->takeDamage(creature, drained, 0.0, 0.0, 0.0, attackedTile, ko);
     if(damageDone > 0.0)
         creature->heal(damageDone);
+    // Rank property MANA_DRAIN: the target also loses mana to the caster
+    creature->drainSkillMana(*attackedCreature, damageDone, *this);
     if(notifyPlayerIfHit)
         attackedCreature->notifyFightPlayer(attackedTile);
 

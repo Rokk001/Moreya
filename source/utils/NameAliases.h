@@ -30,6 +30,17 @@ uint64_t hashName(const std::string& name);
 
 //! \brief Returns the current name if name is an old name, name itself otherwise. Case-insensitive on the old name.
 std::string resolve(const std::string& name);
+
+//! \brief Returns the class of the successor if className names a removed creature class, className itself otherwise.
+//! Case-insensitive on the removed class. Only creature class names are looked up here.
+std::string resolveCreatureClass(const std::string& className);
+
+//! \brief The class a creature of a savegame or level written before the current creature roster is loaded as, by
+//! the side of its seat: a keeper-side or rogue creature of the class that moved to the hero side is loaded as that
+//! class's successor on the other sides; a hero-side creature and every other class keep their class.
+//! \param className The class after resolveCreatureClass.
+//! \param heroSide True when the creature belongs to a hero seat.
+std::string resolveOldCreatureClassForSide(const std::string& className, bool heroSide);
 }
 
 #endif // NAMEALIASES_H

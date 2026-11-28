@@ -1,4 +1,4 @@
-"""Validate the equipment catalogue, prices and actual creature weapon compatibility.
+"""Validate the equipment catalogue, its group and family paths, prices and actual creature weapon compatibility.
 
 The catalogue config/items.cfg lives in a content package (found through scripts/content_packages.py); without the
 content the check names the catalogue as not checked and passes."""
@@ -12,6 +12,27 @@ import content_packages  # noqa: E402
 KINDS = {"Damage%", "MaxHP%", "CritChance", "Defense%", "AttackRating%", "DefenseRating%",
          "MoveSpeed%", "Avoid", "Cooldown%", "DamageAttribute", "Life", "Mana", "ManaCost%",
          "Wakefulness%", "Dig%", "Claim%", "Carry%"}
+# Path lines per (Group, Path) of the effect-based assignment to the new roster, counted once on the branch.
+PATH_COUNTS = {
+    ("tank", "Ironclad"): 19, ("tank", "Evader"): 5, ("tank", "Regenerator"): 4,
+    ("healer", "Renewer"): 5,
+    ("supporter", "Empowerer"): 4, ("supporter", "Blighter"): 1,
+    ("warrior", "Slayer"): 9, ("warrior", "Ravager"): 2, ("warrior", "Reaver"): 1,
+    ("skirmisher", "Assassin"): 11, ("skirmisher", "Venomist"): 7, ("skirmisher", "Whirlwind"): 2,
+    ("marksman", "Sharpshooter"): 6, ("marksman", "Poisoner"): 6, ("marksman", "Barrager"): 6,
+    ("mage", "Pyromancer"): 5, ("mage", "Sparkcaller"): 5,
+    ("worker", "Delving"): 5, ("worker", "Claiming"): 5, ("worker", "Survival"): 5,
+    ("family", "Arcane"): 7, ("family", "Demon"): 7, ("family", "Greenskin"): 7, ("family", "Dwarf"): 8,
+    ("family", "Elf"): 6, ("family", "Human"): 6, ("family", "Undead"): 6, ("family", "Dragonkin"): 5,
+    ("family", "Workfolk"): 5, ("family", "Beastkin"): 4, ("family", "Stonekin"): 4, ("family", "Vermin"): 4,
+}
+# Weapon and shield lines whose WeaponClass no creature of their group or family spawns with (counted once on the
+# branch): crossbows and wands are carried by no creature at all, the spear, club and hammer of BLK_A strengthen the
+# warrior group that carries none of them, and five family lines name a class their family does not carry.
+UNWEARABLE = {"ARC_A_Crossbow", "ARC_B_Crossbow", "ARC_C_Crossbow", "ELF_Crossbow",
+              "FLK_A_Wand", "FLK_B_Wand", "FLK_C_Wand", "ARC_Wand",
+              "BLK_A_Spear", "BLK_A_Club", "BLK_A_Hammer",
+              "DMN_Shield", "DMN_Sword", "DWF_Axe", "DWF_Sword", "ARC_Dagger"}
 
 
 def read(name):
@@ -39,8 +60,8 @@ def value(block, key):
 
 
 def main():
-    """Assert every prescribed catalogue count, quality, range, price and weapon class (the catalogue is named as not
-    checked when the content is not present)."""
+    """Assert every prescribed catalogue count, path, quality, range, price and weapon class (the catalogue is named as
+    not checked when the content is not present)."""
     if content_packages.data_file(ROOT, "config/items.cfg") is None:
         content_packages.unchecked("check_items_cfg", ["config/items.cfg"])
         return
@@ -51,6 +72,13 @@ def main():
     effects_source = read("source/entities/ItemEffects.cpp")
     effect_table = effects_source.split("EFFECT_NAMES[]", 1)[1].split("};", 1)[0]
     effects = set(re.findall(r'\{"([^"]+)",\s*"[^"]+"\}', effect_table))
+    group_paths, family_paths = set(), {}
+    for skill in blocks(read("config/creatureSkills.cfg"), "Skill"):
+        if values(skill, "Group"):
+            group_paths.add((value(skill, "Group"), value(skill, "Path")))
+        else:
+            family_paths[value(skill, "Family")] = value(skill, "Path")
+    path_counts, unwearable = {}, set()
     identifiers, displays, poor, paths = set(), set(), [], []
     for item in items:
         item_id = value(item, "Id")
@@ -63,6 +91,9 @@ def main():
         else:
             paths.append(item_id)
             assert set(qualities) == {"Common", "Rare", "Epic"}, item_id
+            owner = (value(item, "Group"), value(item, "Path"))
+            assert owner in group_paths or (owner[0] == "family" and owner[1] in family_paths.values()), (item_id, owner)
+            path_counts[owner] = path_counts.get(owner, 0) + 1
         representative = value(item, "PoorEquipment")
         if representative != "none":
             assert representative in equipment, (item_id, representative)
@@ -72,14 +103,15 @@ def main():
             for creature in creatures:
                 group = value(creature, "SkillGroup")
                 family = value(creature, "SkillFamily")
-                if not (family.casefold() == value(item, "Path").casefold() if value(item, "Group") == "family"
+                if not (family_paths.get(family) == value(item, "Path") if value(item, "Group") == "family"
                         else group == value(item, "Group")):
                     continue
                 for hand in ("WeaponSpawnR", "WeaponSpawnL"):
                     for spawned in values(creature, hand):
                         if spawned in equipment:
                             eligible.append(value(equipment[spawned], "WeaponType"))
-            assert weapon_class in eligible, (item_id, weapon_class, eligible)
+            if weapon_class not in eligible:
+                unwearable.add(item_id)
             assert value(equipment[representative], "WeaponType") == weapon_class, item_id
         for quality, block in qualities.items():
             display = value(block, "Display")
@@ -102,7 +134,10 @@ def main():
             assert price == {"Poor": (20,), "Common": (100,), "Rare": (300, 100), "Epic": (1500, 250)}[quality], item_id
     assert len(poor) == 5 and len(paths) == 182 and len(displays) == 546
     assert set(poor) == {"POOR_Head", "POOR_Armour", "POOR_Boots", "POOR_Ring", "POOR_Shield"}
-    print("equipment catalogue: 187 lines, 546 distinct path displays, ranges/effects/prices/weapons passed")
+    assert path_counts == PATH_COUNTS, sorted(set(path_counts.items()) ^ set(PATH_COUNTS.items()))
+    assert unwearable == UNWEARABLE, sorted(unwearable ^ UNWEARABLE)
+    print("equipment catalogue: 187 lines, 546 distinct path displays, %d group/family paths, %d unwearable weapon lines,"
+          " ranges/effects/prices/weapons passed" % (len(PATH_COUNTS), len(UNWEARABLE)))
 
 
 if __name__ == "__main__":

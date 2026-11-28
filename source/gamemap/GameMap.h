@@ -311,9 +311,34 @@ public:
     void addClassDescription(const CreatureDefinition *c);
 
     //! \brief Returns a pointer to the first class description whose 'name' or index parameter matches the query.
+    //! A name of a removed creature class that older savegames and levels may still contain gives the class
+    //! description of its successor (NameAliases::resolveCreatureClass).
     const CreatureDefinition* getClassDescription(int index);
     const CreatureDefinition* getClassDescription(const std::string& className);
+    //! \brief Returns the class description to tune with the data of a level, creating it when the class is unknown.
+    //! The tuning of a removed creature class goes to its successor.
     CreatureDefinition* getClassDescriptionForTuning(const std::string& name);
+
+    //! \brief Returns the class name a creature of a savegame or level is loaded as: the name itself when it is a
+    //! class of this map (or unknown), the successor when it names a removed class whose successor is a class of
+    //! this map.
+    std::string resolveClassName(const std::string& className);
+
+    //! \brief Returns the class name a creature or ghost of a savegame or level is loaded as: resolveClassName, and
+    //! while the loader reads a file written before the current creature roster also the side rule of its seat
+    //! (NameAliases::resolveOldCreatureClassForSide; a keeper-side or rogue record of the class that moved to the hero
+    //! side gets its successor when the map has that class).
+    std::string resolveLoadedClassName(const std::string& className, const Seat* seat);
+
+    //! \brief Set by the level loader while it reads the creatures of a file written before the current creature
+    //! roster (a file without the CreatureRoster line in its [Info] block): their classes are then also mapped by
+    //! the side of their seat (NameAliases::resolveOldCreatureClassForSide).
+    inline void setLoadingOldRosterCreatures(bool loading)
+    { mLoadingOldRosterCreatures = loading; }
+
+    //! \brief True while the level loader reads the creatures of a file written before the current creature roster.
+    inline bool isLoadingOldRosterCreatures() const
+    { return mLoadingOldRosterCreatures; }
 
     //! \brief Returns the total number of class descriptions stored in this game map.
     unsigned int numClassDescriptions();
@@ -1071,6 +1096,8 @@ private:
     //! we will be able to compare and write the differences in the level file.
     //! It is the same for weapons.
     std::vector<std::pair<const CreatureDefinition*,CreatureDefinition*> > mClassDescriptions;
+    //! \brief True while the creatures of a file written before the current creature roster are read.
+    bool mLoadingOldRosterCreatures = false;
     std::vector<std::pair<const Weapon*,Weapon*> > mWeapons;
     //! \brief Catalogue lines and ephemeral ownership records for the item system.
     std::vector<const ItemDefinition*> mItemDefinitions;

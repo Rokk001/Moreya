@@ -17,6 +17,7 @@
 
 #include "creatureskill/CreatureSkillSlow.h"
 
+#include "creatureeffect/CreatureEffectHold.h"
 #include "creatureeffect/CreatureEffectSpeedChange.h"
 #include "creatureskill/CreatureSkillManager.h"
 #include "entities/Creature.h"
@@ -27,6 +28,7 @@
 #include "utils/LogManager.h"
 
 #include <istream>
+#include <vector>
 
 const std::string CreatureSkillSlowName = "Slow";
 
@@ -73,7 +75,9 @@ bool CreatureSkillSlow::canBeUsedBy(const Creature* creature) const
     return true;
 }
 
-//! \brief Puts the effect on the attacked creature; a skill of the skill tree tags it with its id.
+//! \brief Puts the effect on the attacked creature; a skill of the skill tree tags it with its id. Rank properties:
+//! AREA slows every enemy within its radius of the target, LONGER multiplies the turns, HOLD also holds the target in
+//! place for its first number of turns.
 bool CreatureSkillSlow::tryUseFight(GameMap& gameMap, Creature* creature, float range,
         GameEntity* attackedObject, Tile* attackedTile, bool ko, bool notifyPlayerIfHit) const
 {
@@ -84,9 +88,33 @@ bool CreatureSkillSlow::tryUseFight(GameMap& gameMap, Creature* creature, float 
     }
 
     Creature* attackedCreature = static_cast<Creature*>(attackedObject);
-    CreatureEffectSpeedChange* effect = new CreatureEffectSpeedChange(mEffectDuration, mEffectValue, "SpellCreatureSlow");
-    tagEffect(effect);
-    attackedCreature->addCreatureEffect(effect);
+    std::vector<Creature*> targets;
+    targets.push_back(attackedCreature);
+    if(hasProperty("AREA"))
+    {
+        const std::vector<Creature*> nearby = creature->getEnemyCreaturesNear(attackedCreature->getPosition(),
+            getPropertyValue("AREA", 0, 0.0) * getPropertyValue("LARGER_RADIUS", 0, 1.0));
+        for(Creature* enemy : nearby)
+        {
+            if(enemy != attackedCreature)
+                targets.push_back(enemy);
+        }
+    }
+
+    const double duration = mEffectDuration * getPropertyValue("LONGER", 0, 1.0);
+    for(Creature* target : targets)
+    {
+        CreatureEffectSpeedChange* effect = new CreatureEffectSpeedChange(duration, mEffectValue, "SpellCreatureSlow");
+        tagEffect(effect);
+        target->addCreatureEffect(effect);
+    }
+
+    if(hasProperty("HOLD") && !attackedCreature->isControlImmune())
+    {
+        CreatureEffectHold* hold = new CreatureEffectHold(getPropertyValue("HOLD", 0, 0.0));
+        tagEffect(hold);
+        attackedCreature->addCreatureEffect(hold);
+    }
 
     return true;
 }

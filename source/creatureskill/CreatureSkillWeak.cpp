@@ -17,6 +17,7 @@
 
 #include "creatureskill/CreatureSkillWeak.h"
 
+#include "creatureeffect/CreatureEffectSpeedChange.h"
 #include "creatureeffect/CreatureEffectStrengthChange.h"
 #include "creatureskill/CreatureSkillManager.h"
 #include "entities/Creature.h"
@@ -27,6 +28,7 @@
 #include "utils/LogManager.h"
 
 #include <istream>
+#include <vector>
 
 const std::string CreatureSkillWeakName = "Weak";
 
@@ -73,7 +75,8 @@ bool CreatureSkillWeak::canBeUsedBy(const Creature* creature) const
     return true;
 }
 
-//! \brief Puts the effect on the attacked creature; a skill of the skill tree tags it with its id.
+//! \brief Puts the effect on the attacked creature; a skill of the skill tree tags it with its id. The rank
+//! properties SPREAD, SLOW and SPREAD_DOT widen it.
 bool CreatureSkillWeak::tryUseFight(GameMap& gameMap, Creature* creature, float range,
         GameEntity* attackedObject, Tile* attackedTile, bool ko, bool notifyPlayerIfHit) const
 {
@@ -84,9 +87,38 @@ bool CreatureSkillWeak::tryUseFight(GameMap& gameMap, Creature* creature, float 
     }
 
     Creature* attackedCreature = static_cast<Creature*>(attackedObject);
-    CreatureEffectStrengthChange* effect = new CreatureEffectStrengthChange(mEffectDuration, mEffectValue, "SpellCreatureWeak");
-    tagEffect(effect);
-    attackedCreature->addCreatureEffect(effect);
+    // Rank property SPREAD: the enemies within its first number in tiles of the target are weakened too
+    std::vector<Creature*> targets;
+    targets.push_back(attackedCreature);
+    if(hasProperty("SPREAD"))
+    {
+        const std::vector<Creature*> nearby = creature->getEnemyCreaturesNear(attackedCreature->getPosition(),
+            getPropertyValue("SPREAD", 0, 0.0));
+        for(Creature* enemy : nearby)
+        {
+            if(enemy != attackedCreature)
+                targets.push_back(enemy);
+        }
+    }
+
+    for(Creature* target : targets)
+    {
+        CreatureEffectStrengthChange* effect = new CreatureEffectStrengthChange(mEffectDuration, mEffectValue, "SpellCreatureWeak");
+        tagEffect(effect);
+        target->addCreatureEffect(effect);
+        // Rank property SLOW: the weakened creature is also slowed (factor, turns)
+        if(hasProperty("SLOW"))
+        {
+            CreatureEffectSpeedChange* slow = new CreatureEffectSpeedChange(getPropertyValue("SLOW", 1, mEffectDuration),
+                getPropertyValue("SLOW", 0, 1.0), "SpellCreatureSlow");
+            tagEffect(slow);
+            target->addCreatureEffect(slow);
+        }
+    }
+
+    // Rank property SPREAD_DOT: the damage over time of the caster on the target spreads to the enemies near it
+    if(hasProperty("SPREAD_DOT"))
+        attackedCreature->spreadDamageOverTimeOf(creature->getName(), getPropertyValue("SPREAD_DOT", 0, 0.0));
 
     return true;
 }

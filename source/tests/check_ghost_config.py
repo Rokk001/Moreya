@@ -125,12 +125,15 @@ def main():
         if match:
             creatures[match[1]] = block
     afraid = {name for name, block in creatures.items() if re.search(r'^\s*AfraidOfGhosts\s+1\s*$',block,re.M)}
-    assert afraid == {'Rat','Roach','Spider','CaveHornet','Goblin','Adventurer','Elf','Gnome','Dwarf1','Dwarf2'}, afraid
-    jobs = {'CaveHornet':('HerbGarden',100,1.5),'Roach':('HerbGarden',90,1),'Spider':('HerbGarden',80,.5),
-        'DarkElf':('AlchemyLab',90,1),'LavaSpawn':('AlchemyLab',80,.5),'Elf':('AlchemyLab',100,1.5),
-        'NatureMonster':('AlchemyLab',90,1),'Adventurer':('AlchemyLab',80,.5),
+    # Roster change (CREATURE-ROSTER W4a): Ghoul, Witch and Hunter take the fear of their predecessors Spider, Roach and
+    # Dwarf1; the Banshee takes the fear of its predecessor the Rat (D23) and still hunts ghosts in her favourite room
+    assert afraid == {'Ghoul','Witch','CaveHornet','Goblin','Adventurer','Elf','Gnome','Hunter','Dwarf2','Banshee'}, afraid
+    jobs = {'CaveHornet':('HerbGarden',100,1.5),'Witch':('HerbGarden',150,1),'Ghoul':('Hatchery',150,.5),
+        'DarkElf':('AlchemyLab',90,1),'Butcher':('AlchemyLab',80,.5),'Elf':('AlchemyLab',100,1.5),
+        'Paladin':('AlchemyLab',90,1),'Adventurer':('AlchemyLab',80,.5),
         'PitDemon':('GhostRoom',0,3),'Troll':('GhostRoom',0,1.5),'Skeleton':('GhostRoom',0,.5),
-        'RunelordDwarf':('GhostRoom',0,3),'Knight':('GhostRoom',0,1.5),'Defender':('GhostRoom',0,.5)}
+        'RunelordDwarf':('GhostRoom',0,3),'Knight':('GhostRoom',0,1.5),'Defender':('GhostRoom',0,.5),
+        'Banshee':('GhostRoom',150,.4)}
     hunters = set()
     for name, block in creatures.items():
         match = re.search(r'\[RoomAffinity\](.*?)\[/RoomAffinity\]', block, re.S)
@@ -138,20 +141,27 @@ def main():
             if len(row:=line.split('#',1)[0].split())==3}
         if 'GhostRoom' in affinities:
             hunters.add(name)
-            assert name not in afraid
-            assert affinities['GhostRoom'][0] == 0
+            # The Banshee needs the ghost room as its required room, which is its favourite room, and is afraid of
+            # ghosts as its predecessor the Rat (roster D23/D32); every other ghost hunter keeps likeness 0 and no fear
+            if name == 'Banshee':
+                assert affinities['GhostRoom'][0] == 150
+                assert list(affinities)[0] == 'GhostRoom', affinities
+            else:
+                assert name not in afraid
+                assert affinities['GhostRoom'][0] == 0
         if name in jobs:
             job, likeness, efficiency = jobs[name]
             assert affinities.get(job)==(likeness,efficiency), (name, job, affinities)
+        # The Gnome got the workshop back as its favourite room (roster decision D32)
         removed = {'Elf':('Workshop','Library'),'Monk':('Workshop',),'Defender':('Workshop',),
-            'DarkElf':('Workshop',),'Gnome':('Workshop',)}.get(name,())
+            'DarkElf':('Workshop',)}.get(name,())
         assert not set(removed)&affinities.keys(), name
-    assert hunters == {'PitDemon','Troll','Skeleton','RunelordDwarf','Knight','Defender'}, hunters
-    expected_jobs = {'Library':{'Orc':3,'Cultist':1.5,'Rat':.5,'Wizard':3,'Monk':1,'Slime':.5},
-        'Workshop':{'Goblin':2,'LavaSpawn':1.2,'LizardMan':.8,'Rat':.4,'Dwarf1':2,'Dwarf2':1.5,'Scarab':.6,'Slime':.4},
-        'HerbGarden':{'CaveHornet':1.5,'Roach':1,'Spider':.5,'NatureMonster':1.5,'Elf':1.2,'Monk':1},
-        'AlchemyLab':{'LizardMan':1.5,'DarkElf':1,'LavaSpawn':.5,'Elf':1.5,'NatureMonster':1,'Adventurer':.5},
-        'GhostRoom':{'PitDemon':3,'Troll':1.5,'Skeleton':.5,'RunelordDwarf':3,'Knight':1.5,'Defender':.5}}
+    assert hunters == {'PitDemon','Troll','Skeleton','RunelordDwarf','Knight','Defender','Banshee'}, hunters
+    expected_jobs = {'Library':{'Orc':3,'Cultist':1.5,'Banshee':.5,'Wizard':3,'Monk':1},
+        'Workshop':{'Goblin':2,'Butcher':1.2,'LizardMan':.8,'Banshee':.4,'Dwarf2':1.5,'Gnome':1.2,'CrystalGolem':1},
+        'HerbGarden':{'CaveHornet':1.5,'Witch':1,'Paladin':1.5,'Elf':1.2,'Monk':1},
+        'AlchemyLab':{'LizardMan':1.5,'DarkElf':1,'Butcher':.5,'Elf':1.5,'Paladin':1,'Adventurer':.5},
+        'GhostRoom':{'PitDemon':3,'Troll':1.5,'Skeleton':.5,'RunelordDwarf':3,'Knight':1.5,'Defender':.5,'Banshee':.4}}
     for room_name, expected_types in expected_jobs.items():
         actual = {}
         for name, block in creatures.items():

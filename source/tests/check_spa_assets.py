@@ -270,9 +270,10 @@ assert sound_check.returncode == 0, 'check_sound_sources.py failed:\n' + sound_c
 
 # 7. The bath clips in every skeleton a creature type uses (binary skeleton: the clip names end with a line feed)
 types = creature_types()
-# the 35 creature types need the own rows of config/creatures.cfg (content package core-config)
+# the creature types need the own rows of config/creatures.cfg (content package core-config); 36 creature types since
+# the creature roster change (13 hero, 15 keeper, 7 rogue and the Champion)
 if content_packages.has_content(root):
-    assert len(types) == 35, len(types)
+    assert len(types) == 36, len(types)
 else:
     content_packages.unchecked('check_spa_assets', ['number of creature types (own rows of config/creatures.cfg)'])
 unique_skeletons = []

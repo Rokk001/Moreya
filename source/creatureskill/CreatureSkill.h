@@ -18,9 +18,12 @@
 #ifndef CREATURESKILL_H
 #define CREATURESKILL_H
 
+#include "creatureskill/CreatureSkillTree.h"
+
 #include <cstdint>
 #include <iosfwd>
 #include <string>
+#include <vector>
 
 class Creature;
 class CreatureEffect;
@@ -104,6 +107,17 @@ public:
     inline double getTreeManaCost() const
     { return mTreeManaCost; }
 
+    //! \brief Gives a skill made from the skill tree the properties of its rank (Rank1, Rank3, Rank5 or the
+    //! Properties of a tier 4 skill). Each property is a token with the numbers that tune it.
+    void setTreeProperties(const std::vector<CreatureSkillTree::RankProperty>& properties);
+
+    //! \brief True when the skill has the property (always false for a skill that is not from the skill tree).
+    bool hasProperty(const std::string& token) const;
+
+    //! \brief Returns the number at the given position of a property, or the fallback when the skill does not have
+    //! the property or the property has fewer numbers.
+    double getPropertyValue(const std::string& token, size_t index, double fallback) const;
+
     //! \brief Write skill data to the given stream
     virtual void exportToStream(std::ostream& os) const;
     //! \brief Read skills data. Returns true if loading is OK and false otherwise
@@ -121,6 +135,8 @@ private:
     std::string mTreeSkillId;
     //! \brief Mana cost of the rank of a skill tree skill
     double mTreeManaCost;
+    //! \brief Properties of the rank of a skill tree skill (empty for every other skill)
+    std::vector<CreatureSkillTree::RankProperty> mTreeProperties;
 };
 
 #endif // CREATURESKILL_H

@@ -89,8 +89,11 @@ def definition_entries(text, folder, known):
     return result
 
 
-# Account for changed map files and shared campaign definitions without an implicit full sweep.
+# The deploy load test is the agreed basis level Mossgate only (owner decision 2026-11-28: one test level, never the
+# changed levels in addition); an explicit full campaign test stays available. The changed map files and shared
+# campaign definitions are no longer selected; base is still validated as a commit of the success baseline.
 def select(repo, base, tip, full=False):
+    """Returns the deploy load test levels: Mossgate only, or every campaign entry when a full test is requested."""
     commit(repo, tip)
     current = entries(repo, tip)
     if full:
@@ -99,35 +102,14 @@ def select(repo, base, tip, full=False):
                                '(run-campaign-load-tests.py --all-campaign)')
         return dict.fromkeys(current, 'explicit full campaign requested')
     commit(repo, base)
-    changed = git(repo, 'diff', '--name-only', '-z', '--no-renames', base, tip, '--', 'levels').split('\0')
     tracked = set(git(repo, 'ls-tree', '-r', '--name-only', tip, '--', 'levels').splitlines())
     smoke = next((name for name in SMOKES if name in tracked), SMOKES[0])
     # Without a public campaign Mossgate comes with the wing 1 content package; the load runner checks that it is there
     content_smoke = smoke not in tracked and not definitions(repo, tip)
     selected = {smoke: 'agreed basis level (owner decision 99)'
                 + (', from the wing 1 content package' if content_smoke else '')}
-    definition_changed = False
-    for name in changed:
-        if name.endswith('.level') and name in tracked:
-            selected.setdefault(name, 'level changed since successful deploy')
-        elif name == CAMPAIGN or PACKAGE_DEFINITION.match(name):
-            definition_changed = True
-        elif name and not name.endswith('.level') and not PACKAGE_TEXT.match(name):
-            raise RuntimeError('Unmapped shared level file changed: ' + name + '; review dependencies or request explicit full check')
-    if definition_changed:
-        previous = entries(repo, base)
-        old_order, new_order = list(previous), list(current)
-        for name, value in current.items():
-            # Completion checks exercise the next campaign entry too, so changed order affects neighbors.
-            index = new_order.index(name)
-            neighborhood = new_order[max(0, index - 1):index + 2]
-            old_index = old_order.index(name) if name in previous else -1
-            old_neighbors = old_order[max(0, old_index - 1):old_index + 2] if old_index >= 0 else []
-            if previous.get(name) != value or neighborhood != old_neighbors:
-                selected.setdefault(name, 'shared Campaign.cfg entry or sequence changed')
-    for name in selected:
-        if name not in tracked and not (content_smoke and name == smoke):
-            raise RuntimeError('Selected level missing from outgoing commit: ' + name)
+    if smoke not in tracked and not content_smoke:
+        raise RuntimeError('Selected level missing from outgoing commit: ' + smoke)
     return selected
 
 

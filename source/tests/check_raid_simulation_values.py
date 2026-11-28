@@ -7,9 +7,12 @@ keeps a PLACEHOLDER line in its [Raid] section, every key of those blocks that t
 the third simulation pass, every story level sets its countdown inside 1800-3600 game seconds (raid plan R13: wing 1
 one value each for Normal, Hard and Hell, Hard and Hell never above Normal; all 3600 by the owner decision Frage 44 of
 2026-11-21 until the owner has played the maps), and the countdown,
-interval and escape share of every story level, the member levels of its raid and the number of its healers (Wizards
-with the Healer template) have the fixed values of the third simulation pass. All expected values are fixed here
-(counted once on feature/raid-campaign-r3c); nothing is derived from the files under test.
+interval and escape share of every story level, the member levels of its raid and the number of its healers have the
+fixed values of the third simulation pass. A healer is a member of the healer slot: a Monk with the Mender template
+(owner decision of 2026-11-27, creature roster: a mage no longer heals, the healer slot is a class of the healer group;
+the Monk is chosen on every story level), where the third pass had a Wizard with the Healer template; no other member
+has a healer template. All expected values are fixed here (counted once on feature/raid-campaign-r3c, the healer class
+counted once on feature/creature-roster); nothing is derived from the files under test.
 
 Usage: python -I source/tests/check_raid_simulation_values.py
 Exit 0 and "raid simulation values ok" when every item holds.
@@ -70,6 +73,17 @@ LEVELS = {
     "Wraithwood": ("3600", "90", "-", levels(4, 49, 6, 1), 6),
     "HollowmarkCitadel": ("3600", "180", "-", levels(6, 78, 8, 1, 10, 1), 6),
 }
+
+
+# The healer slot of every story level: class and template (creature roster, owner decision of 2026-11-27)
+HEALER_SLOT = ("Monk", "Mender")
+# Templates of the healer skill group (config/creatureSkills.cfg)
+HEALER_TEMPLATES = ("Mender", "Renewer", "Warder")
+
+
+def is_healer(row):
+    """True when the Member row fills the healer slot (HEALER_SLOT)."""
+    return (row[2], row[5]) == HEALER_SLOT
 
 
 # RA11 levels whose guild needs healers: every raid group of them has at least one healer (rule of R3C.2)
@@ -139,12 +153,13 @@ def main():
         check(values.get("EscapeShare") == escape, name + ": escape share")
         members = [row for row in rows if row[0] == "Member"]
         check(sorted(int(row[3]) for row in members) == levels, name + ": member levels (SIM1)")
-        check(sum(1 for row in members if row[2] == "Wizard" and row[5] == "Healer") == healers,
-              name + ": healers (RA11)")
+        check(sum(1 for row in members if is_healer(row)) == healers, name + ": healers (RA11)")
+        check(all(is_healer(row) for row in members if row[5] in HEALER_TEMPLATES),
+              name + ": every member with a healer template fills the healer slot %s" % "/".join(HEALER_SLOT))
         if name in HEALER_EVERY_GROUP:
             groups = sorted(set(row[1] for row in rows if row[0] == "Group"))
             without = [group for group in groups
-                       if not any(row[1] == group and row[2] == "Wizard" and row[5] == "Healer" for row in members)]
+                       if not any(row[1] == group and is_healer(row) for row in members)]
             check(not without, name + ": every raid group has a healer (RA11), not groups %s" % without)
     check(len(LEVELS) == 18, "SIM1: the values of all 18 story levels are fixed here")
     print('ODP_TEST_PHASE {"name":"check","seconds":%.3f}' % (time.perf_counter() - START))

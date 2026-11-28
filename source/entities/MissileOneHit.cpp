@@ -109,6 +109,21 @@ void MissileOneHit::setCreatureDamageRange(double phyMin, double phyMax, double 
     mHasCreatureDamageRange = true;
 }
 
+//! \brief Rolls the IGNORE_DODGE chance (percent, first number) of the shooter, read when the shot lands; a shooter that
+//! is gone or has no such property never ignores a dodge.
+bool MissileOneHit::rollIgnoreDodge() const
+{
+    if(mShooterName.empty())
+        return false;
+
+    const Creature* shooter = getGameMap()->getCreature(mShooterName);
+    if(shooter == nullptr)
+        return false;
+
+    const double chance = shooter->getSkillPropertyValue("IGNORE_DODGE", 0, 0.0);
+    return chance > 0.0 && Random::Double(0.0, 100.0) < chance;
+}
+
 //! \brief Resolves shot accuracy, damage and equipment effects after a landed impact.
 void MissileOneHit::hurt(Tile* tile, GameEntity* entity)
 {
@@ -121,7 +136,10 @@ void MissileOneHit::hurt(Tile* tile, GameEntity* entity)
             target->fireHitMissed(mShooterName, true);
             return;
         }
-        const DefenceChance::Outcome defence = target->rollMeleeDefence(true);
+        DefenceChance::Outcome defence = target->rollMeleeDefence(true);
+        // IGNORE_DODGE of the shooter: a dodge of the shot is ignored with the chance in percent of the property
+        if(defence == DefenceChance::dodged && rollIgnoreDodge())
+            defence = DefenceChance::none;
         if(defence != DefenceChance::none)
         {
             target->fireHitDefended(mShooterName, defence, true);

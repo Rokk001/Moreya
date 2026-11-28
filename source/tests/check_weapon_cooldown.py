@@ -194,25 +194,31 @@ EXPECTED_WEAPON_COOLDOWN = {
     'Knife': 1, 'KoboldPick': 1, 'Pickaxe': 1, 'DefenderWeapon': 4,
     'HandAxe': 2, 'Club': 2, 'Trident': 4, 'RitualDagger': 1, 'Wand': 2,
     'BasicAxeOrc': 3, 'BasicHammerDwarf2': 1, 'StaffLich': 3, 'LizardManStaff': 3, 'SkeletonSword': 2,
+    # look-only copies of BasicAxe and Club for the neutral Minotaurus and Zyklop (same values)
+    'MinotaurAxe': 3, 'CyclopsClub': 2,
 }
 # Weapons that are part of the creature model and attach no mesh of their own
 EXPECTED_MODEL_WEAPONS = {'Knife': 'Goblin', 'KoboldPick': 'Kobold', 'DefenderWeapon': 'Defender'}
 # Cooldown in turns at level 1 per creature skill (melee: from the weapon if one is carried)
+# Roster change (CREATURE-ROSTER W4a): the new types take the cooldown of the attack line of their wage class (melee 2, wage class 400
+# melee 4, ranged 3) or the larger one of their weapon; the Dark Elf fights in melee, the Gnome throws from a distance
 EXPECTED_COOLDOWN = {
-    ('Kobold', 'Melee'): 1, ('DwarfWorker', 'Melee'): 1, ('Rat', 'Melee'): 2, ('Orc', 'Melee'): 4,
-    ('LavaSpawn', 'Melee'): 2, ('Goblin', 'Melee'): 1, ('PitDemon', 'Melee'): 4, ('Roach', 'Melee'): 2,
-    ('Spider', 'Melee'): 2, ('Troll', 'Melee'): 4, ('Cultist', 'Melee'): 2, ('CaveHornet', 'Melee'): 2,
-    ('Slime', 'Melee'): 2, ('Skeleton', 'Melee'): 2, ('Scarab', 'Melee'): 4, ('Adventurer', 'Melee'): 2,
-    ('Monk', 'Melee'): 2, ('Dwarf1', 'Melee'): 2, ('Dwarf2', 'Melee'): 2, ('Knight', 'Melee'): 2,
-    ('RunelordDwarf', 'Melee'): 2, ('NatureMonster', 'Melee'): 2, ('Defender', 'Melee'): 4, ('Wyvern', 'Melee'): 2,
-    ('Gnome', 'Melee'): 2, ('TentacleAlbine', 'Melee'): 2, ('TentacleGreen', 'Melee'): 2, ('Dragon', 'Melee'): 4,
-    ('Champion', 'Melee'): 6,
+    ('Kobold', 'Melee'): 1, ('DwarfWorker', 'Melee'): 1, ('Orc', 'Melee'): 2,
+    ('Butcher', 'Melee'): 4, ('Goblin', 'Melee'): 1, ('PitDemon', 'Melee'): 4,
+    ('Ghoul', 'Melee'): 2, ('Troll', 'Melee'): 2, ('Cultist', 'Melee'): 2, ('CaveHornet', 'Melee'): 2,
+    ('Skeleton', 'Melee'): 2, ('Adventurer', 'Melee'): 2,
+    ('Monk', 'Melee'): 2, ('Hunter', 'Melee'): 2, ('Dwarf2', 'Melee'): 2, ('Knight', 'Melee'): 2,
+    ('RunelordDwarf', 'Melee'): 2, ('Paladin', 'Melee'): 4, ('Defender', 'Melee'): 4, ('Werewolf', 'Melee'): 2,
+    ('DarkElf', 'Melee'): 2, ('CrystalGolem', 'Melee'): 2, ('Cyclops', 'Melee'): 2, ('Dragon', 'Melee'): 4,
+    ('Minotaur', 'Melee'): 3, ('Champion', 'Melee'): 6,
     ('LizardMan', 'MissileLaunch'): 3, ('Lich', 'MissileLaunch'): 2, ('Wizard', 'MissileLaunch'): 3,
-    ('DarkElf', 'MissileLaunch'): 3, ('Elf', 'MissileLaunch'): 3,
-    ('Dragon', 'MissileLaunch'): 22, ('Kreatur', 'MissileLaunch'): 3,
+    ('Elf', 'MissileLaunch'): 3, ('Banshee', 'MissileLaunch'): 3, ('Witch', 'MissileLaunch'): 3,
+    ('Vampire', 'MissileLaunch'): 3, ('Priestess', 'MissileLaunch'): 3, ('Gnoll', 'MissileLaunch'): 3,
+    ('Gnome', 'MissileLaunch'): 3, ('Dragon', 'MissileLaunch'): 22,
 }
-# The GuidedBolt and Grenade lines of the archers are skills of the Bow path now (their cooldown in turns)
-EXPECTED_TREE_COOLDOWN = {'ARC_A2': '3', 'ARC_A3': '10'}
+# The GuidedBolt and Grenade lines of the marksmen are skills of the tree now (their cooldown in turns): Seeking Shot
+# (tier 3 of Sharpshooter) and Blast Shot (tier 1 of Barrager)
+EXPECTED_TREE_COOLDOWN = {'MRK_A3': '3', 'MRK_C1': '10'}
 
 
 # Parry values (percent) per weapon: the three weapons of the unskilled model carriers parry badly, all others keep the
@@ -389,11 +395,21 @@ if WITH_CONTENT:
 
     # ---------------------------------------------------------------- retained building skill damage unchanged against the base state
 
-    assert set(creatures) == set(base_creatures)
+    # Roster change (CREATURE-ROSTER W4a): the comparison covers the types that stayed in the roster with their wage
+    # class and attack kind; the new types have first-estimate attack lines of their own, the attack lines of Orc, Troll,
+    # Knight, Monk, Dwarf2, Cultist, CaveHornet and Elf follow their new wage class, the Dark Elf fights in melee and the
+    # Gnome throws from a distance
+    STAYED = {'Kobold', 'DwarfWorker', 'Orc', 'LizardMan', 'Goblin', 'PitDemon', 'Troll', 'Cultist', 'CaveHornet', 'Skeleton',
+              'Lich', 'Adventurer', 'Monk', 'Dwarf2', 'Knight', 'Wizard', 'DarkElf', 'Elf', 'RunelordDwarf', 'Defender',
+              'Gnome', 'Dragon', 'Champion'}
+    assert set(creatures) & set(base_creatures) == STAYED, sorted(set(creatures) & set(base_creatures))
+    KEPT = STAYED - {'Orc', 'Troll', 'Knight', 'Monk', 'Dwarf2', 'Cultist', 'CaveHornet', 'Elf'}
     checked = 0
     for name, creature in creatures.items():
+        if name not in KEPT:
+            continue
         for skill in creature['skills']:
-            if skill not in DAMAGE_SKILLS:
+            if skill not in DAMAGE_SKILLS or skill not in base_creatures[name]['skills']:
                 continue
             for level in range(1, 31):
                 before = per_damage_type(base_creatures[name], base_equipments, skill, level)
@@ -404,7 +420,8 @@ if WITH_CONTENT:
                 for i, (b, a) in enumerate(zip(before, after)):
                     assert abs((a - b) - (new_items[i] - old_items[i])) < 1e-9, (name, skill, level, before, after)
                 checked += 1
-    assert checked > 1000, checked
+    # 14 unchanged attack lines at 30 levels each, counted once for the roster change
+    assert checked == 420, checked
 
     # Weapons with damage 0 are listed: as decided on 2026-10-19 their damage stays 0 and the creature base damage
     # stays unchanged; balancing the weapon damage follows later in a separate change

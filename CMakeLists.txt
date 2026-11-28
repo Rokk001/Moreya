@@ -346,6 +346,13 @@ set(OD_SOURCEFILES
     ${SRC}/creatureeffect/CreatureEffectStrengthChange.cpp
     ${SRC}/creatureeffect/CreatureEffectBleed.cpp
     ${SRC}/creatureeffect/CreatureEffectPotion.cpp
+    ${SRC}/creatureeffect/CreatureEffectTaunt.cpp
+    ${SRC}/creatureeffect/CreatureEffectMark.cpp
+    ${SRC}/creatureeffect/CreatureEffectHold.cpp
+    ${SRC}/creatureeffect/CreatureEffectProtection.cpp
+    ${SRC}/creatureeffect/CreatureEffectShield.cpp
+    ${SRC}/creatureeffect/CreatureEffectDamageOverTime.cpp
+    ${SRC}/creatureeffect/CreatureEffectHealOverTime.cpp
 
     ${SRC}/creaturemood/CreatureMood.cpp
     ${SRC}/creaturemood/CreatureMoodWakefulness.cpp
@@ -393,6 +400,26 @@ set(OD_SOURCEFILES
     ${SRC}/creatureskill/CreatureSkillSummon.cpp
     ${SRC}/creatureskill/CreatureSkillRaiseDead.cpp
     ${SRC}/creatureskill/CreatureSkillSkeletonArmy.cpp
+    ${SRC}/creatureskill/CreatureSkillRole.cpp
+    ${SRC}/creatureskill/CreatureSkillTaunt.cpp
+    ${SRC}/creatureskill/CreatureSkillParryCounter.cpp
+    ${SRC}/creatureskill/CreatureSkillAuraAllyDefense.cpp
+    ${SRC}/creatureskill/CreatureSkillBuffAllyDefense.cpp
+    ${SRC}/creatureskill/CreatureSkillShieldAlly.cpp
+    ${SRC}/creatureskill/CreatureSkillShieldArea.cpp
+    ${SRC}/creatureskill/CreatureSkillHealInstant.cpp
+    ${SRC}/creatureskill/CreatureSkillHotArea.cpp
+    ${SRC}/creatureskill/CreatureSkillHotSelf.cpp
+    ${SRC}/creatureskill/CreatureSkillDamageOverTime.cpp
+    ${SRC}/creatureskill/CreatureSkillCurseDot.cpp
+    ${SRC}/creatureskill/CreatureSkillBleed.cpp
+    ${SRC}/creatureskill/CreatureSkillPoison.cpp
+    ${SRC}/creatureskill/CreatureSkillBurnDot.cpp
+    ${SRC}/creatureskill/CreatureSkillMark.cpp
+    ${SRC}/creatureskill/CreatureSkillHold.cpp
+    ${SRC}/creatureskill/CreatureSkillDrainHealAllies.cpp
+    ${SRC}/creatureskill/CreatureSkillChainLightning.cpp
+    ${SRC}/creatureskill/CreatureSkillFlurry.cpp
 
     ${SRC}/entities/Building.cpp
     ${SRC}/entities/BuildingObject.cpp

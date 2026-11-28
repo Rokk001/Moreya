@@ -55,7 +55,9 @@ ROOMS = ("roomAlchemyLab", "roomArena", "roomBridgeStone", "roomBridgeWooden", "
          "roomLibrary", "roomMerchant", "roomPrison", "roomSpa", "roomTavern", "roomTemple", "roomToilet",
          "roomTorture", "roomTrainingHall", "roomTreasury", "roomWorkshop")
 
-# WR1: the start rooms of every level; WR2: the researchable rooms per level; WR3: every other room is forbidden
+# WR1: the start rooms of every level; WR2: the researchable rooms per level; WR3: every other room is forbidden.
+# Counted again on feature/creature-roster: the required rooms of the portal creatures are released (owner decision
+# of 2026-11-27; the released rooms per level are content rows, see WING1_ROWS below).
 START_ROOMS = ("roomDormitory", "roomHatchery", "roomLibrary", "roomTreasury")
 NOT_FREE = ("roomTavern",)
 

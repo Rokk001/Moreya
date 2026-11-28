@@ -71,8 +71,9 @@ for block in re.findall(r'\[Creature\](.*?)\[/Creature\]', creatures_cfg, re.S):
             continue
         types[fields['Name']] = fields['MeshName']
 # Most creature rows are own rows of the content package core-config: without the content only the public rows count
+# 36 creature types since the creature roster change (13 hero, 15 keeper, 7 rogue and the Champion)
 if HAS_CONTENT:
-    assert len(types) == 35, len(types)
+    assert len(types) == 36, len(types)
 else:
     content_packages.unchecked('check_dirt_assets', ['config/creatures.cfg own creature rows'])
 
@@ -92,9 +93,10 @@ else:
         assert png_size('materials/textures/Pile_' + name + '.png') == (PILE_TEXTURE_SIZE, PILE_TEXTURE_SIZE), name + ' texture size'
         assert re.search(r'^material Pile_' + name + r'\b', materials, re.M), 'material Pile_' + name + ' missing'
     # Level-specific classes keep their explicitly declared species mesh, including its unchanged pile geometry.
-    pile_aliases = {'DragonBoss': 'Dragon', 'BossDragon': 'Dragon', 'VeteranScarab': 'Scarab'}
+    # (the VeteranScarab class and its pile alias were removed with the roster change, Mario 2026-11-27)
+    pile_aliases = {'DragonBoss': 'Dragon', 'BossDragon': 'Dragon'}
     expected_piles = {'Pile_' + name + '.mesh' for name in types} | {'Pile_' + name + '.mesh' for name in pile_aliases}
-    assert {path.name for path in content_packages.data_glob(root, 'models', 'Pile_*.mesh')} == expected_piles, 'exactly 35 species piles and three declared-species aliases'
+    assert {path.name for path in content_packages.data_glob(root, 'models', 'Pile_*.mesh')} == expected_piles, 'exactly 35 species piles and two declared-species aliases'
     for alias, original in pile_aliases.items():
         original_bytes = data_path('models/Pile_' + original + '.mesh').read_bytes()
         assert data_path('models/Pile_' + alias + '.mesh').read_bytes() == original_bytes, alias + ' changes the original geometry'

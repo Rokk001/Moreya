@@ -61,9 +61,11 @@ def clips(credits):
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     creatures = read('config/creatures.cfg')
-    scared = ('Rat','Roach','Spider','CaveHornet','Goblin','Adventurer','Elf','Gnome','Dwarf1','Dwarf2')
-    hunters = ('PitDemon','Troll','Skeleton','RunelordDwarf','Knight','Defender')
-    for creature in scared+hunters:
+    # Roster change: Witch, Ghoul and Hunter take the fear of Roach, Spider and Dwarf1; the Banshee takes the fear of
+    # the Rat (D23) and also hunts ghosts in the ghost room, so it needs both clip sets (as in check_ghost_config.py)
+    scared = ('Witch','Ghoul','CaveHornet','Goblin','Adventurer','Elf','Gnome','Hunter','Dwarf2','Banshee')
+    hunters = ('PitDemon','Troll','Skeleton','RunelordDwarf','Knight','Defender','Banshee')
+    for creature in sorted(set(scared+hunters)):
         block = next(block for block in re.findall(r'\[Creature\](.*?)\[/Creature\]',creatures,re.S)
             if re.search(r'^\s*Name\s+'+creature+r'\s*$',block,re.M))
         mesh = re.search(r'^\s*MeshName\s+(\S+)',block,re.M)[1]
@@ -76,8 +78,8 @@ def clips(credits):
         _, chunks = module.chunks(room_file('models/'+skeleton).read_bytes())
         animations = {name:data for kind,name,data in chunks if kind==module.ANIMATION}
         # Empty is never played (decision 936: the hunter's put-in is the generated reach pose over Idle; see
-        # check_ghost_hunter_pose), so the hunters carry Beam and Throw
-        expected = ('Scared',) if creature in scared else ('Beam','Throw')
+        # check_ghost_hunter_pose), so the hunters carry Beam and Throw; the Banshee, scared and hunter, carries both sets
+        expected = (('Scared',) if creature in scared else ())+(('Beam','Throw') if creature in hunters else ())
         for name in expected:
             assert name in animations, (creature,name)
             data = animations[name]

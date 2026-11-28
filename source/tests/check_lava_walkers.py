@@ -25,5 +25,6 @@ for block in re.findall(r'^\[Creature\]\s*$(.*?)^\[/Creature\]', config, re.M | 
     assert name and speed
     if float(speed.group(1)) > 0:
         walkers.add(name.group(1))
-assert walkers == {'LavaSpawn', 'PitDemon', 'Dragon', 'Wyvern', 'CaveHornet'}, walkers
+# Roster change (CREATURE-ROSTER W4a): Butcher, Werewolf and Gnoll take the lava walking of their predecessors LavaSpawn and Wyvern
+assert walkers == {'Butcher', 'PitDemon', 'Dragon', 'Werewolf', 'Gnoll', 'CaveHornet'}, walkers
 print('lava walkers ok')

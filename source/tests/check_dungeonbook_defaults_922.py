@@ -27,17 +27,19 @@ def field(block, key, default="none"):
 
 
 def main():
-    """Verify 35 classes, 21 distinct defaults, real atlas entries and production tooltip probe generation."""
+    """Verify 36 classes, 19 distinct defaults, real atlas entries and production tooltip probe generation."""
     creatures = blocks("config/creatures.cfg", "Creature")
     weapons = {field(b, "Name"): b for b in blocks("config/equipments.cfg", "Equipment")}
     defaults = {field(b, "WeaponSpawn" + hand) for b in creatures for hand in ("R", "L")} - {"none"}
     # The creature and equipment rows are own rows of the content package core-config (read joined by blocks());
     # without the content only the public rows are there and the counts are named as not checked
+    # Roster change (CREATURE-ROSTER W4a): 36 classes; BasicAxeOrc, Sabre, Wand and Crossbow are no default weapon any
+    # more, BasicAxe and BasicHammer are (Minotaur, Runelord Dwarf)
     if content_packages.has_content(ROOT):
-        assert len(creatures) == 35, len(creatures)
-        assert len(defaults) == 21, defaults
+        assert len(creatures) == 36, len(creatures)
+        assert len(defaults) == 19, defaults
     else:
-        content_packages.unchecked("check_dungeonbook_defaults_922", ["config/creatures.cfg 35 classes, 21 defaults"])
+        content_packages.unchecked("check_dungeonbook_defaults_922", ["config/creatures.cfg 36 classes, 19 defaults"])
     # The item catalogue and the item atlas lie in the content packages (core-config, core-gui)
     if not content_packages.has_content(ROOT):
         content_packages.unchecked("check_dungeonbook_defaults_922", ["config/items.cfg", "gui/Items.imageset coverage"])
@@ -114,7 +116,7 @@ int main(int argc, char** argv) {
         output.parent.mkdir(parents=True, exist_ok=True)
         output.write_text(probe, encoding="utf-8")
         coverage = "atlas coverage passed" if content_packages.has_content(ROOT) else "atlas coverage not checked"
-        print("decision 922: 35 classes, 21 defaults, " + coverage + "; C++ probe emitted, not compiled")
+        print("decision 922: 36 classes, 19 defaults, " + coverage + "; C++ probe emitted, not compiled")
     else:
         compile_and_run("dungeonbook-defaults-922", probe)
 

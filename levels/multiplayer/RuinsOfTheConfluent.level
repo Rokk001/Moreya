@@ -2086,7 +2086,7 @@ DwarfWorker	15
 Knight	7
 Wizard	7
 RunelordDwarf	5
-NatureMonster	5
+Paladin	5
 [/Creatures]
 [/Wave]
 [/Waves]
@@ -2154,123 +2154,6 @@ NatureMonster	5
 [/Lights]
 
 [CreatureDefinitions]
-[Creature]
-    Name	VeteranScarab
-    [Stats]
-    CreatureJob	Fighter
-    MeshName	Scarab.mesh
-    BedMeshName	DragonBed
-    BedDim	1	1
-    BedPos	1	1	0	-1
-    MinHP	153.8
-    HP/Level	6
-    Heal/Turn	0.03
-    WakefulnessLost/Turn	0.1
-    HungerGrowth/Turn	0.1
-    UrgeGrowth/Turn	0.1
-    Cleanliness	0.25
-    DirtFactor	1.75
-    TileSightRadius	18
-    MaxGoldCarryable	0
-    DigRate	0
-    DigRate/Level	0
-    ClaimRate	0
-    ClaimRate/Level	0
-    GroundMoveSpeed	0.7
-    WaterMoveSpeed	0.3
-    LavaMoveSpeed	0
-    GroundSpeed/Level	0.012
-    WaterSpeed/Level	0.005
-    LavaSpeed/Level	0
-    PhysicalDefense	4
-    PhysicalDef/Level	0.2
-    MagicalDefense	3
-    MagicalDef/Level	0
-    ElementDefense	1.5
-    ElementDef/Level	0.1
-    FightIdleDist	1
-    FeeBase	300
-    MoodSensitivity	1
-    FeePerLevel	48
-    SkillDamageFactor	0.9075
-    SleepHeal	1
-    TurnsStunDropped	0
-    WeaponSpawnL	none
-    WeaponSpawnL	none
-    SoundFamilyPickup	Default/Pickup
-    SoundFamilyDrop	Default/Drop
-    SoundFamilyAttack	Default/Attack
-    SoundFamilyDie	Default/Die
-    SoundFamilySlap	Default/Slap
-    AttackRating	233
-    DefenseRating	78
-    Avoidance	none
-    Strength	30
-    Dexterity	20
-    Life	25
-    Mana	10
-    StrengthPerLevel	2
-    DexterityPerLevel	1
-    LifePerLevel	1
-    ManaPerLevel	1
-    ManaPerPoint	1
-    SkillGroup	blocker
-    SkillFamily	vermin
-    PreSkill	none
-    TierFourSkill	T4_Scarab
-    [/Stats]
-    [RoomAffinity]
-    TrainingHall	100	1.2
-    Workshop	80	0.8
-    Library	0	0.5
-    [/RoomAffinity]
-    [XP]
-    # 2-10
-    10	21	33	46	50	65	81	98	116
-    # 11-20
-    136	158	182	208	236	266	298	332	368	406
-    # 21-30
-    447	491	538	588	641	697	756	818	883	951
-    [/XP]
-    [MoodModifiers]
-    # MoodModifierName	StartHunger	Jump	FallPerTurn	Reward
-    Hunger	80	-300	-1.1905	300
-    # MoodModifierName	StartWakefulness	Jump	FallPerTurn	Reward
-    Wakefulness	20	-300	-1.1905	300
-    # MoodModifierName	Jump	FallPerTurn	Reward
-    Fee	-300	-0.8929	300
-    # MoodModifierName	Jump	FallPerTurn	Reward
-    HpLoss	-125	-0.1488	125
-    # MoodModifierName	TurnsWithoutFightMin	Jump	FallPerTurn	Reward
-    TurnsWithoutFight	150	-100	-0.119	100
-    # MoodModifierName	Jump	FallPerTurn	Reward
-    NoLair	-300	-1.1905	300
-    # MoodModifierName	TurnsMin	Jump	FallPerTurn	Reward
-    OutOfWork	10	-100	-0.119	100
-    # MoodModifierName	TurnsMin	Jump	FallPerTurn	Reward
-    HeldInHand	100	-100	-0.119	100
-    # MoodModifierName	DurationTurns	MaxSlaps	MoodModifier
-    Slapped	600	5	-100
-    # MoodModifierName	Jump	FallPerTurn	Reward
-    Tortured	-300	-1.1905	300
-    # MoodModifierName	MoodModifier
-    Rested	100
-    # MoodModifierName	FallPerTurn
-    HatedCompany	-0.119
-    [/MoodModifiers]
-    [CreatureSkills]
-    # SkillName	CooldownNbTurns	WarmupNbTurns	LevelMin	PhyAtk	PhyAtkPerLvl	MagAtk	MagAtkPerLvl	EleAtk	EleAtkPerLvl	PhyMin	PhyMax	MagMin	MagMax	EleMin	EleMax
-    Melee	2	1	1	0	0	16	0.31	0	0	0	0	79.05	118.53	0	0
-    [/CreatureSkills]
-    [CreatureBehaviours]
-    # BehaviourName	WeakCoef
-    FleeWhenWeak	0.3
-    # BehaviourName
-    AttackEnemy
-    # BehaviourName
-    LeaveDungeonWhenFurious
-    [/CreatureBehaviours]
-[/Creature]
 [/CreatureDefinitions]
 
 [EquipmentDefinitions]
@@ -2286,42 +2169,42 @@ NatureMonster	5
 0	Orc7	Orc.mesh	33	5	0	Orc	4	0	max	100	0	0	none	none	nullSkillType	none	0
 0	PitDemon9	PitDemon.mesh	27	47	0	PitDemon	3	0	max	100	0	0	none	none	nullSkillType	none	0
 0	PitDemon10	PitDemon.mesh	22	5	0	PitDemon	3	0	max	100	0	0	none	none	nullSkillType	none	0
-0	Spider11	Spider.mesh	11	2	0	Spider	2	0	max	100	0	0	none	none	nullSkillType	none	0
-0	Spider12	Spider.mesh	10	1	0	Spider	2	0	max	100	0	0	none	none	nullSkillType	none	0
-0	TentacleAlbine13	TentacleAlbine.mesh	12	2	0	TentacleAlbine	3	0	max	100	0	0	none	none	nullSkillType	none	0
-0	TentacleAlbine14	TentacleAlbine.mesh	3	54	0	TentacleAlbine	3	0	max	100	0	0	none	none	nullSkillType	none	0
-0	Spider15	Spider.mesh	2	54	0	Spider	2	0	max	100	0	0	none	none	nullSkillType	none	0
-0	Spider16	Spider.mesh	3	53	0	Spider	2	0	max	100	0	0	none	none	nullSkillType	none	0
-0	Spider17	Spider.mesh	52	56	0	Spider	2	0	max	100	0	0	none	none	nullSkillType	none	0
-0	Spider18	Spider.mesh	54	55	0	Spider	2	0	max	100	0	0	none	none	nullSkillType	none	0
-0	Spider19	Spider.mesh	56	2	0	Spider	2	0	max	100	0	0	none	none	nullSkillType	none	0
-0	Spider20	Spider.mesh	56	3	0	Spider	2	0	max	100	0	0	none	none	nullSkillType	none	0
-0	TentacleAlbine21	TentacleAlbine.mesh	57	3	0	TentacleAlbine	3	0	max	100	0	0	none	none	nullSkillType	none	0
-0	TentacleAlbine22	TentacleAlbine.mesh	53	57	0	TentacleAlbine	3	0	max	100	0	0	none	none	nullSkillType	none	0
-0	TentacleGreen23	TentacleGreen.mesh	55	54	0	TentacleGreen	2	0	max	100	0	0	none	none	nullSkillType	none	0
-0	TentacleGreen24	TentacleGreen.mesh	2	55	0	TentacleGreen	2	0	max	100	0	0	none	none	nullSkillType	none	0
-0	TentacleGreen25	TentacleGreen.mesh	11	1	0	TentacleGreen	2	0	max	100	0	0	none	none	nullSkillType	none	0
-0	TentacleGreen26	TentacleGreen.mesh	55	3	0	TentacleGreen	2	0	max	100	0	0	none	none	nullSkillType	none	0
+0	Spider11	Ghoul.mesh	11	2	0	Ghoul	2	0	max	100	0	0	none	none	nullSkillType	none	0
+0	Spider12	Ghoul.mesh	10	1	0	Ghoul	2	0	max	100	0	0	none	none	nullSkillType	none	0
+0	TentacleAlbine13	CrystalGolem.mesh	12	2	0	CrystalGolem	3	0	max	100	0	0	none	none	nullSkillType	none	0
+0	TentacleAlbine14	CrystalGolem.mesh	3	54	0	CrystalGolem	3	0	max	100	0	0	none	none	nullSkillType	none	0
+0	Spider15	Ghoul.mesh	2	54	0	Ghoul	2	0	max	100	0	0	none	none	nullSkillType	none	0
+0	Spider16	Ghoul.mesh	3	53	0	Ghoul	2	0	max	100	0	0	none	none	nullSkillType	none	0
+0	Spider17	Ghoul.mesh	52	56	0	Ghoul	2	0	max	100	0	0	none	none	nullSkillType	none	0
+0	Spider18	Ghoul.mesh	54	55	0	Ghoul	2	0	max	100	0	0	none	none	nullSkillType	none	0
+0	Spider19	Ghoul.mesh	56	2	0	Ghoul	2	0	max	100	0	0	none	none	nullSkillType	none	0
+0	Spider20	Ghoul.mesh	56	3	0	Ghoul	2	0	max	100	0	0	none	none	nullSkillType	none	0
+0	TentacleAlbine21	CrystalGolem.mesh	57	3	0	CrystalGolem	3	0	max	100	0	0	none	none	nullSkillType	none	0
+0	TentacleAlbine22	CrystalGolem.mesh	53	57	0	CrystalGolem	3	0	max	100	0	0	none	none	nullSkillType	none	0
+0	TentacleGreen23	Cyclops.mesh	55	54	0	Cyclops	2	0	max	100	0	0	none	none	nullSkillType	none	0
+0	TentacleGreen24	Cyclops.mesh	2	55	0	Cyclops	2	0	max	100	0	0	none	none	nullSkillType	none	0
+0	TentacleGreen25	Cyclops.mesh	11	1	0	Cyclops	2	0	max	100	0	0	none	none	nullSkillType	none	0
+0	TentacleGreen26	Cyclops.mesh	55	3	0	Cyclops	2	0	max	100	0	0	none	none	nullSkillType	none	0
 0	Troll27	Troll.mesh	43	35	0	Troll	3	0	max	100	0	0	none	none	nullSkillType	none	0
 0	Troll28	Troll.mesh	36	18	0	Troll	3	0	max	100	0	0	none	none	nullSkillType	none	0
 0	Troll29	Troll.mesh	16	18	0	Troll	3	0	max	100	0	0	none	none	nullSkillType	none	0
 0	Troll31	Troll.mesh	26	38	0	Troll	3	0	max	100	0	0	none	none	nullSkillType	none	0
-0	Wyvern33	Wyvern.mesh	36	42	0	Wyvern	3	0	max	100	0	0	none	none	nullSkillType	none	0
+0	Wyvern33	Werewolf.mesh	36	42	0	Werewolf	3	0	max	100	0	0	none	none	nullSkillType	none	0
 0	Dragon34	Dragon.mesh	37	41	0	Dragon	4	0	max	100	0	0	none	none	nullSkillType	none	0
 0	Dragon35	Dragon.mesh	32	6	0	Dragon	4	0	max	100	0	0	none	none	nullSkillType	none	0
-0	Wyvern37	Wyvern.mesh	21	7	0	Wyvern	3	0	max	100	0	0	none	none	nullSkillType	none	0
+0	Wyvern37	Werewolf.mesh	21	7	0	Werewolf	3	0	max	100	0	0	none	none	nullSkillType	none	0
 0	PitDemon39	PitDemon.mesh	49	30	0	PitDemon	4	0	max	100	0	0	none	none	nullSkillType	none	0
 0	PitDemon40	PitDemon.mesh	11	28	0	PitDemon	4	0	max	100	0	0	none	none	nullSkillType	none	0
-0	Kreatur46	Kreatur.mesh	13	28	0	Kreatur	5	0	max	100	0	0	none	none	nullSkillType	none	0
-0	Kreatur47	Kreatur.mesh	49	24	0	Kreatur	5	0	max	100	0	0	none	none	nullSkillType	none	0
+0	Kreatur46	Minotaur.mesh	13	28	0	Minotaur	5	0	max	100	0	0	none	none	nullSkillType	none	0
+0	Kreatur47	Minotaur.mesh	49	24	0	Minotaur	5	0	max	100	0	0	none	none	nullSkillType	none	0
 1	DefaultWorker1	Kobold.mesh	7	9	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
 2	DefaultWorker3	Kobold.mesh	7	49	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
 3	DefaultWorker4	Kobold.mesh	48	47	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
 4	DefaultWorker5	Kobold.mesh	47	10	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
-1	VeteranScarab1	Scarab.mesh	5	8	0	VeteranScarab	1	0	max	100	0	0	none	none	nullSkillType	none	0
-2	VeteranScarab2	Scarab.mesh	7	57	0	VeteranScarab	1	0	max	100	0	0	none	none	nullSkillType	none	0
-3	VeterabScarab3	Scarab.mesh	54	49	0	VeteranScarab	1	0	max	100	0	0	none	none	nullSkillType	none	0
-4	VeteranScarab4	Scarab.mesh	47	3	0	VeteranScarab	1	0	max	100	0	0	none	none	nullSkillType	none	0
+1	Priestess1	Priestess.mesh	5	8	0	Priestess	1	0	max	100	0	0	none	none	nullSkillType	none	0
+2	Priestess2	Priestess.mesh	7	57	0	Priestess	1	0	max	100	0	0	none	none	nullSkillType	none	0
+3	Priestess3	Priestess.mesh	54	49	0	Priestess	1	0	max	100	0	0	none	none	nullSkillType	none	0
+4	Priestess4	Priestess.mesh	47	3	0	Priestess	1	0	max	100	0	0	none	none	nullSkillType	none	0
 [/Creatures]
 
 [Spells]

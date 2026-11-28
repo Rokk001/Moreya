@@ -101,9 +101,10 @@ if WITH_CONTENT:
         turns += 1
     check(abs(turns - 168) <= 1, "Upset after about 168 turns, got " + str(turns))
     check(clamp(900 + reward * sens) == 1200, "solved: the lair comes back at 900")
-    rat, dragon = creature_block("Rat"), creature_block("Dragon")
-    check(sensitivity(rat) == 0.8 and sensitivity(dragon) == 1.25, "type sensitivities")
-    check(modifier(rat, "NoLair")[0] * sensitivity(rat) == -240.0 and modifier(dragon, "NoLair")[0] * sensitivity(dragon) == -375.0,
+    # Roster change (CREATURE-ROSTER W4a): the Ghoul (wage class 50, successor of the Spider) replaces the Rat as the cheap type
+    ghoul, dragon = creature_block("Ghoul"), creature_block("Dragon")
+    check(sensitivity(ghoul) == 0.8 and sensitivity(dragon) == 1.25, "type sensitivities")
+    check(modifier(ghoul, "NoLair")[0] * sensitivity(ghoul) == -240.0 and modifier(dragon, "NoLair")[0] * sensitivity(dragon) == -375.0,
           "sensitivity jumps -240 / -375")
 for token in ("changeStoredMoodBySensitivity(mood->getJump() * (amount - previous))",
               "changeStoredMoodBySensitivity(mood->getReward() * (previous - amount))",

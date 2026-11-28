@@ -2,7 +2,8 @@
 gui/CreatureSkillIcons.imageset, the imageset is loaded by gui/ODSkin.scheme, every image lies inside
 gui/CreatureSkillIcons.png and the picture has a CREDITS row.
 
-Expected: 124 skill ids (90 path skills and 34 tier-4 skills), counted once in config/creatureSkills.cfg.
+Expected: 146 skill ids (111 path skills and 35 tier-4 skills), counted once in config/creatureSkills.cfg on
+feature/creature-roster-w4b (the role groups of the creature roster).
 
 Calls (from the repository root):
   python source/tests/check_creature_skill_icons.py   plain file checks, no compiler, no game
@@ -23,10 +24,10 @@ sys.path.insert(0, str(root / 'scripts'))
 import campaign_packages  # noqa: E402
 import content_packages  # noqa: E402
 
-# Skill ids of config/creatureSkills.cfg: 90 path skills and 34 tier-4 skills
-EXPECTED_SKILLS = 124
-EXPECTED_PATH_SKILLS = 90
-EXPECTED_TIER_FOUR = 34
+# Skill ids of config/creatureSkills.cfg: 111 path skills and 35 tier-4 skills
+EXPECTED_SKILLS = 146
+EXPECTED_PATH_SKILLS = 111
+EXPECTED_TIER_FOUR = 35
 
 errors = []
 

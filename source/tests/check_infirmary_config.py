@@ -46,7 +46,8 @@ def main():
     creatures = content_packages.read_text(repo, "config/creatures.cfg")
     dimensions = Counter(tuple(sorted(map(int, row))) for row in
         re.findall(r"^\s*BedDim\s+(\d+)\s+(\d+)\s*$", creatures, re.M))
-    assert dimensions == {(1, 1): 12, (1, 2): 17, (2, 2): 6}, dimensions
+    # Roster change (CREATURE-ROSTER W4a): 36 types, the new ones with the bed size of their predecessor (the Vampire of the Lich)
+    assert dimensions == {(1, 1): 12, (1, 2): 18, (2, 2): 6}, dimensions
     skills = re.sub(r'#[^\n]*', '', content_packages.read_text(repo, "config/skills.cfg"))
     assert value(skills.split("[Skills]", 1)[1].split("[/Skills]", 1)[0], "roomInfirmary") == 600
     assert re.search(r"^\s*roomInfirmary\s+HealTime\s+mul\s+1\.0\s+0\.8\s+0\.667\s*$", skills, re.M)

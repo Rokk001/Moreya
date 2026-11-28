@@ -134,6 +134,8 @@ MAX_EXAMPLES = 5
 # fighter classes the portal can bring). Brackenford: the portal lies next to the heart and is
 # reached without digging (wing 1 rooms plan WR5, counted on the level on feature/raid-campaign-r17; counted
 # again on fix/wing1-level1-no-river with water walked by the keeper's classes: all values unchanged).
+# Fighter sets counted again on feature/creature-roster, where every portal creature needs only its required room
+# (the rows and the rooms released per level are content).
 # The wing 1 levels are content: the rows lie in checks/campaign_opening.json of the content repository
 # (scripts/campaign_packages.py: content_data); without content there are no wing 1 levels to check.
 def load_wing1_portals():

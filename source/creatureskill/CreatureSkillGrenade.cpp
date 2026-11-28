@@ -54,13 +54,19 @@ CreatureSkillGrenade* CreatureSkillGrenade::clone() const
     return new CreatureSkillGrenade(*this);
 }
 
+//! \brief Creates the blast missile with the blast radius of the line times LARGER_RADIUS. A blast of a skill tree skill
+//! names that skill, so that its hits take the COOLDOWN_PER_HIT of the shooter off its cooldown.
 MissileOneHit* CreatureSkillGrenade::createMissile(GameMap& gameMap, Creature* creature,
         const Ogre::Vector3& direction, double phyAtk, double magAtk, double eleAtk, GameEntity* attackedObject,
         bool ko, bool notifyPlayerIfHit) const
 {
-    return new MissileBlast(&gameMap, creature->getSeat(), creature->getName(), mMissileMesh, mMissilePartScript,
-        direction, mMissileSpeed, phyAtk, magAtk, eleAtk, attackedObject, false, ko, notifyPlayerIfHit,
-        mBlastRadius, false);
+    // Rank property LARGER_RADIUS multiplies the blast radius
+    MissileBlast* missile = new MissileBlast(&gameMap, creature->getSeat(), creature->getName(), mMissileMesh,
+        mMissilePartScript, direction, mMissileSpeed, phyAtk, magAtk, eleAtk, attackedObject, false, ko,
+        notifyPlayerIfHit, mBlastRadius * getPropertyValue("LARGER_RADIUS", 0, 1.0), false);
+    if(isTreeSkill() && creature->hasSkillProperty("COOLDOWN_PER_HIT"))
+        missile->setCooldownSkill(getTreeSkillId());
+    return missile;
 }
 
 void CreatureSkillGrenade::getFormatString(std::string& format) const

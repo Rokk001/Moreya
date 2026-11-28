@@ -34,6 +34,39 @@ void CreatureSkill::tagEffect(CreatureEffect* effect) const
         effect->setSourceId(mTreeSkillId);
 }
 
+//! \brief Keeps the properties of the rank of a skill tree skill.
+void CreatureSkill::setTreeProperties(const std::vector<CreatureSkillTree::RankProperty>& properties)
+{
+    mTreeProperties = properties;
+}
+
+//! \brief Looks the property up among the properties of the rank.
+bool CreatureSkill::hasProperty(const std::string& token) const
+{
+    for(std::vector<CreatureSkillTree::RankProperty>::const_iterator it = mTreeProperties.begin();
+        it != mTreeProperties.end(); ++it)
+    {
+        if(it->mToken == token)
+            return true;
+    }
+    return false;
+}
+
+//! \brief Returns a number of a property of the rank, the fallback when it is not written.
+double CreatureSkill::getPropertyValue(const std::string& token, size_t index, double fallback) const
+{
+    for(std::vector<CreatureSkillTree::RankProperty>::const_iterator it = mTreeProperties.begin();
+        it != mTreeProperties.end(); ++it)
+    {
+        if(it->mToken != token)
+            continue;
+        if(index < it->mValues.size())
+            return it->mValues[index];
+        return fallback;
+    }
+    return fallback;
+}
+
 void CreatureSkill::getFormatString(std::string& format) const
 {
     if(!format.empty())

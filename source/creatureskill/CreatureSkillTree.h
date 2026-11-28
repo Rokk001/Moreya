@@ -43,6 +43,16 @@ struct SkillNumber
     double mValue;
 };
 
+//! \brief A property a skill gains at a rank (keys Rank1, Rank3 and Rank5 of a [Skill], Properties of a
+//! [TierFour]): a property token followed by the numbers that tune it (see the header of creatureSkills.cfg).
+struct RankProperty
+{
+    //! \brief The property token, e.g. AREA or STUN.
+    std::string mToken;
+    //! \brief The numbers written after the token (may be empty).
+    std::vector<double> mValues;
+};
+
 //! \brief One [Skill] block: a skill of a path of a group or family (tier 1 to 3, ranks 1 to 5).
 struct SkillDef
 {
@@ -77,6 +87,12 @@ struct SkillDef
     SkillNumber mRange;
     //! \brief The today line the skill scales (empty when "-").
     std::string mBaseLine;
+    //! \brief Properties the skill has from rank 1 (key Rank1, empty when not written).
+    std::vector<RankProperty> mRank1;
+    //! \brief Properties the skill gains at rank 3 (key Rank3, empty when not written).
+    std::vector<RankProperty> mRank3;
+    //! \brief Properties the skill gains at rank 5 (key Rank5, empty when not written).
+    std::vector<RankProperty> mRank5;
 };
 
 //! \brief One [TierFour] block: the single rank skill of a creature type.
@@ -97,6 +113,8 @@ struct TierFourDef
     SkillNumber mRange;
     //! \brief The today line the skill scales (empty when "-").
     std::string mBaseLine;
+    //! \brief Properties of the skill (key Properties, empty when not written).
+    std::vector<RankProperty> mProperties;
 };
 
 //! \brief One [Template] block: a point order of a group.
@@ -293,6 +311,22 @@ double passiveSum(const SkillTreeConfig& config, const SkillBuild& build, const 
 
 //! \brief The rank value of a skill as a number (the first number of a "p/s" token).
 double rankValue(const SkillDef& skill, uint32_t rank);
+
+//! \brief True when the token is one of the rank property tokens of creatureSkills.cfg.
+bool isPropertyToken(const std::string& token);
+
+//! \brief The properties a skill has at a rank: Rank1 from rank 1, Rank3 added from rank 3, Rank5 added from rank 5.
+//! A token of a higher rank replaces the same token of a lower rank (its numbers win).
+//! \param rank The rank (0 gives no property).
+std::vector<RankProperty> propertiesAtRank(const SkillDef& skill, uint32_t rank);
+
+//! \brief Looks for a property among all skills of a build at their ranks (tier 1 to 3 and the tier 4 skill). Used for
+//! the properties of passive skills, which act on the whole creature.
+//! \param token The property token.
+//! \param found Receives the first property found (in the order of the skill ids).
+//! \return false when no skill of the build has the property.
+bool findBuildProperty(const SkillTreeConfig& config, const SkillBuild& build, const std::string& token,
+    RankProperty& found);
 
 //! \brief Name of the creature skill class a kind token is built from (e.g. "Explosion"), empty for PASSIVE kinds
 //! and unknown kinds.

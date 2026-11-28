@@ -44,6 +44,12 @@ for block in (re.findall(r'^\[Creature\]\s*$(.*?)^\[/Creature\]', config, re.M |
         words = line.split()
         if len(words) >= 3 and not words[0].startswith('#'):
             affinity[words[0]] = words[1:]
+    name = re.search(r'^\s*Name\s+(\S+)', block, re.M).group(1)
+    # Butcher and Paladin need the Temple as their required room, which is their favourite room (roster D23/D32)
+    if name in ('Butcher', 'Paladin'):
+        assert affinity['Temple'] == ['150', '0.5'], (name, affinity.get('Temple'))
+        assert list(affinity)[0] == 'Temple', name
+        continue
     if 'Casino' in affinity and float(affinity['Casino'][0]) > 0:
         assert 'Temple' in affinity and affinity['Casino'][0] == affinity['Temple'][0]
 print('decision order ok')

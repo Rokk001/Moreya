@@ -272,7 +272,11 @@ def check_mug_code():
     scales = [float(v) for v in re.findall(r', ([0-9.]+)f \}', table)]
     assert len(scales) == 6 and min(scales) >= MIN_LIMB_MUG_SCALE, scales
     entity = read('source/entities/MovableGameEntity.h')
-    assert 'return isSeatClip(clip) || (clip == drink_anim);' in extract(entity, 'inline bool hidesWeapons(')
+    assert 'return isSeatClip(clip) || (clip == drink_anim) || hidesWeaponsAtRest(clip);' in extract(entity, 'inline bool hidesWeapons(')
+    at_rest = extract(entity, 'inline bool hidesWeaponsAtRest(')
+    hidden = re.findall(r'clip == (\w+)\)', at_rest)
+    assert hidden == ['ambient_lie_anim', 'sleep_anim', 'bathe_anim', 'relieve_pit_anim', 'vomit_anim', 'dance_anim',
+                      'happy_anim', 'stretch_anim', 'throw_anim'], hidden
     reactions = read('source/render/CreatureCombatReactions.cpp')
     assert 'EntityAnimation::hidesWeapons(animState->getAnimationName())' in extract(reactions, 'bool playsSeatClip(')
     state = extract(render, 'void RenderManager::rrSetObjectAnimationState(')
@@ -599,7 +603,8 @@ def check_models(out):
         tavern = re.search(r'^\s*Tavern\s+(\S+)\s+(\S+)', block, re.M)
         if mesh and tavern and (float(tavern.group(1)) > 0.0 or float(tavern.group(2)) > 0.0) and mesh.group(1) not in meshes:
             meshes.append(mesh.group(1))
-    assert len(meshes) == 31, len(meshes)
+    # 32 tavern visitor meshes, counted once after the roster change (12 removed creature meshes, 13 new ones)
+    assert len(meshes) == 32, len(meshes)
     posed = {}
     stool_names = set()
     for mesh in meshes:

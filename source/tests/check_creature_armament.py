@@ -12,27 +12,28 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'scripts'))
 import campaign_packages  # noqa: E402
 import content_packages  # noqa: E402
+# Roster change (CREATURE-ROSTER W4a): the equipment column of the roster plan (sections 2-4) with the equipment that exists today;
+# the weapons still missing (mace, spear, cleaver, bombs, throwing spears) are an open item of the content split
 ASSIGNMENTS = {
-    'Orc': 'BasicAxeOrc', 'Troll': 'Club', 'PitDemon': 'Trident', 'Cultist': 'RitualDagger',
-    'Gnome': 'Wand', 'Adventurer': 'BasicSword', 'Skeleton': 'SkeletonSword', 'Dwarf1': 'HandAxe',
-    'Dwarf2': 'BasicHammerDwarf2', 'Wizard': 'Staff', 'Lich': 'StaffLich', 'LizardMan': 'LizardManStaff',
+    'Troll': 'Club', 'PitDemon': 'Trident', 'Cultist': 'RitualDagger', 'Adventurer': 'BasicSword',
+    'Skeleton': 'SkeletonSword', 'Wizard': 'Staff', 'Lich': 'StaffLich', 'LizardMan': 'LizardManStaff',
+    'RunelordDwarf': 'BasicHammer', 'Priestess': 'Staff', 'Cyclops': 'Club', 'Minotaur': 'BasicAxe',
 }
 UNCHANGED = {
-    'Kobold': ('KoboldPick', 'none'), 'DwarfWorker': ('Pickaxe', 'none'),
-    'LavaSpawn': ('Sabre', 'RustyShield'), 'Goblin': ('Knife', 'none'),
-    'Monk': ('RustySword', 'RustyShield'), 'Knight': ('RustySword', 'RustyShield'),
-    'DarkElf': ('Crossbow', 'none'), 'Elf': ('none', 'Bow'),
-    'RunelordDwarf': ('RustySword', 'RustyShield'), 'NatureMonster': ('RustySword', 'RustyShield'),
+    'Kobold': ('KoboldPick', 'none'), 'DwarfWorker': ('Pickaxe', 'none'), 'Goblin': ('Knife', 'none'),
+    'Knight': ('RustySword', 'RustyShield'), 'Orc': ('HandAxe', 'RustyShield'),
+    'Dwarf2': ('BasicHammerDwarf2', 'RustyShield'), 'Paladin': ('none', 'RustyShield'),
+    'DarkElf': ('Knife', 'Knife'), 'Elf': ('none', 'Bow'),
     'Defender': ('DefenderWeapon', 'none'),
 }
-UNARMED = ('Rat', 'Spider', 'Roach', 'CaveHornet', 'Slime', 'Scarab', 'TentacleAlbine', 'TentacleGreen',
-           'Wyvern', 'Dragon', 'Champion', 'Kreatur')
+UNARMED = ('Monk', 'Hunter', 'Vampire', 'Ghoul', 'Butcher', 'Banshee', 'Witch', 'CaveHornet', 'CrystalGolem',
+           'Werewolf', 'Gnoll', 'Gnome', 'Dragon', 'Champion')
 TYPES = {
     'sword': (('RustySword', 'BasicSword', 'SkeletonSword', 'ShortSword', 'Sabre', 'T2SwordGood'), 1),
     'dagger': (('Knife', 'RitualDagger'), 1),
-    'axe': (('BasicAxe', 'BasicAxeOrc'), 2),
+    'axe': (('BasicAxe', 'BasicAxeOrc', 'MinotaurAxe'), 2),
     'staff': (('Staff', 'StaffLich', 'LizardManStaff'), 2), 'bow': (('Bow',), 2), 'crossbow': (('Crossbow',), 2),
-    'tool': (('KoboldPick', 'Pickaxe'), 1), 'club': (('Club',), 1), 'spear': (('Trident',), 2),
+    'tool': (('KoboldPick', 'Pickaxe'), 1), 'club': (('Club', 'CyclopsClub'), 1), 'spear': (('Trident',), 2),
     'wand': (('Wand',), 1),
 }
 EXPECTED_TYPES = {name: (kind, hands) for kind, (names, hands) in TYPES.items() for name in names}
@@ -149,6 +150,7 @@ def check_equipment(equipment):
     # The copies differ from their originals only in Name, MeshName and the name the player reads (DisplayName,
     # plan INGAME-QS-11 K6), which every equipment has
     for name, original in (('BasicAxeOrc', 'BasicAxe'), ('BasicHammerDwarf2', 'BasicHammer'), ('StaffLich', 'Staff'),
+                           ('MinotaurAxe', 'BasicAxe'), ('CyclopsClub', 'Club'),
                            ('LizardManStaff', 'Staff'), ('SkeletonSword', 'BasicSword')):
         expected = dict(equipment[original], Name=name, MeshName=name + '.mesh')
         expected.pop('DisplayName', None)

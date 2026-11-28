@@ -306,7 +306,8 @@ uint32_t sNextFallenId = 0;
 
 //! \brief Returns the combat state of the creature with that name and creates it (calm, as of now) if it is new
 //! \brief True while the creature plays a seated tavern clip: a weapon in its hand would reach through the table. The
-//! standing Drink counts too: the mug sits on the same hand bone as the weapon and was buried in it (decision 863).
+//! standing Drink counts too: the mug sits on the same hand bone as the weapon and was buried in it (decision 863). So do
+//! the lying, sleeping, bathing, toilet, vomiting, dance, cheer, stretch and throw clips (EntityAnimation::hidesWeapons).
 bool playsSeatClip(const Creature* creature)
 {
     const Ogre::AnimationState* animState = creature->getAnimationState();
@@ -1017,7 +1018,8 @@ void CreatureCombatReactions::tick(CreatureReactions& reactions)
         Ogre::AnimationState* animState = creature->getAnimationState();
         bool idle = (animState != nullptr) && (animState->getAnimationName() == "Idle") && !creature->isMoving();
 
-        // A seated guest has its weapons put away, without the standing sheathing clip on the bench and without drawing them
+        // A seated guest has its weapons put away, without the standing sheathing clip on the bench and without drawing them;
+        // so has a creature in one of the other clips that hide its weapons (EntityAnimation::hidesWeapons)
         if(playsSeatClip(creature))
         {
             if(carriesWeapon && hasWeaponModel(reactions, creature))

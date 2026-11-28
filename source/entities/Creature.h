@@ -54,6 +54,7 @@ class CreatureAction;
 class CreatureActionHuntGhost;
 class CreatureEffectDigTile;
 class CreatureEffect;
+class CreatureEffectCombat;
 class CreatureDefinition;
 class CreatureOverlayStatus;
 class CreatureSkill;
@@ -781,6 +782,124 @@ public:
     void setDefenseContribution(const CreatureEffect* source, double phy, double mag, double ele);
     //! \brief Removes the bonus of a defense effect that ended.
     void removeDefenseContribution(const CreatureEffect* source);
+
+    // Skill hooks of the role skill kinds and rank properties (creatureSkills.cfg). Properties of a PASSIVE skill act
+    // on the whole creature and are read with the three getters below; properties of an active skill are read by the
+    // skill itself (CreatureSkill::getPropertyValue).
+
+    //! \brief Looks for a property of the PASSIVE skills (and a PASSIVE tier 4 skill) at their ranks (server side).
+    //! \param token The property token.
+    //! \param found Receives the property.
+    //! \return false when no passive skill of the creature has the property.
+    bool findSkillProperty(const std::string& token, CreatureSkillTree::RankProperty& found) const;
+    //! \brief True when a passive skill of the creature has the property (server side).
+    bool hasSkillProperty(const std::string& token) const;
+    //! \brief Returns a number of a property of the passive skills, the fallback when it is not there.
+    double getSkillPropertyValue(const std::string& token, size_t index, double fallback) const;
+    //! \brief Returns true the first time per fight it is called with the key ("once per fight" properties); the keys
+    //! are forgotten while the creature has no fight action (upkeepSkillMovement).
+    bool useOncePerFight(const std::string& key);
+    //! \brief AURA_DOUBLE of the creature: once per fight the aura is doubled (a factor value v becomes 1 + 2 (v - 1),
+    //! any other value twice the value) and lasts the turns of the property.
+    //! \param value The value of the aura, changed in place.
+    //! \param duration The turns of the aura, changed in place.
+    //! \param factorValue True when the value is a factor around 1 (strength aura).
+    //! \return True when the aura was doubled.
+    bool applyAuraDouble(double& value, double& duration, bool factorValue);
+    //! \brief FREE_ON_LOW of the creature: the skill that is being cast costs no mana when the health share of the
+    //! target is below the first number of the property.
+    void waiveSkillManaWhenLow(const Creature& target);
+    //! \brief Shortens the cooldown the skill that is being used gets by the turns (COOLDOWN_PER_HIT).
+    void addSkillCooldownCut(double turns);
+    //! \brief Takes the turns off the cooldown of the skill of the skill tree with the id (COOLDOWN_PER_HIT of a blast
+    //! shot whose hits come when it explodes). While that skill is being used the turns go to its collected cut.
+    //! \param treeSkillId The id of the skill tree entry (e.g. MRK_C1).
+    //! \param turns The turns to take off; the cooldown does not drop below 0.
+    void cutTreeSkillCooldown(const std::string& treeSkillId, double turns);
+
+    //! \brief Returns the living enemy creatures on the map within the radius in tiles of the position, nearest first.
+    std::vector<Creature*> getEnemyCreaturesNear(const Ogre::Vector3& center, double radius) const;
+    //! \brief Counts the running effects with the name whose source is the given skill or spell id.
+    uint32_t countActiveEffects(const std::string& effectName, const std::string& sourceId) const;
+    //! \brief Returns the living enemy tank that taunts the creature (the taunt with the most turns left), nullptr if
+    //! none.
+    Creature* getTaunter() const;
+    //! \brief True while a Hold effect keeps the creature in place.
+    bool isRooted() const;
+    //! \brief True while an effect makes the creature immune to stun, knock down, hold and freeze.
+    bool isControlImmune() const;
+    //! \brief Factor on the damage the creature takes from its running role skill effects (marks, protections).
+    double getSkillDamageTakenFactor() const;
+    //! \brief Factor on the damage the creature deals from its running role skill effects (taunts).
+    double getSkillDamageDealtFactor() const;
+    //! \brief Factor on every heal the creature receives from its running role skill effects (damage over time).
+    double getSkillHealReceivedFactor() const;
+    //! \brief Factor on the cooldown of the attacks of the creature from its running role skill effects (HASTE).
+    double getSkillAttackCooldownFactor() const;
+    //! \brief Returns the own fighting creature within the range with the lowest health share that carries no effect
+    //! of the name and source, nullptr if none.
+    //! \param includeSelf True when the creature itself may be chosen.
+    Creature* findWeakestFightingAlly(double range, const std::string& sourceId, const std::string& effectName,
+        bool includeSelf) const;
+    //! \brief Returns the own creature within the range (the creature itself included) with the lowest health share
+    //! below the share, nullptr if none.
+    Creature* findWeakestHurtAlly(double range, double belowShare) const;
+    //! \brief Gives the target an absorb shield of percent of the own heal base for the turns, with the DEFENSE,
+    //! HEAL_ON_BREAK and REFLECT properties of the skill.
+    void giveSkillShield(Creature& target, const CreatureSkill& skill, double percent, double duration);
+    //! \brief Gives the target a heal over time of percent of the own heal base spread over the turns, with the
+    //! CLEANSE, MORE_ON_LOW, BURST_ON_LOW and EXTEND_ON_HIT properties of the skill.
+    void giveSkillHealOverTime(Creature& target, const CreatureSkill& skill, double percent, double duration);
+    //! \brief Ends the running bleeding and poison of the creature, with curses also the curses and burns.
+    void cleanseDamageOverTime(bool curses);
+    //! \brief Copies the running damage over time of the named attacker to the allies of the creature within the
+    //! radius (SPREAD_DOT).
+    void spreadDamageOverTimeOf(const std::string& attackerName, double radius);
+    //! \brief True while a damage over time of the role skills runs on the creature.
+    bool hasDamageOverTime() const;
+    //! \brief MANA_DRAIN of the skill: the target loses the first number times the damage as mana and the creature
+    //! gains it.
+    void drainSkillMana(Creature& target, double damageDone, const CreatureSkill& skill);
+    //! \brief Factor on the damage against the target from the rank properties EXECUTE, BONUS_VS_DOT,
+    //! BONUS_VS_SLOWED, BONUS_VS_FROZEN, BONUS_VS_FLEEING and BONUS_VS_BACKLINE (of the skill when it has them, else
+    //! of the passive skills of the creature).
+    //! \param skill The skill that deals the damage (may be nullptr).
+    double getSkillTargetDamageFactor(const Creature& target, const CreatureSkill* skill) const;
+    //! \brief Deals one melee blow of the creature to the target with the factor on its damage (FLURRY, COUNTER).
+    //! \param canCrit False when the blow cannot be critical.
+    void skillMeleeBlow(Creature& target, double factor, bool canCrit, bool ko);
+    //! \brief Moves the target the tiles away from the creature (towards it when towards is true) until something
+    //! blocks the way; the Brace effect of the target shortens it. Returns false when there is no direction.
+    bool pushSkillTarget(Creature& target, double tiles, bool towards);
+    //! \brief The creature gives up the fight it runs now (LOSE_TARGET).
+    void loseSkillFightTarget();
+    //! \brief DODGE_AREA of the creature: rolls the melee dodge against an area skill; true when it dodged.
+    bool rollAreaDodge() const;
+    //! \brief Lets the creature flee from the source for the turns (FEAR); nothing while it is immune to control.
+    void fleeFromSkill(const Creature& source, double turns);
+    //! \brief BURNING_GROUND of the skill: a zone of the first number of damage per turn (scaled like the skill tree
+    //! spells) for the second number of turns within the third number of tiles of the tile.
+    void addSkillBurningGround(const CreatureSkill& skill, Tile* tile);
+    //! \brief Arms the next melee blow and remembers the skill whose rank properties act when it lands.
+    void armStrike(double factor, const CreatureSkill* skill);
+    //! \brief Returns the skill of the armed blow and forgets it (nullptr when none).
+    const CreatureSkill* consumeStrikeSkill();
+    //! \brief Rolls the parry of a PARRY_COUNTER skill of the creature against a melee blow.
+    //! \param parrySkill Receives the skill that parried.
+    //! \return true when the blow is parried.
+    bool rollSkillParry(const CreatureSkill*& parrySkill) const;
+    //! \brief CRIT_BEHIND of the creature: true when it strikes the target from behind.
+    bool isSkillCriticalFromBehind(const Creature& target) const;
+    //! \brief Acts on the rank properties after a melee blow of the creature on the target: the dodge properties of
+    //! the target, the counter of a skill parry, the critical hit properties and the armed strike properties.
+    void onSkillMeleeResult(Creature& target, DefenceChance::Outcome defence, bool critical, double damageDone,
+        const CreatureSkill* strikeSkill, const CreatureSkill* parrySkill);
+    //! \brief SLOW_ON_CRIT and PIERCE of the creature after a critical shot of it hit the target.
+    void onSkillRangedCritical(Creature& target, double damageDone);
+    //! \brief A heal over time of the creature healed someone (MANA_REFUND).
+    void onSkillHealTick();
+    //! \brief A damage over time of the creature killed its target (MANA_REFUND_ON_KILL).
+    void onSkillDamageOverTimeKill();
 
     //! \brief Check whether a creature has earned one level. If yes, handle leveling it up
     void checkLevelUp();
@@ -2697,6 +2816,48 @@ private:
     std::map<const CreatureEffect*, double> mSpeedContributions;
     //! \brief Bonuses of the running defense effects; the defense modifier is their sum
     std::map<const CreatureEffect*, CreatureDefenseBonus> mDefenseContributions;
+    //! \brief The properties of the PASSIVE skills at their ranks, rebuilt with the tree skills (server side)
+    std::map<std::string, CreatureSkillTree::RankProperty> mSkillProperties;
+    //! \brief Keys of the "once per fight" properties used in the running fight (forgotten without a fight action)
+    std::vector<std::string> mSkillOncePerFight;
+    //! \brief True when the skill that is being cast costs no mana (FREE_ON_LOW, FREE_ON_DEBUFFED)
+    bool mSkillManaWaived = false;
+    //! \brief Turns taken off the cooldown of the skill that is being used (COOLDOWN_PER_HIT)
+    double mSkillCooldownCut = 0.0;
+    //! \brief The attack skill whose tryUseFight is running (nullptr otherwise), for cutTreeSkillCooldown
+    const CreatureSkill* mSkillBeingUsed = nullptr;
+    //! \brief The skill of the armed melee blow (nullptr when none or when it was armed without a skill)
+    const CreatureSkill* mStrikeSkill = nullptr;
+    //! \brief Melee blows dodged in a row since the last blow that landed (DODGE_TAUNT_RESET)
+    uint32_t mSkillDodgesInRow = 0;
+    //! \brief True while a skill blow that cannot be critical is dealt (FLURRY without CAN_CRIT)
+    bool mSkillCriticalBlocked = false;
+    //! \brief True while the target choice looks at the taunting or marked creature only
+    bool mSearchingForcedTarget = false;
+
+    //! \brief Applies the role skill rules to damage the creature is about to take: the damage factors of the
+    //! effects, the block, the absorb shields with their reflect, the rescue from a deadly blow and the heals that
+    //! a hit extends.
+    //! \param attacker The entity that deals the damage (a creature, or a missile whose shooter counts), may be nullptr.
+    //! \param damage The damage after the defense.
+    //! \return The damage that reaches the hit points (unchanged off the server).
+    double applySkillDamageRules(GameEntity* attacker, double damage);
+    //! \brief Lets the damage over time with SPREAD_ON_DEATH of a creature that died jump to an ally near it.
+    void spreadDamageOverTimeOnDeath();
+    //! \brief Rebuilds mSkillProperties from the ranks of the PASSIVE skills.
+    void rebuildSkillProperties();
+    //! \brief The running effects of the role skills (CreatureEffectCombat) of the creature (server side).
+    std::vector<CreatureEffectCombat*> getRunningCombatEffects() const;
+    //! \brief The experience of one heal or strengthening cast in a fight: the fight experience of one attack of the
+    //! first attack line of the creature (CR7).
+    double getSkillCastExperience() const;
+    //! \brief Shortens the timers a skill just got by FASTER_CAST, COOLDOWN_PER_HIT and DOUBLE_CAST_ONCE.
+    //! \param addedCooldown The cooldown that was just added.
+    //! \param support True for a skill used at the start of the turn.
+    void applySkillTimerProperties(CreatureSkillData& skillData, double addedCooldown, bool support);
+    //! \brief DASH and CHASE of the creature: the speed bursts while it fights; without a fight action the "once per
+    //! fight" properties start again (server side, every turn).
+    void upkeepSkillMovement();
 
     //! \brief Starts the skill build of a new creature (personal seed, free rank of the pre-skill) and spends the points
     //! it has earned (server side). Does nothing for a creature whose build was started or loaded.

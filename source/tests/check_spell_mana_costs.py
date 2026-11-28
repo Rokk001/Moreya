@@ -66,8 +66,9 @@ if WITH_CONTENT:
         costs[name] = int(match.group(1))
     for name in ("Kobold", "DwarfWorker"):
         assert costs[name] == 0, f"{name} (worker) possesses for free"
-    for name, value in {"Skeleton": 160, "Dwarf1": 40, "Dwarf2": 80, "Goblin": 80, "Troll": 320, "Monk": 80,
-                        "Wizard": 160, "DarkElf": 160, "Elf": 160, "Orc": 320, "Knight": 80, "Dragon": 320}.items():
+    # Roster change (CREATURE-ROSTER W4a): 0.8 x FeeBase of the new wage classes
+    for name, value in {"Skeleton": 160, "Hunter": 80, "Dwarf2": 160, "Goblin": 80, "Troll": 160, "Monk": 40,
+                        "Wizard": 160, "DarkElf": 80, "Elf": 80, "Orc": 40, "Knight": 40, "Dragon": 320}.items():
         assert costs[name] == value, f"{name} is {costs[name]}, expected {value}"
 action = (repo / "source/creatureaction/CreatureActionPossessed.cpp").read_text()
 assert "PossessFreeSeconds" in action and "getPossessManaCost" in action,     "the possession action uses the free period and the creature drain"

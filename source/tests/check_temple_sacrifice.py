@@ -64,11 +64,13 @@ if content_packages.has_content(repo):
     # The recipes that worked before the queue (12 creature and special recipes, the ones with
     # three inputs in any order) must all still resolve to the same result in the queue model:
     # the last three sacrifices, the first recipe that matches the newest ones wins.
+    # Roster change (CREATURE-ROSTER W4a): a removed creature is replaced by its successor (Rat -> Banshee, LavaSpawn -> Butcher) and the
+    # keeper-side Dark Elf by the Banshee (decisions D6, D20)
     old_recipes = [
         "Lich+Lich=PitDemon", "Troll+Troll=Cultist", "Orc+Cultist+CaveHornet=Workers",
-        "LavaSpawn+LavaSpawn=LizardMan", "Elf+Elf=Orc", "Cultist+Cultist=Goblin",
-        "Rat+Rat=LavaSpawn", "Skeleton+Skeleton=DarkElf", "Orc+Orc=Lich", "PitDemon+PitDemon=Rat",
-        "LizardMan+LizardMan=Skeleton", "Gnome+Gnome+Gnome=ManaBoost", "PitDemon+DarkElf+Cultist=Workers",
+        "Butcher+Butcher=LizardMan", "Elf+Elf=Orc", "Cultist+Cultist=Goblin",
+        "Banshee+Banshee=Butcher", "Skeleton+Skeleton=Banshee", "Orc+Orc=Lich", "PitDemon+PitDemon=Banshee",
+        "LizardMan+LizardMan=Skeleton", "Gnome+Gnome+Gnome=ManaBoost", "PitDemon+Banshee+Cultist=Workers",
     ]
     table = [values[f"TempleRecipe{i}"].split("=") for i in range(1, count + 1)]
     table = [(inputs.split("+"), result) for inputs, result in table]
@@ -92,7 +94,7 @@ if content_packages.has_content(repo):
         for order in set(itertools.permutations(inputs.split("+"))):
             assert sacrifice(order) == result, f"{recipe} does not resolve for the order {order}"
     # a sacrifice that matches nothing gives nothing, a leftover does not hide the next recipe
-    assert sacrifice(["Rat"]) is None and sacrifice(["Orc", "Rat", "Rat"]) == "LavaSpawn"
+    assert sacrifice(["Banshee"]) is None and sacrifice(["Orc", "Banshee", "Banshee"]) == "Butcher"
 else:
     content_packages.unchecked("check_temple_sacrifice", ["temple recipes (own rows of config/rooms.cfg and "
                                                           "config/creatures.cfg)"])

@@ -43,18 +43,45 @@ import config_own_rows  # noqa: E402
 TEMPLATE = REPO / "levels" / "skirmish" / "TestRaid.level"
 TURNS_PER_SECOND = 1.4
 
-# The keeper's fighters of the keeper faction's spawn pool (config/factions.cfg), without the scouts (CaveHornet,
-# Goblin) and the worker: the reference keeper force cycles through them. The tiers of the pool are interleaved (tier
-# 1, 2, 3, 4, then again), so that a small force has every tier as well and only a force of ten or more has every class.
-KEEPER_POOL = ["Spider", "Roach", "LavaSpawn", "Orc", "Rat", "Cultist", "LizardMan", "PitDemon", "DarkElf", "Troll"]
+# The scouts of the keeper faction's spawn pool that the reference keeper force leaves out.
+KEEPER_SCOUTS = ("CaveHornet", "Goblin")
 
-# Raid members per role: class and fixed skill template (the role follows from the template, rules G3).
+
+def keeper_pool(repo=REPO):
+    """The keeper's fighters of the keeper faction's spawn pool (config/factions.cfg), without the scouts
+    (KEEPER_SCOUTS) and the worker, read from the configuration: the reference keeper force cycles through them. The
+    tiers of the pool (wage classes by FeeBase of config/creatures.cfg) are interleaved (tier 1, 2, 3, 4, then again),
+    so that a small force has every tier as well and only a force of ten or more has every class."""
+    factions = (repo / "config" / "factions.cfg").read_text(encoding="utf-8")
+    keeper = re.search(r"\[Faction\]\s*Name\s+Keeper\b(.*?)\[/Faction\]", factions, re.S).group(1)
+    pool = re.search(r"\[SpawnPool\](.*?)\[/SpawnPool\]", keeper, re.S).group(1)
+    names = [line.strip() for line in pool.splitlines()
+             if line.strip() and not line.strip().startswith("#") and line.strip() not in KEEPER_SCOUTS]
+    creatures = (repo / "config" / "creatures.cfg").read_text(encoding="utf-8")
+    fees = {}
+    for block in re.findall(r"\[Creature\](.*?)\[/Creature\]", creatures, re.S):
+        name = re.search(r"^\s*Name\s+(\S+)", block, re.M)
+        fee = re.search(r"^\s*FeeBase\s+(\S+)", block, re.M)
+        if name and fee:
+            fees.setdefault(name.group(1), float(fee.group(1)))
+    tiers = [[name for name in names if fees[name] == fee] for fee in sorted({fees[name] for name in names})]
+    result = []
+    for index in range(max(len(tier) for tier in tiers)):
+        result += [tier[index] for tier in tiers if index < len(tier)]
+    return result
+
+
+KEEPER_POOL = keeper_pool()
+
+# Raid members per role: class and fixed skill template (a template of the class's skill group; the group decides the
+# role in group fights). The healer slot is a class of the healer group with the Mender template (owner decision of
+# 2026-11-27): the Monk, the cheap healer (wage 50); a mage cannot heal any more.
 ROLE_MEMBER = {
-    "tank": ("Knight", "Guardian"),
-    "melee": ("Dwarf1", "Berserker"),
-    "ranged": ("Elf", "Marksman"),
-    "healer": ("Wizard", "Healer"),
-    "caster": ("Wizard", "Destroyer"),
+    "tank": ("Knight", "Ironclad"),
+    "melee": ("Hunter", "Assassin"),
+    "ranged": ("Elf", "Sharpshooter"),
+    "healer": ("Monk", "Mender"),
+    "caster": ("Wizard", "Pyromancer"),
 }
 
 # Role cycles of the reference compositions: "all" has every role, the others weight the role emphasis of the guild
@@ -68,9 +95,10 @@ COMPOSITIONS = {
 }
 
 # Role emphasis of the guild of every story level (guild table of the raid plan): the primary roles, the secondary
-# roles ("tank with ranged") and the tank classes of the guild (heavy tanks: no Monks; many Monks: mostly Monks).
-# Roles follow from the fixed skill templates by the rules G3 (Guardian: tank, Healer: healer, other archer and caster
-# templates: ranged or caster, every other template: melee).
+# roles ("tank with ranged") and the tank classes of the guild (heavy tanks: Knights and Dwarf Warriors; the monk guild:
+# Knights only, its Monks heal).
+# Roles follow from the skill group of the fixed template (tank, healer, marksman: ranged, mage: caster, every other
+# group: melee; TEMPLATE_ROLES).
 GUILDS = {
     "Brackenford": (("melee",), (), "tank"),
     "Coldwell": (("melee",), ("tank",), "tank"),
@@ -92,24 +120,28 @@ GUILDS = {
     "HollowmarkCitadel": (("tank",), (), "tank"),
 }
 
-# Class and fixed template of the members of a role, taken in turn (the hero classes of the guild table: Knight, Dwarf
-# and Monk tanks, Adventurer melee, Elf ranged, Wizard caster and healer).
+# Class and fixed template of the members of a role, taken in turn (the hero classes of the guild table: Knight and Dwarf
+# Warrior tanks with Ironclad, Adventurer melee, Elf ranged, Wizard caster, Monk healer with Mender; owner decision of
+# 2026-11-27: tank slots are tanks, the healer slot a healer).
 ROLE_CLASSES = {
-    "tank": [("Knight", "Guardian"), ("Dwarf2", "Guardian"), ("Monk", "Guardian")],
-    "heavy": [("Knight", "Guardian"), ("Dwarf2", "Guardian")],
-    "monks": [("Monk", "Guardian"), ("Monk", "Guardian"), ("Knight", "Guardian")],
-    "melee": [("Adventurer", "Shade"), ("Dwarf1", "Berserker"), ("Adventurer", "Dancer"), ("Knight", "Warlord")],
-    "ranged": [("Elf", "Marksman"), ("Elf", "Hunter"), ("Elf", "Skirmisher")],
-    "healer": [("Wizard", "Healer")],
-    "caster": [("Wizard", "Destroyer"), ("Wizard", "Hexer")],
+    "tank": [("Knight", "Ironclad"), ("Dwarf2", "Ironclad")],
+    "heavy": [("Knight", "Ironclad"), ("Dwarf2", "Ironclad")],
+    "monks": [("Knight", "Ironclad")],
+    "melee": [("Adventurer", "Assassin"), ("Hunter", "Assassin"), ("Adventurer", "Whirlwind"), ("Knight", "Ironclad")],
+    "ranged": [("Elf", "Sharpshooter"), ("Elf", "Poisoner"), ("Elf", "Barrager")],
+    "healer": [("Monk", "Mender")],
+    "caster": [("Wizard", "Pyromancer"), ("Wizard", "Witherer")],
 }
 
 # Order in which the members that are neither primary nor secondary are spread over the other roles
 OTHER_ROLES = ["melee", "ranged", "healer", "caster", "tank"]
 
-# Role of a fixed template (rules G3, config/creatureSkills.cfg and [GroupCombat] of global.cfg)
-TEMPLATE_ROLES = {"Guardian": "tank", "Protector": "tank", "Healer": "healer", "Marksman": "ranged",
-                  "Hunter": "ranged", "Skirmisher": "ranged", "Destroyer": "caster", "Hexer": "caster"}
+# Role of a fixed template by its skill group (config/creatureSkills.cfg [Template], [GroupCombat] of global.cfg);
+# the templates of the other groups (supporter, warrior, skirmisher) fight as melee
+TEMPLATE_ROLES = {"Ironclad": "tank", "Evader": "tank", "Regenerator": "tank",
+                  "Mender": "healer", "Renewer": "healer", "Warder": "healer",
+                  "Sharpshooter": "ranged", "Poisoner": "ranged", "Barrager": "ranged",
+                  "Sparkcaller": "caster", "Witherer": "caster", "Pyromancer": "caster"}
 
 GATE = (33, 33)
 # Free dirt tiles near the keeper's heart (5..9) where the keeper force starts, row by row
@@ -218,9 +250,10 @@ def campaign_members(level_name, text, member_level, leader_offset, share, heale
 
 def adjust_members(raid, shift, healers):
     """The level's own raid composition with every member level moved by shift (at least 1) and, with healers, that
-    many Wizards with the Healer template in every group (RA11): members of the role that has the most members (tanks
-    only when no other role is left, never the named leader) become healers at their level, surplus healers become
-    melee members (ROLE_CLASSES melee, first class)."""
+    many healers in every group (RA11): members of the role that has the most members (tanks
+    only when no other role is left, never the named leader) become members of the healer slot (ROLE_MEMBER healer) at
+    their level, surplus healers become melee members (ROLE_CLASSES melee, first class). A healer is a member with a
+    template of the healer group (Monk or Priestess with Mender)."""
     lines = raid.split("\n")
     leaders = {}
     for line in lines:
@@ -238,9 +271,9 @@ def adjust_members(raid, shift, healers):
             members.setdefault(fields[1], []).append(index)
 
     def role(index):
-        """Role of a member line by its template (rules G3)."""
+        """Role of a member line: the role of its template's skill group (TEMPLATE_ROLES, melee for the others)."""
         fields = lines[index].split("\t")
-        return "healer" if fields[5] == "Healer" else TEMPLATE_ROLES.get(fields[5], "melee")
+        return TEMPLATE_ROLES.get(fields[5], "melee")
 
     if healers is not None:
         for group_id, indexes in members.items():
@@ -256,7 +289,7 @@ def adjust_members(raid, shift, healers):
                 chosen = max(others, key=lambda name: len(counts[name]))
                 index = counts[chosen][-1]
                 fields = lines[index].split("\t")
-                fields[2], fields[5] = "Wizard", "Healer"
+                fields[2], fields[5] = ROLE_MEMBER["healer"]
                 lines[index] = "\t".join(fields)
                 have.append(index)
             while len(have) > int(healers):

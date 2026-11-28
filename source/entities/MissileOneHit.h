@@ -85,6 +85,9 @@ protected:
     //! \brief Resolves hit and avoidance, applies equipment effects, and reports the actual damage.
     void hurt(Tile* tile, GameEntity* entity);
 
+    //! \brief True when the shooter's IGNORE_DODGE (chance in percent) makes the shot land although it was dodged.
+    bool rollIgnoreDodge() const;
+
 protected:
     //! Shooter and target names for hit-result events, saved with creature-shot launch accuracy.
     std::string mShooterName;

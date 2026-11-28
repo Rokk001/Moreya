@@ -2708,8 +2708,8 @@ Knight	10
 [Creatures]
 # SeatId	Name	MeshName	PosX	PosY	PosZ	ClassName	Level	CurrentXP	CurrentHP	CurrentWakefulness	CurrentHunger	GoldToDeposit	LeftWeapon	RightWeapon	CarriedSkill	CarriedWeapon	NbCreatureEffects	N*CreatureEffects
 1	Goblin1	Goblin.mesh	13	13	0	Goblin	5	0	max	100	0	0	none	none	nullSkillType	none	0
-1	Spider1	Spider.mesh	14	13	0	Spider	5	0	max	100	0	0	none	none	nullSkillType	none	0
-1	Wyvern1	Wyvern.mesh	13	14	0	Wyvern	5	0	max	100	0	0	none	none	nullSkillType	none	0
+1	Spider1	Ghoul.mesh	14	13	0	Ghoul	5	0	max	100	0	0	none	none	nullSkillType	none	0
+1	Wyvern1	Werewolf.mesh	13	14	0	Werewolf	5	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Orc1	Orc.mesh	14	14	0	Orc	5	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Cultist1	Cultist.mesh	13	15	0	Cultist	5	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Skeleton1	skeleton.mesh	14	15	0	Skeleton	5	0	max	100	0	0	none	none	nullSkillType	none	0

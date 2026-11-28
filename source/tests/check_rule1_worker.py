@@ -71,10 +71,11 @@ def main():
     research = float(re.search(r"^\s*spellCreatureStrength\s+Factor\s+dev\s+\S+\s+\S+\s+(\S+)", read("config/skills.cfg"), re.M).group(1))
     strength = 1 + (spell - 1) * research
     potion = float(re.search(r"Id\s+strength_small\b.*?^\s*Value\s+(\S+)", read("config/potions.cfg"), re.S | re.M).group(1))
-    assert math.isclose(blow, 52.56, abs_tol=1e-9) and (name, template) == ("Elf", 2), (blow, name, template)
+    # Fixed values of the roster's first-estimate balance (roster change W6): the Runelord Dwarf's Binder template.
+    assert math.isclose(blow, 49.632373333333334, abs_tol=1e-9) and (name, template) == ("RunelordDwarf", 2), (blow, name, template)
     assert math.isclose(strength, 1.2) and math.isclose(potion, 1.1), (strength, potion)
     total = blow * strength * potion
-    assert math.isclose(total, 69.3792, abs_tol=1e-9), total
+    assert math.isclose(total, 65.5147328, abs_tol=1e-9), total
     for worker_name in ("Kobold", "DwarfWorker"):
         hp = roster.number(roster.creatures[worker_name][0], "MinHP")
         assert hp > total, (worker_name, hp, total)

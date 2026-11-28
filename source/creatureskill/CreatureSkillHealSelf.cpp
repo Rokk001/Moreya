@@ -80,6 +80,16 @@ bool CreatureSkillHealSelf::tryUseSupport(GameMap& gameMap, Creature* creature) 
     double healPerTurn = mEffectValue;
     if(mHealPercent > 0.0 && mEffectDuration > 0)
         healPerTurn = mHealPercent / 100.0 * creature->getHealBase() / static_cast<double>(mEffectDuration);
+    // Rank property MORE_PER_ATTACKER: the heal grows by its first number (a share) for every enemy within its second
+    // number in tiles; CLEANSE and CLEANSE_ALL remove damage over time from the creature
+    if(hasProperty("MORE_PER_ATTACKER"))
+    {
+        const size_t attackers = creature->getEnemyCreaturesNear(creature->getPosition(),
+            getPropertyValue("MORE_PER_ATTACKER", 1, 0.0)).size();
+        healPerTurn *= 1.0 + getPropertyValue("MORE_PER_ATTACKER", 0, 0.0) * static_cast<double>(attackers);
+    }
+    if(hasProperty("CLEANSE") || hasProperty("CLEANSE_ALL"))
+        creature->cleanseDamageOverTime(hasProperty("CLEANSE_ALL"));
 
     CreatureEffectHeal* effect = new CreatureEffectHeal(mEffectDuration, healPerTurn, "SpellCreatureHeal");
     creature->addCreatureEffect(effect);

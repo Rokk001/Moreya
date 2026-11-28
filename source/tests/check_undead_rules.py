@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Undead rules: Skeleton and Lich are never knocked out, leave no corpse, blood or ghost, cannot be carried,
+"""Undead rules: Skeleton, Lich and Vampire are never knocked out, leave no corpse, blood or ghost, cannot be carried,
 taken by the crypt or raised, vanish after DeathVanishSeconds (the Skeleton leaves its bone pile, the Lich fires its
-beetle effect at death), and the renderer keeps their own Die clip. Static source and config scan, no compiling.
+beetle effect at death, and the Vampire takes these values of the Lich, roster D30/D38), and the renderer keeps
+their own Die clip. Static source and config scan, no compiling.
 config/roomAmbienceSpells.cfg lies in the content packages (scripts/content_packages.py); without the content its
 effect is named as not checked."""
 from pathlib import Path
@@ -11,7 +12,8 @@ import sys
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'scripts'))
 import content_packages  # noqa: E402
-UNDEAD = {'Skeleton': ('5.0', '1', None), 'Lich': ('5.0', None, 'LichBeetles')}
+UNDEAD = {'Skeleton': ('5.0', '1', None), 'Lich': ('5.0', None, 'LichBeetles'),
+          'Vampire': ('5.0', None, 'LichBeetles')}
 
 
 # Read one file of the repository; a mixed table of config/ comes joined with its own rows of the content.

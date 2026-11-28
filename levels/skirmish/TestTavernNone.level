@@ -1118,8 +1118,8 @@ ProtectDungeonTemple	NULL
 SpawnTurnMin	0
 SpawnTurnMax	-1
 [Creatures]
-Wyvern	10
-Wyvern	1
+Werewolf	10
+Werewolf	1
 DwarfWorker	1
 [/Creatures]
 [/Wave]
@@ -1570,7 +1570,7 @@ DwarfWorker	1
     LifePerLevel	1
     ManaPerLevel	1
     ManaPerPoint	1.5
-    SkillGroup	blitzer
+    SkillGroup	warrior
     SkillFamily	dragonkin
     PreSkill	DRK_1
     TierFourSkill	T4_Dragon
@@ -1655,37 +1655,37 @@ DwarfWorker	1
 # SeatId	Name	MeshName	PosX	PosY	PosZ	ClassName	Level	CurrentXP	CurrentHP	CurrentWakefulness	CurrentHunger	GoldToDeposit	LeftWeapon	RightWeapon	CarriedSkill	CarriedWeapon	NbCreatureEffects	N*CreatureEffects
 1	DefaultWorker1	Kobold.mesh	11	11	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
 2	DefaultWorker2	Kobold.mesh	12	39	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
-1	NatureMonster1	NatureMonster	7	7	0	NatureMonster	1	0	10	100	0	0	Longsword	none	nullSkillType	none	0
+1	NatureMonster1	Paladin	7	7	0	Paladin	1	0	10	100	0	0	Longsword	none	nullSkillType	none	0
 1	DragonBoss1	Dragon	7	9	0	DragonBoss	1	0	10	100	0	0	none	none	nullSkillType	none	0
 1	Adventurer2	Adventurer	7	8	0	Adventurer	1	0	10	100	0	0	none	SpecialStaff	nullSkillType	none	0
 2	Adventurer3	Adventurer	7	40	0	Adventurer	1	0	10	100	0	0	none	none	nullSkillType	none	0
-3	TentacleAlbine1	TentacleAlbine	5	15	0	TentacleAlbine	1	0	max	100	0	0	none	none	nullSkillType	none	0
-3	TentacleAlbine2	TentacleAlbine	5	11	0	TentacleAlbine	10	0	10	100	0	0	none	none	nullSkillType	none	0
-3	TentacleAlbine3	TentacleAlbine	5	13	0	TentacleAlbine	25	0	10	100	0	0	none	none	nullSkillType	none	0
-3	TentacleAlbine4	TentacleAlbine	5	9	0	TentacleAlbine	1	0	max	100	0	0	none	none	nullSkillType	none	0
-3	TentacleAlbine5	TentacleAlbine	5	7	0	TentacleAlbine	1	0	max	100	0	0	none	none	nullSkillType	none	0
+3	TentacleAlbine1	CrystalGolem	5	15	0	CrystalGolem	1	0	max	100	0	0	none	none	nullSkillType	none	0
+3	TentacleAlbine2	CrystalGolem	5	11	0	CrystalGolem	10	0	10	100	0	0	none	none	nullSkillType	none	0
+3	TentacleAlbine3	CrystalGolem	5	13	0	CrystalGolem	25	0	10	100	0	0	none	none	nullSkillType	none	0
+3	TentacleAlbine4	CrystalGolem	5	9	0	CrystalGolem	1	0	max	100	0	0	none	none	nullSkillType	none	0
+3	TentacleAlbine5	CrystalGolem	5	7	0	CrystalGolem	1	0	max	100	0	0	none	none	nullSkillType	none	0
 3	Kobold2	Kobold	1	19	0	Kobold	1	0	max	100	0	0	none	none	nullSkillType	none	0
 3	Orc3	Orc	3	20	0	Orc	1	0	0	100	0	0	none	none	nullSkillType	none	0
-0	Wyvern1	Wyvern	15	18	0	Wyvern	1	0	max	100	0	0	none	none	roomTrainingHall	none	0
+0	Wyvern1	Werewolf	15	18	0	Werewolf	1	0	max	100	0	0	none	none	roomTrainingHall	none	0
 2	DefaultWorker3	Kobold.mesh	12	9	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
-0	Wyvern2	Wyvern.mesh	18	32	0	Wyvern	1	0	max	100	0	0	none	none	nullSkillType	none	1	Explosion	100	SpellCreatureExplosion	0.01
-1	TentacleAlbine6	TentacleAlbine	11	5	0	TentacleAlbine	1	0	max	100	0	0	none	none	nullSkillType	none	0
+0	Wyvern2	Werewolf.mesh	18	32	0	Werewolf	1	0	max	100	0	0	none	none	nullSkillType	none	1	Explosion	100	SpellCreatureExplosion	0.01
+1	TentacleAlbine6	CrystalGolem	11	5	0	CrystalGolem	1	0	max	100	0	0	none	none	nullSkillType	none	0
 0	Wizard1	Wizard.mesh	20	19	0	Wizard	1	0	max	100	0	0	RustyShield	none	nullSkillType	none	0
-2	Wyvern3	Wyvern.mesh	7	37	0	Wyvern	1	0	max	100	0	0	none	none	nullSkillType	none	0
+2	Wyvern3	Werewolf.mesh	7	37	0	Werewolf	1	0	max	100	0	0	none	none	nullSkillType	none	0
 0	Troll1	Troll.mesh	48	21	0	Troll	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Wizard2	Wizard.mesh	12	8	0	Wizard	1	0	max	100	0	0	RustyShield	none	nullSkillType	none	0
 0	Troll2	Troll.mesh	26	5	0	Troll	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Skeleton1	skeleton.mesh	12	9	0	Skeleton	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Lich1	lich.mesh	13	10	0	Lich	1	0	max	100	0	0	none	none	nullSkillType	none	0
-0	NatureMonster2	Knight.mesh	22	6	0	NatureMonster	1	0	max	100	0	0	RustyShield	RustySword	nullSkillType	none	0
+0	NatureMonster2	Knight.mesh	22	6	0	Paladin	1	0	max	100	0	0	RustyShield	RustySword	nullSkillType	none	0
 1	Orc10	Orc.mesh	18	6	0	Orc	1	0	max	100	0	300	none	none	nullSkillType	none	0	[Thirst] 70 0 0 0 0 0 [/Thirst]
 1	Troll11	Troll.mesh	18	7	0	Troll	2	0	max	100	0	300	none	none	nullSkillType	none	0	[Thirst] 70 0 0 0 0 0 [/Thirst]
 1	Goblin12	Goblin.mesh	18	8	0	Goblin	4	0	max	100	0	300	none	none	nullSkillType	none	0	[Thirst] 70 0 0 0 0 0 [/Thirst]
-1	Rat13	Rat.mesh	18	9	0	Rat	6	0	max	100	0	300	none	none	nullSkillType	none	0	[Thirst] 70 0 0 0 0 0 [/Thirst]
+1	Rat13	Banshee.mesh	18	9	0	Banshee	6	0	max	100	0	300	none	none	nullSkillType	none	0	[Thirst] 70 0 0 0 0 0 [/Thirst]
 1	LizardMan14	Lizardman.mesh	18	10	0	LizardMan	9	0	max	100	0	300	none	none	nullSkillType	none	0	[Thirst] 70 0 0 0 0 0 [/Thirst]
-1	Spider15	Spider.mesh	18	11	0	Spider	12	0	max	100	0	300	none	none	nullSkillType	none	0	[Thirst] 70 0 0 0 0 0 [/Thirst]
+1	Spider15	Ghoul.mesh	18	11	0	Ghoul	12	0	max	100	0	300	none	none	nullSkillType	none	0	[Thirst] 70 0 0 0 0 0 [/Thirst]
 1	Cultist16	Cultist.mesh	18	12	0	Cultist	3	0	max	100	0	300	none	none	nullSkillType	none	0	[Thirst] 70 0 0 0 0 0 [/Thirst]
-1	Slime17	Slime.mesh	19	12	0	Slime	5	0	max	100	0	300	none	none	nullSkillType	none	0	[Thirst] 70 0 0 0 0 0 [/Thirst]
+1	Slime17	Banshee.mesh	19	12	0	Banshee	5	0	max	100	0	300	none	none	nullSkillType	none	0	[Thirst] 70 0 0 0 0 0 [/Thirst]
 [/Creatures]
 
 [Spells]

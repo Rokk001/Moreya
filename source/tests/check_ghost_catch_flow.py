@@ -590,7 +590,9 @@ def beam_from_capture_cannon():
     blocks = {re.search(r"^\s*Name\s+(\S+)", block, re.M).group(1): block
               for block in re.findall(r"^\s*\[Creature\]\s*$(.*?)^\s*\[/Creature\]", read_config("config/creatures.cfg"), re.M | re.S)}
     hunters = ghost_hunters()
-    assert sorted(hunters) == ["Defender", "Knight", "PitDemon", "RunelordDwarf", "Skeleton", "Troll"], sorted(hunters)
+    # The Banshee of the new roster works in the ghost room (as in check_ghost_config.py)
+    assert sorted(hunters) == ["Banshee", "Defender", "Knight", "PitDemon", "RunelordDwarf", "Skeleton", "Troll"], \
+        sorted(hunters)
     for name in hunters:
         skeleton = re.search(r"^\s*MeshName\s+(\S+)\.mesh", blocks[name], re.M).group(1) + ".skeleton"
         names = {bone.decode() for bone in skeleton_bones(room_file("models/" + skeleton))}

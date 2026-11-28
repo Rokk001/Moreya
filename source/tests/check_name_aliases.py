@@ -30,8 +30,14 @@ def fnv(name):
 assert "14695981039346656037ULL" in alias_src and "1099511628211ULL" in alias_src, "hash constants changed"
 assert "std::tolower" in alias_src, "names are not lowercased before hashing"
 
-table = {int(h, 16): n for h, n in re.findall(r'\{\s*0x([0-9a-f]{16})ULL,\s*"([A-Za-z0-9]+)"\s*\}', alias_src)}
+ENTRY = r'\{\s*0x([0-9a-f]{16})ULL,\s*"([A-Za-z0-9]+)"\s*\}'
+# The general table ALIASES and the table of the removed creature classes are read apart
+general_src = alias_src.split("const AliasEntry ALIASES[] =", 1)[1].split("};", 1)[0]
+creature_src = alias_src.split("const AliasEntry CREATURE_CLASS_ALIASES[] =", 1)[1].split("};", 1)[0]
+table = {int(h, 16): n for h, n in re.findall(ENTRY, general_src)}
+creature_table = {int(h, 16): n for h, n in re.findall(ENTRY, creature_src)}
 assert len(table) >= 29, f"alias table has {len(table)} entries"
+assert len(re.findall(ENTRY, alias_src)) == len(table) + len(creature_table), "an alias entry outside the two tables"
 
 # Old names from fragments
 a, b, c, d, e = "Turn" + "coat", "Chi" + "cken", "Guard" + "Post", "Bra" + "ced", "Ma" + "gic"
@@ -110,6 +116,76 @@ old_seat = " ".join(["[%sGround]", "12", "13", "1", "[/%sGround]", "[dirtGround]
 tags = [resolve_tag(t) for t in old_seat.split()]
 assert tags[0] == "[manaWellGround]" and tags[4] == "[/manaWellGround]", tags
 assert tags[5:] == ["[dirtGround]", "[/dirtGround]", "[/Seat]"], "other tags must stay unchanged"
+
+# Removed creature classes of older savegames and levels (creature roster CR3): every removed class (built from
+# fragments, so the old spelling is never written out) resolves to its successor, counted once: 12 classes
+creature_cases = {
+    "Ra" + "t": "Banshee", "Spi" + "der": "Ghoul", "Roa" + "ch": "Witch", "Lava" + "Spawn": "Butcher",
+    "Sli" + "me": "DarkElf", "Dwarf" + "1": "Hunter", "Nature" + "Monster": "Paladin", "Sca" + "rab": "Priestess",
+    "Tentacle" + "Albine": "CrystalGolem", "Tentacle" + "Green": "Cyclops", "Kre" + "atur": "Minotaur",
+    "Wy" + "vern": "Werewolf",
+}
+assert len(creature_cases) == 12 and len(creature_table) == 12, f"{len(creature_table)} creature class entries"
+for old, new in creature_cases.items():
+    for variant in (old, old.lower(), old.upper()):
+        assert creature_table.get(fnv(variant)) == new, f"removed class {variant} does not resolve to {new}"
+        assert fnv(variant) not in table, f"removed class {variant} must not be in the general table"
+# The classes of the roster keep their names (36 creatures)
+ROSTER = ("Knight Dwarf2 Paladin Priestess Monk RunelordDwarf Defender Adventurer Hunter DarkElf Elf Wizard DwarfWorker "
+          "Troll Orc PitDemon Vampire Cultist LizardMan Skeleton Goblin Ghoul Butcher CaveHornet Lich Banshee Witch "
+          "Kobold CrystalGolem Cyclops Minotaur Werewolf Gnoll Gnome Dragon Champion").split()
+assert len(ROSTER) == 36
+for name in ROSTER + ["DefaultWorker", ""]:
+    assert fnv(name) not in creature_table and fnv(name) not in table, f"{name!r} would be changed"
+assert "lookUp(CREATURE_CLASS_ALIASES" in alias_src, "resolveCreatureClass reads the creature class table"
+assert 'SIDE_MOVED_CLASS = "DarkElf"' in alias_src and 'SIDE_SUCCESSOR_CLASS = "Banshee"' in alias_src
+
+
+def side_class(name, hero_side):
+    # same rule as NameAliases::resolveOldCreatureClassForSide
+    return "Banshee" if (not hero_side and name == "DarkElf") else name
+
+
+assert side_class("DarkElf", False) == "Banshee" and side_class("DarkElf", True) == "DarkElf"
+assert side_class("Elf", False) == "Elf"
+side_body = alias_src.split("std::string resolveOldCreatureClassForSide(", 1)[1].split("\n}", 1)[0]
+assert "if(!heroSide && (className == SIDE_MOVED_CLASS))" in side_body, "side rule changed"
+
+# Parse points of the creature classes: the class lookup of the map and the creature loader
+game_map_src = (repo / "source/gamemap/GameMap.cpp").read_text(encoding="utf-8")
+lookup = game_map_src.split("const CreatureDefinition* GameMap::getClassDescription(const string &className)", 1)[1]
+lookup = lookup.split("\n}", 1)[0]
+assert "NameAliases::resolveCreatureClass(className)" in lookup, "the class lookup does not resolve removed classes"
+assert lookup.index("findClassDescriptionByName(mClassDescriptions, className)") < lookup.index("resolveCreatureClass"), \
+    "a class of the map must be found before the alias table is asked"
+tuning = game_map_src.split("CreatureDefinition* GameMap::getClassDescriptionForTuning(", 1)[1].split("\n}", 1)[0]
+assert tuning.index("resolveClassName(name)") < tuning.index("new CreatureDefinition(name)"), \
+    "the tuning of a removed class must go to its successor"
+creature_src_cpp = (repo / "source/entities/Creature.cpp").read_text(encoding="utf-8")
+loader = creature_src_cpp.split("bool Creature::importFromStream(std::istream& is)", 1)[1].split("if(!(is >> mLevel))", 1)[0]
+assert "getGameMap()->resolveLoadedClassName(mDefinitionString, getSeat())" in loader
+assert "setMeshName(successor->getMeshName())" in loader, "a replaced creature takes the mesh of its new class"
+# The side rule of the seat is shared by the creature and the ghost loader
+loaded_class = game_map_src.split("std::string GameMap::resolveLoadedClassName(", 1)[1].split("\n}", 1)[0]
+assert loaded_class.index("resolveClassName(className)") < loaded_class.index("mLoadingOldRosterCreatures")
+assert 'seat->getFaction() == "Hero"' in loaded_class
+assert "NameAliases::resolveOldCreatureClassForSide(resolved, heroSide)" in loaded_class
+assert "getClassDescription(sideClass) != nullptr" in loaded_class, "the successor must be a class of the map"
+ghost_src = (repo / "source/entities/GhostEntity.cpp").read_text(encoding="utf-8")
+ghost_loader = ghost_src.split("bool GhostEntity::importFromStream(std::istream& stream)", 1)[1].split("\n}", 1)[0]
+assert ghost_loader.index("setSeat(getGameMap()->getSeatById(seatId));") < \
+    ghost_loader.index("mClassName = getGameMap()->resolveLoadedClassName(mClassName, getSeat());"), \
+    "a ghost of an older file gets the class of its successor, by the side of its seat"
+map_handler = (repo / "source/gamemap/MapHandler.cpp").read_text(encoding="utf-8")
+assert 'CREATURE_ROSTER_INFO_KEY = "CreatureRoster\\t"' in map_handler and "CREATURE_ROSTER_VERSION = 1;" in map_handler
+assert "levelFile << CREATURE_ROSTER_INFO_KEY << CREATURE_ROSTER_VERSION" in map_handler, "files carry the roster"
+creatures_block = map_handler.split("gameMap.setLoadingOldRosterCreatures(oldRosterFile);", 1)
+assert len(creatures_block) == 2 and "Creature::getCreatureFromStream(&gameMap, ss)" in creatures_block[1].split(
+    "gameMap.setLoadingOldRosterCreatures(false);\n    OD_LOG_INF", 1)[0], "the side rule is on only for [Creatures]"
+ghosts_block = map_handler.split("gameMap.setLoadingOldRosterCreatures(oldRosterFile);")
+assert len(ghosts_block) == 3 and 'readGameEntity(gameMap, "Ghosts", GameEntityType::ghostEntity, levelFile)' in \
+    ghosts_block[2].split("gameMap.setLoadingOldRosterCreatures(false);", 1)[0], "the side rule is on for [Ghosts]"
+assert map_handler.count("gameMap.setLoadingOldRosterCreatures(false);") == 5, "the side rule is switched off again"
 
 assert "utils/NameAliases.cpp" in (repo / "CMakeLists.txt").read_text(encoding="utf-8")
 assert (repo / "docs/development/NAME-ALIASES.md").is_file()

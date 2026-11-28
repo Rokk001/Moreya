@@ -262,7 +262,7 @@ def check_environment():
     return env
 
 
-# Run selected static checks, or the complete integration checks followed by the load test (Mossgate plus the changed levels).
+# Run selected static checks, or the complete integration checks followed by the load test (Mossgate only).
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--repo', default=os.getcwd())
@@ -323,7 +323,7 @@ def main():
             record(r'scripts\check-level-similarity.py skipped (no changed level files)')
     if args.load_test_only:
         jobs = []
-    # Full integrator runs load Mossgate plus changed surviving levels, never the entire campaign.
+    # Full integrator runs load Mossgate only (owner decision 2026-11-28), never the changed levels or the entire campaign.
     load_required = not wanted or args.load_test_only
     selected = {}
     if load_required:

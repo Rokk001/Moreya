@@ -458,6 +458,8 @@ void GhostEntity::exportToStream(std::ostream& stream) const
     stream.precision(precision);
 }
 
+//! \brief Reads a saved ghost; the class of a removed creature, and of a keeper-side or rogue ghost of the class that
+//! moved to the hero side in a file before the current roster, becomes the class of its successor.
 bool GhostEntity::importFromStream(std::istream& stream)
 {
     int seatId;
@@ -466,6 +468,12 @@ bool GhostEntity::importFromStream(std::istream& stream)
         >> mLevel >> mLifeLeft >> state >> mAssignedHunter) || !readState(state, mState))
         return false;
     setSeat(getGameMap()->getSeatById(seatId));
+    // A removed class of an older file, and in a file before the current roster a keeper-side or rogue ghost of the
+    // class that moved to the hero side, is kept as the class of its successor
+    const std::string loadedClass = mClassName;
+    mClassName = getGameMap()->resolveLoadedClassName(mClassName, getSeat());
+    if(mClassName != loadedClass)
+        OD_LOG_INF("Ghost " + mName + " of an older file is kept as " + mClassName);
     const CreatureDefinition* definition = getGameMap()->getClassDescription(mClassName);
     if(getSeat() == nullptr || definition == nullptr)
         return false;

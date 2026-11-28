@@ -123,7 +123,8 @@ if SOCIAL_DATA:
         else:
             check(False, where + ': unknown key ' + key)
     check(current is None, 'social-names.cfg: missing [/NameGroup]')
-    check(len(groups) == 11, 'expected 11 name groups, found %d' % len(groups))
+    # Roster change (CREATURE-ROSTER W4a): the groups beast (Minotaur, Werewolf, Gnoll) and giant (Crystal Golem, Cyclops) are new
+    check(len(groups) == 13, 'expected 13 name groups, found %d' % len(groups))
     check('monster' in groups, 'the fallback group monster is missing')
 
     class_to_group = {}

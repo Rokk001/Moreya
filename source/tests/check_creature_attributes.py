@@ -217,39 +217,59 @@ assert 'bool CreatureDefinition::isFirstAttackSkill(' in definition_cpp
 
 
 # ---- Part H: values per creature type (section 4) and the heart (section 9)
-# Group table of section 4: Str, Dex, Life, Mana, Str/L, Dex/L, Life/L, Mana/L, ManaPerPoint
+# Roster change (CREATURE-ROSTER W4a): the attribute values follow the mana pool and Str/Dex of the creature (roster plan
+# section 7), no longer the skill group; the role groups replace blocker, blitzer, flanker, archer and caster.
+# Attribute profiles: Str, Dex, Life, Mana, Str/L, Dex/L, Life/L, Mana/L, ManaPerPoint (mana pool at level 1 in the name)
 GROUP_VALUES = {
-    'blocker': (30.0, 20.0, 25.0, 10.0, 2.0, 1.0, 1.0, 1.0, 1.0),
-    'blitzer': (25.0, 20.0, 25.0, 26.6667, 2.0, 1.0, 1.0, 1.0, 1.5),
-    'flanker': (20.0, 20.0, 20.0, 25.0, 1.0, 2.0, 1.0, 1.0, 1.75),
-    'archer': (20.0, 25.0, 20.0, 15.0, 0.0, 3.0, 1.0, 1.0, 1.5),
-    'caster': (10.0, 25.0, 10.0, 35.0, 0.0, 1.0, 2.0, 2.0, 2.0),
+    'mana10': (30.0, 20.0, 25.0, 10.0, 2.0, 1.0, 1.0, 1.0, 1.0),
+    'mana40': (25.0, 20.0, 25.0, 26.6667, 2.0, 1.0, 1.0, 1.0, 1.5),
+    'mana44': (20.0, 20.0, 20.0, 25.0, 1.0, 2.0, 1.0, 1.0, 1.75),
+    'mana22': (20.0, 25.0, 20.0, 15.0, 0.0, 3.0, 1.0, 1.0, 1.5),
+    'mana70': (10.0, 25.0, 10.0, 35.0, 0.0, 1.0, 2.0, 2.0, 2.0),
+    'mana60': (20.0, 20.0, 20.0, 30.0, 1.0, 2.0, 1.0, 1.0, 2.0),
+    'mana70strong': (30.0, 20.0, 25.0, 35.0, 2.0, 1.0, 1.0, 1.0, 2.0),
     'worker': (15.0, 25.0, 15.0, 25.0, 1.0, 2.0, 1.0, 1.0, 2.0),
 }
+PROFILE_MEMBERS = {
+    'mana10': 'Knight Dwarf2 Troll Orc Skeleton Butcher Defender CrystalGolem Cyclops',
+    'mana40': 'Paladin PitDemon Minotaur Dragon',
+    'mana44': 'Adventurer Hunter DarkElf Goblin Ghoul CaveHornet Werewolf',
+    'mana22': 'Elf Gnoll Gnome',
+    'mana70': 'Priestess Vampire Cultist Wizard Lich Banshee Witch',
+    'mana60': 'RunelordDwarf LizardMan',
+    'mana70strong': 'Monk',
+    'worker': 'Kobold DwarfWorker',
+}
 GROUP_MEMBERS = {
-    'blocker': 'Orc LavaSpawn PitDemon Troll Skeleton Scarab Monk Dwarf1 Dwarf2 Knight RunelordDwarf NatureMonster Defender '
-               'TentacleAlbine TentacleGreen',
-    'blitzer': 'Dragon',
-    'flanker': 'Rat Goblin Roach Spider Cultist CaveHornet Slime Adventurer Wyvern Gnome',
-    'archer': 'DarkElf Elf',
-    'caster': 'LizardMan Lich Wizard Kreatur',
+    'tank': 'Knight Dwarf2 Paladin Troll Orc PitDemon CrystalGolem Cyclops',
+    'healer': 'Priestess Vampire Monk Cultist',
+    'supporter': 'RunelordDwarf LizardMan',
+    'warrior': 'Defender Skeleton Butcher Minotaur Dragon',
+    'skirmisher': 'Adventurer Hunter DarkElf Goblin Ghoul CaveHornet Werewolf',
+    'marksman': 'Elf Gnoll Gnome',
+    'mage': 'Wizard Lich Banshee Witch',
     'worker': 'Kobold DwarfWorker',
 }
 FAMILY_MEMBERS = {
-    'greenskin': 'Orc Troll Goblin', 'dwarf': 'Dwarf1 Dwarf2 RunelordDwarf', 'undead': 'Skeleton Lich',
-    'vermin': 'Rat Roach Spider CaveHornet Scarab', 'tentacle': 'TentacleAlbine TentacleGreen', 'demon': 'LavaSpawn PitDemon',
-    'elf': 'Elf DarkElf', 'human': 'Adventurer Monk Knight Defender', 'arcane': 'Cultist Wizard Gnome Kreatur',
-    'dragonkin': 'LizardMan Wyvern Dragon', 'wild': 'Slime NatureMonster', 'workfolk': 'Kobold DwarfWorker',
+    'greenskin': 'Orc Troll Goblin Butcher', 'dwarf': 'Dwarf2 RunelordDwarf', 'undead': 'Skeleton Lich Ghoul Banshee',
+    'vermin': 'CaveHornet', 'demon': 'PitDemon', 'elf': 'Elf DarkElf',
+    'human': 'Adventurer Monk Knight Defender Paladin Priestess Hunter', 'arcane': 'Wizard Gnome Witch',
+    'dragonkin': 'LizardMan Dragon', 'workfolk': 'Kobold DwarfWorker', 'blood': 'Vampire Cultist',
+    'beast': 'Minotaur Werewolf Gnoll', 'stone': 'CrystalGolem Cyclops',
 }
-PRE_SKILLS = {
-    'Lich': 'UND_1', 'Dragon': 'DRK_1', 'Slime': 'WLD_1', 'CaveHornet': 'VRM_1', 'Goblin': 'FLK_A2', 'Gnome': 'FLK_A2',
-    'Wizard': 'CST_B1', 'Elf': 'ARC_A3', 'DarkElf': 'ARC_A2', 'Kobold': 'WRK_C1', 'DwarfWorker': 'WRK_C1',
-}
+PRE_SKILLS = dict({name: 'TNK_A1' for name in GROUP_MEMBERS['tank'].split()}, **{
+    'Monk': 'HLR_A1', 'Cultist': 'HLR_A1', 'Priestess': 'HLR_B1', 'Vampire': 'HLR_B1', 'RunelordDwarf': 'SUP_A1',
+    'LizardMan': 'SUP_A1', 'DarkElf': 'SKR_A1', 'Goblin': 'SKR_A1', 'Elf': 'MRK_C1', 'Gnome': 'MRK_C1', 'Wizard': 'MAG_A1',
+    'Lich': 'UND_1', 'Dragon': 'DRK_1', 'CaveHornet': 'VRM_1', 'Kobold': 'WRK_C1', 'DwarfWorker': 'WRK_C1',
+})
+# Ghoul and Dark Elf: high damage with critical hits (roster plan section 7, first estimate)
+CRIT_BONUS = {'Ghoul': 10.0, 'DarkElf': 10.0}
 STAT_KEYS = ('Strength', 'Dexterity', 'Life', 'Mana', 'StrengthPerLevel', 'DexterityPerLevel', 'LifePerLevel', 'ManaPerLevel',
              'ManaPerPoint')
 CHAMPION_CRIT_BONUS = 15.0
 # Level-file creature classes use the values of the type whose mesh they use
-LEVEL_FILE_CLASSES = {'DragonBoss': 'Dragon', 'BossDragon': 'Dragon', 'VeteranScarab': 'Scarab'}
+# (the VeteranScarab of RuinsOfTheConfluent was removed; its four creatures are plain Priestesses, Mario 2026-11-27)
+LEVEL_FILE_CLASSES = {'DragonBoss': 'Dragon', 'BossDragon': 'Dragon'}
 HEART_HP = 15100.0
 HEART_HEAL_PER_SECOND = 3.775
 LEGACY_HEART_HEALTH_SCALE = 10000.0
@@ -282,12 +302,18 @@ def heart_health_after_load(marker, value, max_hp, research_factor):
 def check_part_h():
     """Values per creature type of section 4 (also in the level files) and the heart values and save markers of section 9."""
     creatures = stats_blocks(creatures_cfg)
-    assert len(creatures) == 35, len(creatures)
+    assert len(creatures) == 36, len(creatures)
     group_of = {}
     for group, members in GROUP_MEMBERS.items():
         for member in members.split():
             assert member not in group_of, member
             group_of[member] = group
+    profile_of = {}
+    for profile, members in PROFILE_MEMBERS.items():
+        for member in members.split():
+            assert member not in profile_of, member
+            profile_of[member] = profile
+    assert set(profile_of) == set(group_of), 'every type has an attribute profile'
     family_of = {}
     for family, members in FAMILY_MEMBERS.items():
         for member in members.split():
@@ -295,12 +321,12 @@ def check_part_h():
             family_of[member] = family
     assert set(group_of) | {'Champion'} == set(creatures), set(creatures) ^ (set(group_of) | {'Champion'})
     assert set(family_of) == set(group_of), 'every type has a family'
-    # Every group gives 5 attribute points per level
-    for group, values in GROUP_VALUES.items():
-        assert sum(values[4:8]) == 5.0, (group, values)
+    # Every attribute profile gives 5 attribute points per level
+    for profile, values in GROUP_VALUES.items():
+        assert sum(values[4:8]) == 5.0, (profile, values)
 
-    def check_values(name, stats, group, skill_group, family, pre_skill, tier_four):
-        wanted = GROUP_VALUES[group]
+    def check_values(name, stats, profile, skill_group, family, pre_skill, tier_four):
+        wanted = GROUP_VALUES[profile]
         for key, value in zip(STAT_KEYS, wanted):
             assert key in stats and abs(float(stats[key]) - value) < 1e-9, (name, key, stats.get(key), value)
         assert sum(float(stats[key]) for key in STAT_KEYS[4:8]) == 5.0, (name, 'points per level')
@@ -311,27 +337,32 @@ def check_part_h():
 
     for name, group in group_of.items():
         stats = creatures[name]
-        check_values(name, stats, group, group, family_of[name], PRE_SKILLS.get(name, 'none'), 'T4_' + name)
-        assert 'CritChanceBonus' not in stats, (name, 'only the Champion has a critical chance bonus')
+        check_values(name, stats, profile_of[name], group, family_of[name], PRE_SKILLS.get(name, 'none'), 'T4_' + name)
+        if name in CRIT_BONUS:
+            assert float(stats.get('CritChanceBonus', 0)) == CRIT_BONUS[name], (name, 'CritChanceBonus')
+        else:
+            assert 'CritChanceBonus' not in stats, (name, 'only the Champion, Ghoul and Dark Elf have a critical chance bonus')
         # The group follows the combat class and the job of the type
         combat_class = stats.get('CombatClass')
         if group == 'worker':
             assert stats['CreatureJob'] == 'Worker', name
         else:
             assert stats['CreatureJob'] == 'Fighter', name
-        if group == 'blitzer':
-            assert combat_class == 'Blitzer', name
-        elif group == 'flanker':
+        if group == 'tank':
+            assert combat_class == 'Blocker', name
+        elif group == 'warrior':
+            assert combat_class in ('Blocker', 'Blitzer'), name
+        elif group == 'skirmisher':
             assert combat_class == 'Flanker', name
-        elif group == 'blocker':
-            assert combat_class in ('Blocker', 'Support'), name
-        elif group in ('archer', 'caster'):
+        elif group in ('marksman', 'mage'):
             assert combat_class == 'Support', name
-        if group == 'archer':
-            assert 'Bow' in stats['_block'] or 'Crossbow' in stats['_block'], name
-    # Champion: blitzer attribute values, no skill tree, critical chance bonus 15
+        elif group in ('healer', 'supporter'):
+            assert combat_class in ('Blocker', 'Flanker', 'Support'), name
+        if group in ('marksman', 'mage'):
+            assert 'MissileLaunch' in stats['_block'], name
+    # Champion: the attribute values of mana pool 40, no skill tree, critical chance bonus 15
     champion = creatures['Champion']
-    check_values('Champion', champion, 'blitzer', 'none', 'none', 'none', 'none')
+    check_values('Champion', champion, 'mana40', 'none', 'none', 'none', 'none')
     assert float(champion['CritChanceBonus']) == CHAMPION_CRIT_BONUS
     # Worker hit points follow the rebalance (70)
     assert creatures['Kobold']['MinHP'] == '70' and creatures['DwarfWorker']['MinHP'] == '70'
@@ -352,7 +383,7 @@ def check_part_h():
             base = LEVEL_FILE_CLASSES[name]
             mesh = stats['MeshName'].split('.')[0]
             assert mesh == base, (name, mesh, base)
-            check_values(name, stats, group_of[base], group_of[base], family_of[base], PRE_SKILLS.get(base, 'none'), 'T4_' + base)
+            check_values(name, stats, profile_of[base], group_of[base], family_of[base], PRE_SKILLS.get(base, 'none'), 'T4_' + base)
             found_classes.add(name)
     if content_packages.has_content(root):
         assert found_classes == set(LEVEL_FILE_CLASSES), found_classes
@@ -436,11 +467,13 @@ def mana_cost_model(group, skill_name, is_first_attack, carries_bow, manacost_pe
     """The cost rules of 6.3 as Creature::getSkillManaCost applies them."""
     if skill_name != 'MissileLaunch':
         return 0.0
-    if is_first_attack and carries_bow:
+    if is_first_attack and (carries_bow or group == 'marksman'):
+        # The weapon shot of a bow or crossbow and of a marksman (ranged fighter with weapons) is free
         return 0.0
     caster = is_first_attack
     if group != 'none':
-        caster = group == 'caster'
+        # The spell-shooting groups that replaced the caster group of before (roster plan section 5)
+        caster = group in ('mage', 'healer', 'supporter')
     base = caster_shot if caster else second_shot
     return base * max(0.0, 1.0 - manacost_percent / 100.0)
 
@@ -488,21 +521,26 @@ def check_mana_part_b():
     assert 'skill.getSkillName() != "MissileLaunch"' in cost, 'Melee and every other line is free here'
     manacost = function(creature, 'double Creature::getManaCost(double baseCost) const')
     assert 'getSkillPassive("manacost%")' in manacost and '1.0 - getSkillPassive("manacost%") / 100.0' in manacost
-    assert mana_cost_model('caster', 'MissileLaunch', True, False, 0, caster_shot, second_shot) == 2.5
-    assert mana_cost_model('caster', 'MissileLaunch', True, False, 30, caster_shot, second_shot) == 1.75
-    assert mana_cost_model('blitzer', 'MissileLaunch', False, False, 0, caster_shot, second_shot) == 5.0
-    assert mana_cost_model('blitzer', 'MissileLaunch', True, False, 0, caster_shot, second_shot) == 5.0, 'level file lists the shot first'
+    assert mana_cost_model('mage', 'MissileLaunch', True, False, 0, caster_shot, second_shot) == 2.5
+    assert mana_cost_model('healer', 'MissileLaunch', True, False, 0, caster_shot, second_shot) == 2.5
+    assert mana_cost_model('supporter', 'MissileLaunch', True, False, 0, caster_shot, second_shot) == 2.5
+    assert mana_cost_model('mage', 'MissileLaunch', True, False, 30, caster_shot, second_shot) == 1.75
+    assert mana_cost_model('warrior', 'MissileLaunch', False, False, 0, caster_shot, second_shot) == 5.0
+    assert mana_cost_model('warrior', 'MissileLaunch', True, False, 0, caster_shot, second_shot) == 5.0, 'level file lists the shot first'
     assert mana_cost_model('none', 'MissileLaunch', False, False, 0, caster_shot, second_shot) == 5.0
-    assert mana_cost_model('archer', 'MissileLaunch', True, True, 0, caster_shot, second_shot) == 0.0, 'bow shot is free'
-    assert mana_cost_model('archer', 'MissileLaunch', True, False, 0, caster_shot, second_shot) == second_shot, 'no archer special rule'
-    assert mana_cost_model('caster', 'Melee', True, False, 0, caster_shot, second_shot) == 0.0
-    assert mana_cost_model('blitzer', 'Explosion', False, False, 0, caster_shot, second_shot) == 0.0, 'Champion line is free'
-    assert mana_cost_model('caster', 'MissileLaunch', True, False, 100, caster_shot, second_shot) == 0.0
-    # The cost classes of the real type lists: casters pay per first shot, only the Dragon has a second shot
+    assert mana_cost_model('marksman', 'MissileLaunch', True, True, 0, caster_shot, second_shot) == 0.0, 'bow shot is free'
+    assert mana_cost_model('marksman', 'MissileLaunch', True, False, 0, caster_shot, second_shot) == 0.0, 'marksman shot is free'
+    assert mana_cost_model('marksman', 'MissileLaunch', False, False, 0, caster_shot, second_shot) == second_shot, 'only the first line'
+    assert mana_cost_model('mage', 'Melee', True, False, 0, caster_shot, second_shot) == 0.0
+    assert mana_cost_model('warrior', 'Explosion', False, False, 0, caster_shot, second_shot) == 0.0, 'Champion line is free'
+    assert mana_cost_model('mage', 'MissileLaunch', True, False, 100, caster_shot, second_shot) == 0.0
+    # The cost classes of the real type lists of the roster: the first shot without a bow (the casters of the mage,
+    # healer and supporter groups pay the caster rate; the marksmen Gnoll and Gnome shoot free like the bow, roster
+    # D14), only the Dragon has a second shot, only the Elf shoots a bow
     weapon_types = {}
     for block in config_blocks(equipments_cfg, 'Equipment'):
         weapon_types[first_value(block, 'Name')] = first_value(block, 'WeaponType')
-    caster_types, second_line_types, bow_types = set(), set(), set()
+    caster_types, second_line_types, bow_types, marksman_types = set(), set(), set(), set()
     for block in config_blocks(creatures_cfg, 'Creature'):
         names = skill_names(block)
         attack_names = [name for name in names if name in ('Melee', 'MissileLaunch')]
@@ -515,18 +553,23 @@ def check_mana_part_b():
             second_line_types.add(type_name)
         elif has_bow:
             bow_types.add(type_name)
+        elif first_value(block, 'SkillGroup') == 'marksman':
+            marksman_types.add(type_name)
         else:
             caster_types.add(type_name)
-    assert caster_types == {'LizardMan', 'Lich', 'Wizard', 'Kreatur'}, caster_types
+    assert caster_types == {'Banshee', 'Lich', 'LizardMan', 'Priestess', 'Vampire', 'Witch', 'Wizard'}, caster_types
+    assert marksman_types == {'Gnoll', 'Gnome'}, marksman_types
     assert second_line_types == {'Dragon'}, second_line_types
-    assert bow_types == {'DarkElf', 'Elf'}, bow_types
+    assert bow_types == {'Elf'}, bow_types
     # A level-file Dragon lists the shot before the melee line: the cost follows its skill group, not the line order
     for level_name in ('levels/campaign/Bonus1.level', 'levels/skirmish/TestSingleplayerSmall.level'):
         for block in config_blocks(text(level_name), 'Creature'):
             if first_value(block, 'Name') == 'DragonBoss':
                 names = [name for name in skill_names(block) if name in ('Melee', 'MissileLaunch')]
                 assert names == ['MissileLaunch', 'Melee'], level_name
-    assert 'if(group != "none")' in cost and 'casterShot = (group == "caster");' in cost and '"archer"' not in cost, 'no special rule for an archer without bow'
+    assert 'if(group != "none")' in cost and \
+        'casterShot = (group == "mage" || group == "healer" || group == "supporter");' in cost and \
+        '(carriesBowOrCrossbow() || mDefinition->getSkillGroup() == "marksman")' in cost, 'the marksman shot is free'
 
     # 6.4 not enough mana: the skill is not used, as with a cooldown; 6.5 mana is subtracted when the skill starts
     assert 'bool Creature::hasManaFor(' in creature and 'return mMana >= getSkillManaCost(skill);' in creature
