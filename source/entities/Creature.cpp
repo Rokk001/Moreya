@@ -15353,8 +15353,8 @@ void Creature::updateGhostTrapCable(Ogre::SceneManager& scene, bool shown)
 //! the rising motes, how fast the light runs up the stream and how fast the motes rise (shares of the way a second).
 static const Ogre::Real GHOST_STREAM_INSET=0.8f;
 static const Ogre::Real GHOST_STREAM_DEPTH=0.1f;
-static const Ogre::Real GHOST_STREAM_BASE_WIDTH=0.11f;
-static const Ogre::Real GHOST_STREAM_TOP_WIDTH=0.06f;
+static const Ogre::Real GHOST_STREAM_BASE_WIDTH=0.16f;
+static const Ogre::Real GHOST_STREAM_TOP_WIDTH=0.1f;
 static const size_t GHOST_STREAM_SEGMENTS=16;
 static const size_t GHOST_STREAM_STRANDS=4;
 static const size_t GHOST_STREAM_MOTES=24;
@@ -15412,12 +15412,12 @@ void Creature::updateGhostSuctionStream(Ogre::SceneManager& scene, double share,
             Ogre::Real thickness;
             if(chain==0)
             {
-                colour=Ogre::ColourValue(0.35f,0.95f,0.45f,static_cast<float>(0.45*(0.75+0.25*pulse)*ends)*density);
+                colour=Ogre::ColourValue(0.2f,1.0f,0.3f,static_cast<float>(0.7*(0.75+0.25*pulse)*ends)*density);
                 thickness=width;
             }
             else if(chain==1)
             {
-                colour=Ogre::ColourValue(0.82f,1.0f,0.86f,static_cast<float>(0.8*(0.6+0.4*pulse)*ends)*density);
+                colour=Ogre::ColourValue(0.45f,1.0f,0.5f,static_cast<float>(0.8*(0.6+0.4*pulse)*ends)*density);
                 thickness=0.4f*width;
             }
             else
@@ -15427,7 +15427,7 @@ void Creature::updateGhostSuctionStream(Ogre::SceneManager& scene, double share,
                 const double turn=tau*static_cast<double>(chain-2)/static_cast<double>(GHOST_STREAM_STRANDS);
                 const Ogre::Real offset=static_cast<Ogre::Real>(0.3*sway)*width;
                 point+=(side*static_cast<Ogre::Real>(std::cos(turn))+across*static_cast<Ogre::Real>(std::sin(turn)))*offset;
-                colour=Ogre::ColourValue(0.55f,1.0f,0.65f,static_cast<float>(0.9*pulse*pulse*ends)*density);
+                colour=Ogre::ColourValue(0.3f,1.0f,0.4f,static_cast<float>(0.9*pulse*pulse*ends)*density);
                 thickness=0.22f*width;
             }
             mGhostStreamChain->addChainElement(chain,Ogre::BillboardChain::Element(point,thickness,0.5f,colour,Ogre::Quaternion::IDENTITY));
@@ -15453,7 +15453,7 @@ void Creature::updateGhostSuctionStream(Ogre::SceneManager& scene, double share,
         const Ogre::Real size=0.02f*(1.0f-0.4f*along);
         billboard->setDimensions(size,size);
         const double fade=std::min(1.0,std::min(way-stream.tail,stream.head-way)*12.0);
-        billboard->setColour(Ogre::ColourValue(0.75f,1.0f,0.8f,static_cast<float>(fade)*density));
+        billboard->setColour(Ogre::ColourValue(0.5f,1.0f,0.55f,static_cast<float>(fade)*density));
     }
 }
 

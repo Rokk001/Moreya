@@ -286,8 +286,8 @@ has(stream_draw, 'the drawn stream',
     'if(way<stream.tail || way>stream.head)')
 assert 'Random::' not in stream_draw, 'the stream is the same every frame for the same clock'
 has(creature, 'the stream constants', 'static const Ogre::Real GHOST_STREAM_INSET=0.8f;',
-    'static const Ogre::Real GHOST_STREAM_DEPTH=0.1f;', 'static const Ogre::Real GHOST_STREAM_BASE_WIDTH=0.11f;',
-    'static const Ogre::Real GHOST_STREAM_TOP_WIDTH=0.06f;')
+    'static const Ogre::Real GHOST_STREAM_DEPTH=0.1f;', 'static const Ogre::Real GHOST_STREAM_BASE_WIDTH=0.16f;',
+    'static const Ogre::Real GHOST_STREAM_TOP_WIDTH=0.1f;')
 has(visuals, 'no stream outside the suction', 'if(suction<0.0 && mGhostStreamNode!=nullptr) mGhostStreamNode->setVisible(false);')
 
 
