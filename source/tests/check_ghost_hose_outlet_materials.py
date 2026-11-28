@@ -179,7 +179,8 @@ def check_hose(creature):
     seen = hose_colours(creature)
     assert len(seen['GhostHoseWire']) == 2 * 4, 'four cables, each at the lit top and the dark underside'
     for pixel in seen['GhostHoseWire']:
-        assert max(pixel) - min(pixel) > 0.3, ('cable is clearly coloured, not white or grey', pixel)
+        # muted and worn (owner decision of 2026-11-28), but still its own colour: clearly saturated, never grey
+        assert max(pixel) - min(pixel) > 0.5 * max(pixel), ('cable is clearly coloured, not white or grey', pixel)
     hues = {max(range(3), key=lambda channel: pixel[channel]) for pixel in seen['GhostHoseWire']}
     assert len(hues) == 3, ('cables show red, green and blue leading channels', hues)
 

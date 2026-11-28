@@ -34,7 +34,7 @@ def shaders():
     assert "mViewport->setMaterialScheme(Ogre::RTShader::ShaderGenerator::DEFAULT_SCHEME_NAME);" in rules.read("source/render/RenderManager.cpp")
     # Since the owner decision of 2026-11-28 the cables of the flat bundle carry the configured colours
     shape = rules.function(rules.read("source/entities/Creature.cpp"), "static void shapeGhostCableBundle(")
-    assert "bundle.colour(shadeGhostHose(look.mWires[cable],normal,look.mGlow));" in shape
+    assert "bundle.colour(shadeGhostHose(wearGhostCable(look.mWires[cable],normal,share,cable),normal,look.mGlow));" in shape
     assert "bundle.textureCoord(0.0f,share);" in shape
     assert "FileSystem=materials/scripts" in rules.read("cmake/config/resources.cfg.in")
     missing = [name for name in SHADER_FILES if content_packages.data_file(repo, name) is None]

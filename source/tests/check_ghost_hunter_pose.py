@@ -517,7 +517,7 @@ has(bundle, 'cables in section 0 and brass clamps in section 1 on the hose curve
     'const Ogre::Real offset=(static_cast<Ogre::Real>(cable)-0.5f*static_cast<Ogre::Real>(cables-1))*2.0f*thickness;',
     'const Ogre::Vector3 core=frame(first+(last-first)*share,tangent,side,up)+side*offset;',
     'bundle.position(core+normal*thickness);',
-    'bundle.colour(shadeGhostHose(look.mWires[cable],normal,look.mGlow));',
+    'bundle.colour(shadeGhostHose(wearGhostCable(look.mWires[cable],normal,share,cable),normal,look.mGlow));',
     'const Ogre::Real wide=static_cast<Ogre::Real>(cables)*thickness+GHOST_BUNDLE_CLAMP_MARGIN*thickness;',
     'const Ogre::Real high=thickness+GHOST_BUNDLE_CLAMP_MARGIN*thickness;',
     'bundle.position(centre+side*(x*wide)+up*(y*high));')
@@ -570,17 +570,41 @@ def hue_name(rgb):
     names = [name for name, value in zip(('red', 'green', 'blue'), rgb) if value == top]
     second = sorted(rgb)[1]
     if second > 0.6 * top:
-        return 'yellow' if rgb[2] < 0.2 and min(rgb[0], rgb[1]) > 0.6 else 'mixed'
+        return 'yellow' if rgb[2] < 0.3 * top and min(rgb[0], rgb[1]) > 0.6 * top else 'mixed'
     return names[0]
 
 
 hues = [hue_name(rgb) for rgb in wires]
 assert hues == ['red', 'blue', 'green', 'yellow'], ('red, blue, green and yellow side by side as in the template', hues)
 for rgb in wires:
-    # Bright and saturated: one channel near full, one near zero; even the shadowed underside keeps it vivid
-    assert max(rgb) >= 0.9 and min(rgb) <= 0.2, ('saturated', rgb)
-    assert glow * max(rgb) >= 0.5, ('bright on the underside too', glow, rgb)
-assert 0.4 <= glow < 1.0, 'shaded so the cables read as round, but always bright'
+    # Muted to match the rusty pack (owner decision of 2026-11-28: matt and worn, not bright plastic), but each its own
+    # colour: no channel near full, still clearly saturated, and not lost in the dark on the underside
+    assert 0.4 <= max(rgb) <= 0.7 and min(rgb) <= 0.5 * max(rgb), ('muted but coloured', rgb)
+    assert glow * max(rgb) >= 0.12, ('visible on the underside too', glow, rgb)
+assert 0.2 <= glow <= 0.4, 'mostly lit from above, so the cables read as matt and round, little glow of their own'
+# Wear of wearGhostCable, modelled: grime and rubbed spots darken and pale the colour but never turn it white or black
+has(body(creature_source, 'static Ogre::ColourValue wearGhostCable('), 'grime and rubbed spots',
+    'const Ogre::Real grime=std::min(0.75f,0.2f+0.3f*wave+0.25f*std::max(0.0f,-normal.z));',
+    'const Ogre::ColourValue dust(0.24f,0.2f,0.16f,1.0f);',
+    'const Ogre::Real rubbed=0.45f*spot*std::max(0.0f,normal.z);')
+
+
+def worn(rgb, normal_z, share, cable):
+    """Model of wearGhostCable."""
+    wave = (0.5 + 0.5 * math.sin(23 * share + 1.7 * cable)) * (0.5 + 0.5 * math.sin(7.3 * share + 0.9 * cable))
+    grime = min(0.75, 0.2 + 0.3 * wave + 0.25 * max(0.0, -normal_z))
+    spot = max(0.0, math.sin(41 * share + 2.3 * cable)) ** 6
+    rubbed = 0.45 * spot * max(0.0, normal_z)
+    grey = sum(rgb) / 3 + 0.15
+    mixed = [c * (1 - grime) + d * grime for c, d in zip(rgb, (0.24, 0.2, 0.16))]
+    return [c * (1 - rubbed) + grey * rubbed for c in mixed]
+
+
+for cable, rgb in enumerate(wires):
+    samples = [worn(rgb, z, i / 200, cable) for i in range(201) for z in (-1.0, 0.0, 1.0)]
+    assert all(0.05 <= max(c) <= 0.75 for c in samples), ('worn, never white or black', cable)
+    assert max(max(c) for c in samples) - min(max(c) for c in samples) > 0.1, ('grime varies along the cable', cable)
+    assert any(worn(rgb, 1.0, i / 200, cable) != worn(rgb, -1.0, i / 200, cable) for i in range(201)), 'dirtier underside'
 # The flat bundle fits inside the steel couplings at both ends (sleeve 1.35 hose radii out, 2 hose radii long, see
 # check_ghost_assets.py: bounds -1.35..1.35 across, -0.3..2.0 along) and is thick enough to see each cable
 assert wire_count * wire_share <= 1.25 and wire_share >= 0.2, ('cables thick, the bundle inside the coupling', wire_share)
@@ -662,7 +686,7 @@ for rgb in wires:
         light = glow + (1 - glow) * (0.5 + 0.5 * normal_z)
         shaded = [value * light for value in rgb]
         assert max(shaded) <= 1.0
-    assert min(rgb) * 1.0 <= 0.2, 'no cable is white or grey'
+    assert min(rgb) <= 0.5 * max(rgb), 'no cable is white or grey'
 wire_block = material_block('GhostHoseWire') if GHOST_MATERIAL else ''
 assert not re.search(r'(?i)ghostbust|proton|ecto-?1|slimer', rooms + shape + bundle + wire_block), \
     'no names of other games or films'

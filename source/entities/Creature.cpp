@@ -14937,6 +14937,26 @@ static const GhostHoseLook& ghostHoseLook()
     return look;
 }
 
+//! \brief The worn colour of a cable of the pack's bundle at a vertex (owner decision of 2026-11-28: matt and worn to
+//! match the rusty pack, not smooth bright plastic): grime of brown dust that comes and goes along each cable and
+//! gathers on its underside, and rubbed spots on its top where the dye is worn pale. The same for every frame, given
+//! the share along the cable and the cable's number.
+static Ogre::ColourValue wearGhostCable(const Ogre::ColourValue& colour, const Ogre::Vector3& normal, Ogre::Real share,
+    size_t cable)
+{
+    const Ogre::Real seed=static_cast<Ogre::Real>(cable);
+    const Ogre::Real wave=(0.5f+0.5f*std::sin(23.0f*share+1.7f*seed))*(0.5f+0.5f*std::sin(7.3f*share+0.9f*seed));
+    const Ogre::Real grime=std::min(0.75f,0.2f+0.3f*wave+0.25f*std::max(0.0f,-normal.z));
+    const Ogre::ColourValue dust(0.24f,0.2f,0.16f,1.0f);
+    const Ogre::Real spot=std::pow(std::max(0.0f,std::sin(41.0f*share+2.3f*seed)),6.0f);
+    const Ogre::Real rubbed=0.45f*spot*std::max(0.0f,normal.z);
+    const Ogre::Real grey=(colour.r+colour.g+colour.b)/3.0f+0.15f;
+    Ogre::ColourValue worn=colour*(1.0f-grime)+dust*grime;
+    worn=worn*(1.0f-rubbed)+Ogre::ColourValue(grey,grey,grey,1.0f)*rubbed;
+    worn.a=1.0f;
+    return worn;
+}
+
 //! \brief The colour of a hose or wire vertex (decision 998): the materials are unlit, so the hose reads the same in every
 //! room light; the glow share of the colour always shines and the rest is lit by a light from straight above.
 static Ogre::ColourValue shadeGhostHose(const Ogre::ColourValue& colour, const Ogre::Vector3& normal, Ogre::Real glow)
@@ -15065,7 +15085,7 @@ static const size_t GHOST_BUNDLE_CLAMP_SIDES=16;
 
 //! \brief Re-shapes the cable bundle from the pack's port to the rear end of the cannon (owner decision of 2026-11-28,
 //! the approved gear template, in place of the ribbed hose with wound wires of decision 998): GhostHoseWireCount round
-//! cables in their configured colours lie flat side by side along the hose curve of shapeGhostHose (both ends leave along
+//! cables in their configured colours (worn matt by wearGhostCable) lie flat side by side along the hose curve of shapeGhostHose (both ends leave along
 //! the given directions, the middle sags), each GhostHoseWireRadius hose radii thick, from inside the steel coupling at
 //! the pack to inside the coupling at the cannon (section 0, material GhostHoseWire, shaded by shadeGhostHose). Brass
 //! clamps hold them together at GHOST_BUNDLE_CLAMPS (section 1, material GhostBrass). Both materials come from the
@@ -15117,7 +15137,7 @@ static void shapeGhostCableBundle(Ogre::ManualObject& bundle, const Ogre::Vector
                 const Ogre::Vector3 normal=side*std::cos(angle)+up*std::sin(angle);
                 bundle.position(core+normal*thickness);
                 bundle.normal(normal);
-                bundle.colour(shadeGhostHose(look.mWires[cable],normal,look.mGlow));
+                bundle.colour(shadeGhostHose(wearGhostCable(look.mWires[cable],normal,share,cable),normal,look.mGlow));
                 bundle.textureCoord(0.0f,share);
             }
         }
