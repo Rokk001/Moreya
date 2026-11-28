@@ -113,6 +113,7 @@ def catalogue_fixture():
 #include "entities/ItemValueLines.h"
 #include "entities/PotionDefinition.h"
 #include "rooms/RoomType.h"
+#include "utils/DisplayText.h"
 static const uint32_t MAX_LEVEL = 30;
 #include <algorithm>
 #include <cmath>
