@@ -86,14 +86,15 @@ std::string GiftBoxBonus::getDisplayName(GiftBoxType type)
     }
 }
 
-//! \brief The key giftbox.<type id>.name with the display name as the text for a language without it.
+//! \brief The key gift.<type id>.name (the key of getDisplayName; gift.default.name for the types without an own
+//! name) with the display name as the text for a language without it.
 std::string GiftBoxBonus::getDisplayNameReference(GiftBoxType type)
 {
-    static const char* const TYPE_IDS[] = {"skill", "mana", "gold", "revealmap", "levelup", "healall", "makesafe",
-        "weakenwalls", "stunworkers", "receiveworkers", "makehappy", "makeunhappy", "killcreatures", "item"};
+    static const char* const TYPE_IDS[] = {"default", "mana", "gold", "revealmap", "levelup", "healall", "makesafe",
+        "weakenwalls", "stunworkers", "receiveworkers", "makehappy", "makeunhappy", "killcreatures", "default"};
     const uint32_t index = static_cast<uint32_t>(type);
-    const std::string id = (index < sizeof(TYPE_IDS) / sizeof(TYPE_IDS[0])) ? TYPE_IDS[index] : "special";
-    return Translation::makeNameReference("giftbox." + id + ".name", getDisplayName(type));
+    const std::string id = (index < sizeof(TYPE_IDS) / sizeof(TYPE_IDS[0])) ? TYPE_IDS[index] : "default";
+    return Translation::makeNameReference("gift." + id + ".name", getDisplayName(type));
 }
 
 //! \brief Returns a short text saying what the bonus of the given type does, in the chosen language

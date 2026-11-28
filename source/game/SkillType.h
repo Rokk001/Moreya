@@ -144,7 +144,7 @@ namespace Skills
     //! \brief The skill name as seen in game events.
     std::string skillTypeToPlayerVisibleString(SkillType type);
 
-    //! \brief The skill name as a text reference (key skill.<type id in lowercase>.name, the player-visible string as
+    //! \brief The skill name as a text reference (key research.<type id in lowercase>.name, the player-visible string as
     //! fallback) for the texts that the server sends to the clients.
     std::string skillTypeToReference(SkillType type);
 
