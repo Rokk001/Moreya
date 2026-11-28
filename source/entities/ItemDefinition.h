@@ -15,6 +15,8 @@ enum class Quality : int32_t { poor, common, rare, epic };
 
 //! \brief Returns the spelling used in definition files and player displays.
 const std::string& qualityName(Quality quality);
+//! \brief The name of a quality as the player sees it, in the chosen language (the catalogue spelling stays the id).
+std::string qualityDisplayName(Quality quality);
 //! \brief Parses a quality name without accepting unknown qualities.
 bool parseQuality(const std::string& name, Quality& quality);
 //! \brief Writes a quality as an int32 value.

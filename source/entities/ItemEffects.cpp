@@ -12,8 +12,10 @@
 #include "gamemap/SandboxMode.h"
 #include "rooms/RoomType.h"
 #include "utils/ConfigManager.h"
+#include "utils/Translation.h"
 
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <vector>
 
@@ -22,35 +24,16 @@ namespace
 static const double PERCENT = 100.0;
 static const double ADJACENT_DISTANCE = 1.0;
 
-//! \brief Effect names used by tooltips and definition validation.
-struct EffectName
+//! \brief The configuration ids of the equipment effects, used to validate definitions. The tooltip name of an effect is
+//! the language entry "ui.itemeffect.<lower case id>".
+static const char* const EFFECT_IDS[] =
 {
-    //! \brief Configuration id of the effect.
-    const char* mId;
-    //! \brief Tooltip name chosen for the effect.
-    const char* mDisplay;
-};
-
-static const EffectName EFFECT_NAMES[] =
-{
-    {"SwiftStep", "Swift Step"}, {"Wader", "Wader"}, {"SecondWind", "Second Wind"},
-    {"LightStep", "Light Step"}, {"Tireless", "Tireless"}, {"QuickRise", "Quick Rise"},
-    {"SureFooting", "Sure Footing"}, {"LavaStride", "Lava Stride"},
-    {"ClearMind", "Clear Mind"}, {"Focus", "Focus"}, {"KeenEye", "Keen Eye"},
-    {"ThickSkull", "Thick Skull"}, {"FarSight", "Far Sight"}, {"Scholar", "Scholar"},
-    {"IronWill", "Iron Will"}, {"Craftsman", "Craftsman"},
-    {"ThickPlates", "Thick Plates"}, {"Spiked", "Spiked"}, {"Mending", "Mending"},
-    {"FireWard", "Fire Ward"}, {"SpellWard", "Spell Ward"}, {"LastStand", "Last Stand"},
-    {"Lifeblood", "Lifeblood"}, {"Unyielding", "Unyielding"},
-    {"Block", "Block"}, {"Spikes", "Spikes"}, {"Brace", "Brace"},
-    {"GuardWall", "Guard Wall"}, {"Deflect", "Deflect"}, {"Steadfast", "Steadfast"},
-    {"Bulwark", "Bulwark"}, {"Rally", "Rally"},
-    {"Bleed", "Bleed"}, {"Chill", "Chill"}, {"Weaken", "Weaken"},
-    {"Vampiric", "Vampiric"}, {"Executioner", "Executioner"}, {"Swift", "Swift"},
-    {"Breaker", "Breaker"}, {"ManaLeech", "Mana Leech"}, {"Cleave", "Cleave"},
-    {"HeroBane", "Hero Bane"},
-    {"GoldNose", "Gold Nose"}, {"ManaSpring", "Mana Spring"}, {"Stamina", "Stamina"},
-    {"Charisma", "Charisma"}, {"Thrift", "Thrift"}, {"Trainer", "Trainer"}, {"Fortune", "Fortune"}
+    "SwiftStep", "Wader", "SecondWind", "LightStep", "Tireless", "QuickRise", "SureFooting", "LavaStride",
+    "ClearMind", "Focus", "KeenEye", "ThickSkull", "FarSight", "Scholar", "IronWill", "Craftsman", "ThickPlates",
+    "Spiked", "Mending", "FireWard", "SpellWard", "LastStand", "Lifeblood", "Unyielding", "Block", "Spikes",
+    "Brace", "GuardWall", "Deflect", "Steadfast", "Bulwark", "Rally", "Bleed", "Chill", "Weaken", "Vampiric",
+    "Executioner", "Swift", "Breaker", "ManaLeech", "Cleave", "HeroBane", "GoldNose", "ManaSpring", "Stamina",
+    "Charisma", "Thrift", "Trainer", "Fortune"
 };
 
 //! \brief Applies cleave to enemy creatures on the eight tiles surrounding the struck target.
@@ -75,22 +58,24 @@ void cleave(Creature& attacker, const Creature& target, double damage)
 }
 }
 
-//! \brief Validates an id against the complete equipment effect name table.
+//! \brief Validates an id against the complete equipment effect id table.
 bool ItemEffects::exists(const std::string& id)
 {
-    for(const EffectName& effect : EFFECT_NAMES)
-        if(id == effect.mId)
+    for(const char* const effect : EFFECT_IDS)
+        if(id == effect)
             return true;
     return false;
 }
 
-//! \brief Looks up the player-visible effect name without creating new names.
+//! \brief Looks up the player-visible effect name in the chosen language without creating new names.
 std::string ItemEffects::getName(const std::string& id)
 {
-    for(const EffectName& effect : EFFECT_NAMES)
-        if(id == effect.mId)
-            return effect.mDisplay;
-    return id;
+    if(!exists(id))
+        return id;
+    std::string key = "ui.itemeffect.";
+    for(std::string::size_type i = 0; i < id.size(); ++i)
+        key += static_cast<char>(std::tolower(static_cast<unsigned char>(id[i])));
+    return Translation::tr(key);
 }
 
 //! \brief Adds Executioner to the global critical multiplier.
