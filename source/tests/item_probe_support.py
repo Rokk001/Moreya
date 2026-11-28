@@ -15,6 +15,8 @@ import time
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts"))
 import content_packages  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import language_texts  # noqa: E402
 #: A game data path a probe reads below the repository path (a string literal "/config/items.cfg" of the probe)
 DATA_PATH = re.compile(r'"/((?:config|gui|models|materials|levels|sounds|particles)/[\w./-]+\.\w+)"')
 
@@ -89,6 +91,9 @@ def compile_and_run(name, probe, optimize=False):
     output = ROOT / "out" / name
     output.mkdir(parents=True, exist_ok=True)
     code, executable = output / "probe.cpp", output / "probe.exe"
+    # A probe that calls Translation::tr without defining it gets the English texts of the language files
+    if "Translation::" in probe and "namespace Translation" not in probe:
+        probe = language_texts.translation_stub() + probe
     code.write_text(probe, encoding="utf-8")
     command = ["cl", "/nologo", "/EHsc", "/std:c++14", "/I" + str(ROOT / "source"), str(code),
                "/Fe:" + str(executable), "/Fo:" + str(output / "probe.obj")]
