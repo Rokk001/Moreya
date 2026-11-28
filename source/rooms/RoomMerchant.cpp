@@ -23,6 +23,7 @@
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 #include "utils/MakeUnique.h"
+#include "utils/Translation.h"
 
 #include <algorithm>
 #include <cmath>
@@ -34,7 +35,7 @@ const TileVisual RoomMerchant::mRoomVisual = TileVisual::merchantRoom;
 namespace
 {
 static const std::string ROOM_NAME = "Merchant";
-static const std::string ROOM_DISPLAY = "Merchant room";
+static const std::string ROOM_DISPLAY_KEY = "room.merchant.name";
 static const double PERCENT = 100.0;
 static uint32_t nextGoodsIndex = 1;
 
@@ -47,8 +48,8 @@ class RoomMerchantFactory : public RoomFactory
     TileVisual getVisualType() const override { return RoomMerchant::mRoomVisual; }
     //! \brief Returns its configuration name.
     const std::string& getName() const override { return ROOM_NAME; }
-    //! \brief Returns the approved player-facing room name.
-    const std::string& getNameReadable() const override { return ROOM_DISPLAY; }
+    //! \brief Returns the approved player-facing room name, in the chosen language.
+    std::string getNameReadable() const override { return Translation::tr(ROOM_DISPLAY_KEY); }
     //! \brief Reads the approved build cost.
     int getCostPerTile() const override { return ConfigManager::getSingleton().getRoomConfigInt32("MerchantCostPerTile"); }
     //! \brief Previews ordinary room construction.
@@ -89,6 +90,20 @@ static RoomRegister reg(new RoomMerchantFactory);
 //! \brief Reads a room configuration amount without changing its prescribed value.
 double setting(const std::string& key)
 { return ConfigManager::getSingleton().getRoomConfigDouble(key); }
+
+//! \brief The name of a traded item as a text reference that each client shows in its own language: the keys
+//! ui.item.soulcrystal, potion.<id>.name and item.<id>.<quality>.name, with the given name as fallback.
+std::string itemNameReference(const ItemInstance& item, const std::string& name)
+{
+    if(item.mSoulCrystal)
+        return Translation::makeNameReference("ui.item.soulcrystal", name);
+    if(!item.mPotionId.empty())
+        return Translation::makeNameReference("potion." + Translation::toKeyPart(item.mPotionId) + ".name", name);
+    if(!item.mDefinitionId.empty())
+        return Translation::makeNameReference("item." + Translation::toKeyPart(item.mDefinitionId) + "." +
+            Translation::toKeyPart(qualityName(item.mQuality)) + ".name", name);
+    return name;
+}
 
 //! \brief Reads the margin as a fractional share.
 double margin(const Seat* seat)
@@ -612,7 +627,9 @@ void RoomMerchant::reserveGoods()
         }
 }
 
-//! \brief Records the approved twenty-deal history and plays the merchant's reaction.
+//! \brief Records the approved twenty-deal history and plays the merchant's reaction. The history travels to the
+//! clients, so the item name is a text reference (itemNameReference) that each client shows in its own language;
+//! "bought" and "sold" are tokens of the record, not shown text.
 void RoomMerchant::recordDeal(const std::string& creature, const ItemInstance& item, double price, bool bought)
 {
     std::ostringstream line;
@@ -620,7 +637,8 @@ void RoomMerchant::recordDeal(const std::string& creature, const ItemInstance& i
     line << getGameMap()->getTurnNumber() << '\t' << creature << '\t'
         << (actor == nullptr ? "" : actor->getDefinition()->getClassName()) << '\t'
         << (actor != nullptr && actor->getDefinition()->isWorker()) << '\t'
-        << (bought ? "bought" : "sold") << '\t' << item.getDisplayName(getGameMap()) << '\t' << price;
+        << (bought ? "bought" : "sold") << '\t' << itemNameReference(item, item.getDisplayName(getGameMap())) << '\t'
+        << price;
     getSeat()->recordMerchantDeal(line.str(), item.mPotionId, bought);
     if(getSeat()->getMerchant() != nullptr) getSeat()->getMerchant()->onDeal();
     if(getCentralTile() != nullptr) fireRoomSound(*getCentralTile(), "Merchant/Deal");
@@ -929,8 +947,16 @@ void RoomMerchant::announceDeal(Creature& creature, const ItemInstance& item, ui
 {
     const std::string name = item.getDisplayName(creature.getGameMap());
     creature.setLastItemDeal(deal, name);
+    // The notice shows the item name in the language of each client: the keys potion.<id>.name and
+    // item.<id>.<quality>.name, with the English name as fallback
+    std::string itemName = name;
+    if(!item.mPotionId.empty())
+        itemName = Translation::makeNameReference("potion." + Translation::toKeyPart(item.mPotionId) + ".name", name);
+    else if(!item.mDefinitionId.empty())
+        itemName = Translation::makeNameReference("item." + Translation::toKeyPart(item.mDefinitionId) + "." +
+            Translation::toKeyPart(qualityName(item.mQuality)) + ".name", name);
     Player* player = creature.getSeat() == nullptr ? nullptr : creature.getSeat()->getPlayer();
     if(item.mQuality != Quality::epic || player == nullptr || !player->getIsHuman() || deal == 4) return;
-    if(deal == 5) player->notifyCreatureEvent(creature, " found " + name + "!");
-    else player->notifyCreatureEvent(creature, " bought " + name);
+    if(deal == 5) player->notifyCreatureEvent(creature, Translation::makeReference("msg.merchant.found", {{"item", itemName}}));
+    else player->notifyCreatureEvent(creature, Translation::makeReference("msg.merchant.bought", {{"item", itemName}}));
 }

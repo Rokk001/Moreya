@@ -52,7 +52,7 @@ CAPTION_COUNT = 6
 
 def read(path):
     """Reads tracked production input without depending on the current directory (public tree, else content package)."""
-    return content_packages.read_text(REPO, path)
+    return content_packages.read_layout_text(REPO, path)
 
 
 def props(node):
@@ -132,7 +132,7 @@ def walk(node, path=''):
 
 def frame_contract():
     """Reads the frame, border and title data the model uses from the shipped files."""
-    manager = ET.parse(content_packages.resolve(REPO, 'gui/WindowRoomManager.layout')).getroot().find('Window')
+    manager = ET.ElementTree(ET.fromstring(content_packages.read_layout_text(REPO, 'gui/WindowRoomManager.layout'))).getroot().find('Window')
     frame = props(manager)
     (fx0, fox0), (fy0, foy0), (fx1, fox1), (fy1, foy1) = udims(frame['Area'])
     assert (fx0, fy0, fx1, fy1) == (.5, .5, .5, .5), 'a centred frame of fixed design size'
@@ -196,7 +196,7 @@ def captions(with_values=True):
 def check():
     """Runs the 60 screen and scale cases on the ghost page."""
     contract = frame_contract()
-    root = ET.parse(content_packages.resolve(REPO, 'gui/RoomManagerGhostPage.layout')).getroot().find('Window')
+    root = ET.ElementTree(ET.fromstring(content_packages.read_layout_text(REPO, 'gui/RoomManagerGhostPage.layout'))).getroot().find('Window')
     assert root.get('name') == 'GhostPage' and props(root)['Area'] == '{{0,0},{0,0},{1,0},{1,0}}'
     windows = walk(root)
     assert len(windows) + 1 == PAGE_WINDOWS, len(windows) + 1

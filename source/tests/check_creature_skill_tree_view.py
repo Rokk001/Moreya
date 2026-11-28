@@ -1,7 +1,8 @@
 """Creature skill tree (the Skills page of the Dungeonbook): runs source/tests/test_CreatureSkillTreeView.cpp without
 Boost.Test and checks the wiring of the page.
 
-The test file is compiled with creatureskill/CreatureSkillTreeView.cpp and CreatureSkillTree.cpp against a tiny
+The test file is compiled with creatureskill/CreatureSkillTreeView.cpp, CreatureSkillTree.cpp and utils/Translation.cpp
+(the tooltip texts are read from the English language package) against a tiny
 stand-in for the Boost.Test macros it uses and for the configuration and log singletons (like
 check_level_script.py and check_creature_skill_trees.py), and run on config/creatureSkills.cfg. The wiring checks
 read the layouts and the sources: the Skills page of the book (gui/WindowSocial.layout SkillsPage, INGAME-QS-12 K7;
@@ -103,6 +104,7 @@ public:
     double getSkeletonArmyRadius() const { return 3; }
 };
 #define OD_LOG_ERR(_message) (std::cerr << (std::string("") + _message) << std::endl)
+#define OD_LOG_INF(_message) ((void)0)
 '''
 
 errors = []
@@ -130,6 +132,7 @@ def run_test_cases():
         (tmp / 'main.cpp').write_text(main)
         sources = [repo / 'source/creatureskill/CreatureSkillTree.cpp',
                    repo / 'source/creatureskill/CreatureSkillTreeView.cpp',
+                   repo / 'source/utils/Translation.cpp',
                    repo / 'source/tests/test_CreatureSkillTreeView.cpp', tmp / 'main.cpp']
         exe = tmp / 'skill_tree_view_check.exe'
         compiler = shutil.which('g++') or shutil.which('clang++')

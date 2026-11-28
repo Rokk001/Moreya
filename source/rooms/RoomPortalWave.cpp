@@ -37,12 +37,13 @@
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 #include "utils/Random.h"
+#include "utils/Translation.h"
 
 #include <list>
 #include <vector>
 
 const std::string RoomPortalWaveName = "PortalWave";
-const std::string RoomPortalWaveNameDisplay = "Wave portal room";
+const std::string RoomPortalWaveNameKey = "room.portalwave.name";
 const RoomType RoomPortalWave::mRoomType = RoomType::portalWave;
 const TileVisual RoomPortalWave::mRoomVisual= TileVisual::portalWaveRoom;
 
@@ -61,8 +62,9 @@ class RoomPortalWaveFactory : public RoomFactory
     const std::string& getName() const override
     { return RoomPortalWaveName; }
 
-    const std::string& getNameReadable() const override
-    { return RoomPortalWaveNameDisplay; }
+    //! \brief The name shown to the player, in the chosen language.
+    std::string getNameReadable() const override
+    { return Translation::tr(RoomPortalWaveNameKey); }
 
     int getCostPerTile() const override
     { return 0; }
@@ -449,7 +451,7 @@ void RoomPortalWave::warnHeroesComing()
 
         ServerNotification* serverNotification = new ServerNotification(
             ServerNotificationType::chatServer, player);
-        std::string msg = "Heroes are coming!";
+        const std::string msg = Translation::makeReference("msg.heroes.coming");
         serverNotification->mPacket << msg << EventShortNoticeType::majorGameEvent;
         ODServer::getSingleton().queueServerNotification(serverNotification);
     }
@@ -507,7 +509,7 @@ void RoomPortalWave::handleAttack()
                 ServerNotification *serverNotification = new ServerNotification(
                     ServerNotificationType::chatServer, tileSeat->getPlayer());
 
-                std::string msg = "Your evil presence has soiled this holy land for too long. You shall be crushed by our blessed swords !";
+                const std::string msg = Translation::makeReference("msg.heroes.crush");
                 serverNotification->mPacket << msg << EventShortNoticeType::majorGameEvent;
                 ODServer::getSingleton().queueServerNotification(serverNotification);
             }

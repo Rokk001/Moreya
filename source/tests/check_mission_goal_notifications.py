@@ -35,7 +35,7 @@ def check(seat, runner):
     assert "sendMessage(" not in state and "ServerNotification" not in state
     assert "script.setObjectiveState(" in state
     assert 'sendMessage(gameMap, action.mSeatId, action.mText);' in action
-    assert 'sendMessage(gameMap, action.mSeatId, "Hint: " + action.mText);' in action
+    assert 'sendMessage(gameMap, action.mSeatId, Translation::makeReference("goal.hint", {{"text", action.mText}}));' in action
 
 
 seat = (ROOT / "source/game/Seat.cpp").read_text(encoding="utf-8")

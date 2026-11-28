@@ -7,6 +7,9 @@ event dispatch all execute the production code.
 """
 from pathlib import Path
 import os
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import language_texts  # noqa: E402
 import re
 import shutil
 import subprocess
@@ -29,6 +32,11 @@ STUBS = r'''
 #include <string>
 #include <vector>
 
+//! Text conversion of the production Gui: the probe strings are plain std::string, so the text stays as it is.
+struct Gui {
+    static std::string toCeguiText(const std::string& text){return text;}
+    static std::string trCegui(const std::string& key){return Translation::tr(key);}
+};
 namespace Helper {
 template<class T> std::string toString(T value) { std::ostringstream out; out << value; return out.str(); }
 }
@@ -297,7 +305,7 @@ int main() {
 
 with tempfile.TemporaryDirectory(prefix='odp-room-manager-window-') as directory:
     work = Path(directory)
-    (work / 'check.cpp').write_text(STUBS + production + CASES, encoding='utf-8')
+    (work / 'check.cpp').write_text(language_texts.translation_stub() + STUBS + production + CASES, encoding='utf-8')
     args = ['cl', '/nologo', '/EHsc', '/MD', '/O2', '/W3', '/I' + str(ROOT / 'source'), 'check.cpp', '/Fecheck.exe']
     if shutil.which('cl'):
         subprocess.run(args, cwd=work, check=True)

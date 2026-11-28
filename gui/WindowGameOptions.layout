@@ -2,7 +2,7 @@
 
 <GUILayout version="4" >
 <!--#@own 1-->
-        <Property name="Text" value="Options" />
+        <Property name="Text" value="@layout.window_game_options.game_options_window.text" />
         <Property name="SizingEnabled" value="False" />
 <!--#@own 2-->
             <Property name="IconImage" value="OpenDungeonsIcons/SaveIcon" />
@@ -12,21 +12,21 @@
             <Property name="IconImage" value="OpenDungeonsIcons/LoadIcon" />
 <!--#@own 5-->
             <Property name="IconImage" value="OpenDungeonsIcons/OptionsIcon" />
-            <Property name="Text" value="Settings" />
+            <Property name="Text" value="@layout.window_game_options.game_options_window.settings_button.text" />
             <Property name="Disabled" value="False" />
-            <Property name="TooltipText" value="Open the game settings window." />
+            <Property name="TooltipText" value="@layout.window_game_options.game_options_window.settings_button.tooltip" />
         </Window>
 <!--#@own 6-->
             <Property name="IconImage" value="OpenDungeonsIcons/AbortIcon" />
 <!--#@own 7-->
             <Property name="IconImage" value="OpenDungeonsIcons/AbortIcon" />
-            <Property name="Text" value="Quit to Menu" />
-            <Property name="TooltipText" value="Leave this game and return to the main menu..." />
+            <Property name="Text" value="@layout.window_game_options.game_options_window.quit_game_button.text" />
+            <Property name="TooltipText" value="@layout.window_game_options.game_options_window.quit_game_button.tooltip" />
         </Window>
 <!--#@own 8-->
             <Property name="IconImage" value="OpenDungeonsIcons/AbortIcon" />
-            <Property name="Text" value="Exit to System" />
-            <Property name="TooltipText" value="Leave this game and exit to the desktop..." />
+            <Property name="Text" value="@layout.window_game_options.game_options_window.exit_game_button.text" />
+            <Property name="TooltipText" value="@layout.window_game_options.game_options_window.exit_game_button.tooltip" />
         </Window>
 <!--#@own 9-->
             <Property name="IconImage" value="OpenDungeonsIcons/LoadIcon" />

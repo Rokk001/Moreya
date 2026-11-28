@@ -2,7 +2,7 @@
 
 <GUILayout version="4" >
 <!--#@own 1-->
-        <Property name="Text" value="Settings" />
+        <Property name="Text" value="@layout.window_settings.settings_window.text" />
         <Property name="SizingEnabled" value="False" />
         <Property name="AlwaysOnTop" value="True" />
 <!--#@own 2-->
@@ -15,7 +15,7 @@
             <Property name="RiseOnClickEnabled" value="False" />
             <Window type="DefaultWindow" name="Video" >
                 <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
-                <Property name="Text" value="Video" />
+                <Property name="Text" value="@layout.window_settings.settings_window.main_tab_control.video.text" />
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
                 <Property name="RiseOnClickEnabled" value="False" />
 <!--#@own 5-->
@@ -23,7 +23,7 @@
                     <Window type="OD/StaticText" name="ResolutionText" >
 <!--#@own 6-->
                         <Property name="MaxSize" value="{{1,0},{1,0}}" />
-                        <Property name="Text" value="Resolution:" />
+                        <Property name="Text" value="@layout.window_settings.settings_window.main_tab_control.video.video_sp.resolution_text.text" />
                         <Property name="BackgroundEnabled" value="False" />
                         <Property name="FrameEnabled" value="False" />
                     </Window>
@@ -33,24 +33,24 @@
                     </Window>
                     <Window type="OD/Checkbox" name="FullscreenCheckbox" >
 <!--#@own 8-->
-                        <Property name="Text" value="Fullscreen" />
+                        <Property name="Text" value="@layout.window_settings.settings_window.main_tab_control.video.video_sp.fullscreen_checkbox.text" />
                     </Window>
                     <Window type="OD/Checkbox" name="DynamicShadowsCheckbox" >
 <!--#@own 9-->
-                        <Property name="Text" value="Dynamic Shadows" />
+                        <Property name="Text" value="@layout.window_settings.settings_window.main_tab_control.video.video_sp.dynamic_shadows_checkbox.text" />
                     </Window>                   
                     <Window type="OD/StaticText" name="RendererText" >
 <!--#@own 10-->
                         <Property name="MaxSize" value="{{1,0},{1,0}}" />
-                        <Property name="Text" value="Renderer*:" />
+                        <Property name="Text" value="@layout.window_settings.settings_window.main_tab_control.video.video_sp.renderer_text.text" />
                         <Property name="BackgroundEnabled" value="False" />
                         <Property name="FrameEnabled" value="False" />
-                        <Property name="TooltipText" value="* Needs a restart to be applied." />
+                        <Property name="TooltipText" value="@layout.window_settings.settings_window.main_tab_control.video.video_sp.renderer_text.tooltip" />
                     </Window>
                     <Window type="OD/Combobox" name="RendererCombobox" >
 <!--#@own 11-->
                         <Property name="ReadOnly" value="True" />
-                        <Property name="TooltipText" value="* Needs a restart to be applied." />
+                        <Property name="TooltipText" value="@layout.window_settings.settings_window.main_tab_control.video.video_sp.renderer_combobox.tooltip" />
                     </Window>
                     <Window type="OD/Checkbox" name="VSyncCheckbox" >
 <!--#@own 12-->
@@ -68,7 +68,7 @@
             </Window>
             <Window type="DefaultWindow" name="Audio" >
                 <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
-                <Property name="Text" value="Audio" />
+                <Property name="Text" value="@layout.window_settings.settings_window.main_tab_control.audio.text" />
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
                 <Property name="Visible" value="False" />
                 <Property name="RiseOnClickEnabled" value="False" />
@@ -77,7 +77,7 @@
                     <Window type="OD/StaticText" name="MusicText" >
 <!--#@own 18-->
                         <Property name="MaxSize" value="{{1,0},{1,0}}" />
-                        <Property name="Text" value="Music:" />
+                        <Property name="Text" value="@layout.window_settings.settings_window.main_tab_control.audio.audio_sp.music_text.text" />
                         <Property name="BackgroundEnabled" value="False" />
                         <Property name="FrameEnabled" value="False" />
                     </Window>
@@ -101,7 +101,7 @@
             </Window>
             <Window type="DefaultWindow" name="Input" >
                 <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
-                <Property name="Text" value="Input" />
+                <Property name="Text" value="@layout.window_settings.settings_window.main_tab_control.input.text" />
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
                 <Property name="Visible" value="False" />
                 <Property name="RiseOnClickEnabled" value="False" />
@@ -109,23 +109,23 @@
                     <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
                     <Window type="OD/Checkbox" name="KeyboardGrabCheckbox" >
 <!--#@own 25-->
-                        <Property name="Text" value="Keyboard grab" />
+                        <Property name="Text" value="@layout.window_settings.settings_window.main_tab_control.input.input_sp.keyboard_grab_checkbox.text" />
 <!--#@own 26-->
                     </Window>
                     <Window type="OD/Checkbox" name="MouseGrabCheckbox" >
 <!--#@own 27-->
-                        <Property name="Text" value="Mouse grab" />
+                        <Property name="Text" value="@layout.window_settings.settings_window.main_tab_control.input.input_sp.mouse_grab_checkbox.text" />
 <!--#@own 28-->
                     </Window>
                     <Window type="OD/Checkbox" name="AutoscrollCheckbox" >
 <!--#@own 29-->
-                        <Property name="Text" value="Autoscroll" />
-                        <Property name="TooltipText" value="When checked, if the mouse cousor is on the screen border it will make camera fly " />
+                        <Property name="Text" value="@layout.window_settings.settings_window.main_tab_control.input.input_sp.autoscroll_checkbox.text" />
+                        <Property name="TooltipText" value="@layout.window_settings.settings_window.main_tab_control.input.input_sp.autoscroll_checkbox.tooltip" />
                     </Window>
                     <Window type="OD/StaticText" name="PanSpeedText" >
 <!--#@own 30-->
                         <Property name="MaxSize" value="{{1,0},{1,0}}" />
-                        <Property name="Text" value="Camera pan speed: 100%" />
+                        <Property name="Text" value="@layout.window_settings.settings_window.main_tab_control.input.input_sp.pan_speed_text.text" />
                         <Property name="BackgroundEnabled" value="False" />
                         <Property name="FrameEnabled" value="False" />
                     </Window>
@@ -135,13 +135,13 @@
                         <Property name="AutoRenderingSurface" value="True" />
                         <Property name="MaximumValue" value="290" />
                         <Property name="ClickStepSize" value="10" />
-                        <Property name="TooltipText" value="How fast the arrow keys and autoscroll pan the camera (100% is the default speed)." />
+                        <Property name="TooltipText" value="@layout.window_settings.settings_window.main_tab_control.input.input_sp.pan_speed_slider.tooltip" />
                     </Window>
                 </Window>
             </Window>
             <Window type="DefaultWindow" name="Game" >
                 <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
-                <Property name="Text" value="Game" />
+                <Property name="Text" value="@layout.window_settings.settings_window.main_tab_control.game.text" />
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
                 <Property name="Visible" value="False" />
                 <Property name="RiseOnClickEnabled" value="False" />
@@ -150,7 +150,7 @@
                     <Window type="OD/StaticText" name="NicknameText" >
 <!--#@own 33-->
                         <Property name="MaxSize" value="{{1,0},{1,0}}" />
-                        <Property name="Text" value="Nickname:" />
+                        <Property name="Text" value="@layout.window_settings.settings_window.main_tab_control.game.game_sp.nickname_text.text" />
                         <Property name="BackgroundEnabled" value="False" />
                         <Property name="FrameEnabled" value="False" />
                     </Window>
@@ -161,7 +161,7 @@
                     <Window type="OD/StaticText" name="KeeperVoiceText" >
 <!--#@own 35-->
                         <Property name="MaxSize" value="{{1,0},{1,0}}" />
-                        <Property name="Text" value="Keeper Voice:" />
+                        <Property name="Text" value="@layout.window_settings.settings_window.main_tab_control.game.game_sp.keeper_voice_text.text" />
                         <Property name="BackgroundEnabled" value="False" />
                         <Property name="FrameEnabled" value="False" />
                     </Window>
@@ -172,7 +172,7 @@
                     <Window type="OD/StaticText" name="MinimapText" >
 <!--#@own 37-->
                         <Property name="MaxSize" value="{{1,0},{1,0}}" />
-                        <Property name="Text" value="Minimap Type:" />
+                        <Property name="Text" value="@layout.window_settings.settings_window.main_tab_control.game.game_sp.minimap_text.text" />
                         <Property name="BackgroundEnabled" value="False" />
                         <Property name="FrameEnabled" value="False" />
                     </Window>
@@ -183,7 +183,7 @@
                     <Window type="OD/StaticText" name="LightText" >
 <!--#@own 39-->
                         <Property name="MaxSize" value="{{1,0},{1,0}}" />
-                        <Property name="Text" value="Ambient Light: +" />
+                        <Property name="Text" value="@layout.window_settings.settings_window.main_tab_control.game.game_sp.light_text.text" />
                         <Property name="BackgroundEnabled" value="False" />
                         <Property name="FrameEnabled" value="False" />
                     </Window>
@@ -214,18 +214,19 @@
                     <Window type="OD/Checkbox" name="KOCreatureCheckbox" >
 <!--#@own 48-->
                         <Property name="Visible" value="False" />
-                        <Property name="Text" value="KO enemy creatures instead of killing" />
+                        <Property name="Text" value="@layout.window_settings.settings_window.main_tab_control.game.game_sp.ko_creature_checkbox.text" />
 <!--#@own 49-->
-                    <!-- Language of all texts of the game (localization plan R2); the texts are keys of the language files. -->
+                    <!-- Language of all texts of the game (localization plan R2); the texts are keys of the language files.
+                         It sits below the light slider, where its drop list opens inside the visible part of the pane. -->
                     <Window type="OD/StaticText" name="LanguageText" >
-                        <Property name="Area" value="{{0,32},{0,458},{0,190},{0,482}}" />
+                        <Property name="Area" value="{{0,32},{0,220},{0,190},{0,244}}" />
                         <Property name="MaxSize" value="{{1,0},{1,0}}" />
                         <Property name="Text" value="@settings.language" />
                         <Property name="BackgroundEnabled" value="False" />
                         <Property name="FrameEnabled" value="False" />
                     </Window>
                     <Window type="OD/Combobox" name="LanguageCombo" >
-                        <Property name="Area" value="{{0,200},{0,458},{0,360},{0,538}}" />
+                        <Property name="Area" value="{{0,200},{0,218},{0,360},{0,298}}" />
                         <Property name="MaxSize" value="{{1,0},{1,0}}" />
                         <Property name="ReadOnly" value="True" />
                         <Property name="TooltipText" value="@settings.language.tooltip" />

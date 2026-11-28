@@ -43,9 +43,10 @@
 #include "utils/LogManager.h"
 #include "utils/MakeUnique.h"
 #include "utils/Random.h"
+#include "utils/Translation.h"
 
 const std::string RoomCasinoName = "Casino";
-const std::string RoomCasinoNameDisplay = "Casino room";
+const std::string RoomCasinoNameKey = "room.casino.name";
 const RoomType RoomCasino::mRoomType = RoomType::casino;
 const TileVisual RoomCasino::mRoomVisual= TileVisual::casinoRoom;
 
@@ -63,8 +64,9 @@ class RoomCasinoFactory : public RoomFactory
     const std::string& getName() const override
     { return RoomCasinoName; }
 
-    const std::string& getNameReadable() const override
-    { return RoomCasinoNameDisplay; }
+    //! \brief The name shown to the player, in the chosen language.
+    std::string getNameReadable() const override
+    { return Translation::tr(RoomCasinoNameKey); }
 
     int getCostPerTile() const override
     { return ConfigManager::getSingleton().getRoomConfigInt32("CasinoCostPerTile"); }

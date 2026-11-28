@@ -42,7 +42,8 @@ public:
 
     virtual SpellType getSpellType() const = 0;
     virtual const std::string& getName() const = 0;
-    virtual const std::string& getNameReadable() const = 0;
+    //! \brief The name shown to the player, in the chosen language
+    virtual std::string getNameReadable() const = 0;
     virtual const std::string& getCooldownKey() const = 0;
 
     virtual void checkSpellCast(GameMap* gameMap, const InputManager& inputManager, InputCommand& inputCommand) const = 0;
@@ -93,8 +94,8 @@ public:
     //! \brief Gets the spell identification name
     static const std::string& getSpellNameFromSpellType(SpellType type);
 
-    //! \brief Gets the spell readable name
-    static const std::string& getSpellReadableName(SpellType type);
+    //! \brief Gets the spell name shown to the player, in the chosen language
+    static std::string getSpellReadableName(SpellType type);
 
     static SpellType getSpellTypeFromSpellName(const std::string& name);
 

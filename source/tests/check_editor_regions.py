@@ -1,6 +1,9 @@
 """Static check that the region marker messages of the level editor are wired end to end."""
 from pathlib import Path
 import re
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from language_texts import english  # noqa: E402
 
 repo = Path(__file__).resolve().parents[2]
 
@@ -57,6 +60,6 @@ assert 'region.mName << region.mX1 << region.mY1 << region.mX2 << region.mY2' in
 assert 'case OIS::KC_R:' in editor
 assert 'markRegion();' in editor and 'unmarkRegion();' in editor
 assert 'drawCuboid(box.getAllCorners().data()' in editor
-assert 'R - make the marked tiles a region' in editor
+assert 'editor.help.regions' in editor and 'R - make the marked tiles a region' in english('editor.help.regions')
 assert 'void setRegions(' in editor_h
 print('editor region markers: ok')

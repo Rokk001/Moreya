@@ -20,6 +20,8 @@ args = parser.parse_args()
 repo = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(repo / 'scripts'))
 import content_packages  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import language_texts  # noqa: E402
 prefix = Path(os.environ['CMAKE_PREFIX_PATH'])
 game = (repo / 'source/modes/GameMode.cpp').read_text()
 manager = (repo / 'source/game/SkillManager.cpp').read_text()
@@ -80,16 +82,21 @@ def joined_gui_folders(base):
             mixed = file.suffix in ('.layout', '.looknfeel', '.scheme', '.imageset', '.font') and \
                 '#@own ' in file.read_text(encoding='utf-8')
             if mixed:
-                (target / file.name).write_text(content_packages.read_text(repo, path + '/' + file.name), encoding='utf-8')
+                (target / file.name).write_text(content_packages.read_layout_text(repo, path + '/' + file.name), encoding='utf-8')
             else:
                 shutil.copyfile(file, target / file.name)
 
+
+# The research names come from the language package: the probe gets the English texts of the language files from
+# language_texts.translation_stub(), written in front of the probe (the game reads them with the same keys)
+translation_stub = ''
 
 probe = r'''
 #include <CEGUI/CEGUI.h>
 #include <CEGUI/RendererModules/Null/Renderer.h>
 #include <CEGUI/RendererModules/Ogre/ResourceProvider.h>
 #include <CEGUI/RendererModules/Ogre/ImageCodec.h>
+namespace Gui {inline CEGUI::String toCeguiText(const std::string& text) {return CEGUI::String(text);}}
 #include <OgreRoot.h>
 #include <OgreResourceGroupManager.h>
 #include "game/SkillType.h"
@@ -98,6 +105,7 @@ probe = r'''
 #include <functional>
 #include <iostream>
 #include <map>
+TRANSLATIONS
 const std::string SKILL_BADGE_FONT_NORMAL="MedievalSharp-10";const std::string SKILL_BADGE_FONT_SMALL="MedievalSharp-8";const float SKILL_BADGE_NODE_GAP=16.0f;const float SKILL_BADGE_WIDTH_PADDING=8.0f;
 namespace Helper {template<class T>std::string toString(T v){return std::to_string(v);}}
 struct CreatureDefinition {std::string getMeshName()const{return "Kobold.mesh";}};
@@ -356,7 +364,7 @@ int main(int argc,char** argv){try{
  windows.destroyWindow(root);CEGUI::System::destroy();CEGUI::NullRenderer::destroy(renderer);
  std::cout<<"CHECKS="<<checks<<" FAILURES="<<failures<<'\n';return failures?1:0;
 }catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}
-'''.replace('METHODS', research_colours+chr(10)+function('void GameMode::refreshSkillButtonState(')+'\n'+function('void GameMode::refreshSkillConnections(')).replace('INITIALIZERS', initializers).replace('NAMES', skill_names[names_start:names_end])
+'''.replace('METHODS', research_colours+chr(10)+function('void GameMode::refreshSkillButtonState(')+'\n'+function('void GameMode::refreshSkillConnections(')).replace('INITIALIZERS', initializers).replace('NAMES', skill_names[names_start:names_end]).replace('TRANSLATIONS', translation_stub)
 if args.render:
     probe = probe.replace('#include <CEGUI/RendererModules/Null/Renderer.h>', '#include <CEGUI/RendererModules/Ogre/Renderer.h>\n#include <CEGUI/BasicImage.h>\n#include <Ogre.h>\n#include <OgreRenderTexture.h>\n#include <OgreHardwarePixelBuffer.h>\n#include <RTShaderSystem/OgreShaderGenerator.h>\n#include <Bites/OgreSGTechniqueResolverListener.h>')
     probe = probe.replace('auto& renderer=CEGUI::NullRenderer::create();renderer.setDisplaySize(CEGUI::Sizef(1920,1200));', r'''
@@ -403,7 +411,7 @@ if args.render:
 probe = probe.replace('GUI_FOLDERS', gui_folders)
 with tempfile.TemporaryDirectory(prefix='odp-research-tree-') as directory:
     work = Path(directory)
-    (work / 'check.cpp').write_text(probe)
+    (work / 'check.cpp').write_text(language_texts.translation_stub() + probe)
     cegui_source = prefix.parent / 'src/cegui/cegui'
     subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17', '/DCEGUINULLRENDERER_EXPORTS',
         f'/I{repo / "source"}', f'/I{prefix / "include/cegui-0"}', f'/I{cegui_source / "include"}', f'/I{prefix / "include/OGRE"}', f'/I{prefix / "include/OGRE/RTShaderSystem"}',

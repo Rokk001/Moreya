@@ -33,9 +33,10 @@
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
+#include "utils/Translation.h"
 
 const std::string SpellBlessingName = "blessing";
-const std::string SpellBlessingNameDisplay = "Blessing";
+const std::string SpellBlessingNameKey = "spell.blessing.name";
 const std::string SpellBlessingCooldownKey = "BlessingCooldown";
 const SpellType SpellBlessing::mSpellType = SpellType::blessing;
 const std::string SpellBlessing::MOOD_EFFECT_NAME = "Blessing";
@@ -54,8 +55,9 @@ class SpellBlessingFactory : public SpellFactory
     const std::string& getCooldownKey() const override
     { return SpellBlessingCooldownKey; }
 
-    const std::string& getNameReadable() const override
-    { return SpellBlessingNameDisplay; }
+    //! \brief The name shown to the player, in the chosen language.
+    std::string getNameReadable() const override
+    { return Translation::tr(SpellBlessingNameKey); }
 
     virtual void checkSpellCast(GameMap* gameMap, const InputManager& inputManager, InputCommand& inputCommand) const override
     { SpellBlessing::checkSpellCast(gameMap, inputManager, inputCommand); }
@@ -83,7 +85,7 @@ void SpellBlessing::checkSpellCast(GameMap* gameMap, const InputManager& inputMa
     Tile* tileSelected = gameMap->getTile(inputManager.mXPos, inputManager.mYPos);
     if(tileSelected == nullptr)
     {
-        inputCommand.displayText(Ogre::ColourValue::Red, "Point at a tile inside the map.");
+        inputCommand.displayText(Ogre::ColourValue::Red, Translation::tr("spell.hint.point_at_tile"));
         return;
     }
 
@@ -96,25 +98,25 @@ void SpellBlessing::checkSpellCast(GameMap* gameMap, const InputManager& inputMa
     Creature* closestCreature = tileSelected->getClosestCreature(SelectionEntityWanted::creatureAliveOwned);
     if(closestCreature == nullptr)
     {
-        inputCommand.displayText(Ogre::ColourValue::Red, "Select one of your living creatures.");
+        inputCommand.displayText(Ogre::ColourValue::Red, Translation::tr("spell.hint.select_own_living_creature"));
         return;
     }
 
     if(closestCreature->getDefinition()->getCreatureMoods().empty())
     {
-        inputCommand.displayText(Ogre::ColourValue::Red, "This creature has no mood to bless.");
+        inputCommand.displayText(Ogre::ColourValue::Red, Translation::tr("spell.hint.no_mood_to_bless"));
         return;
     }
 
     if(closestCreature->isInContainment())
     {
-        inputCommand.displayText(Ogre::ColourValue::Red, "The creature is a prisoner.");
+        inputCommand.displayText(Ogre::ColourValue::Red, Translation::tr("spell.hint.creature_is_prisoner"));
         return;
     }
 
     if(playerMana < price)
     {
-        inputCommand.displayText(Ogre::ColourValue::Red, "Not enough mana. " + formatCastSpell(SpellType::blessing, price));
+        inputCommand.displayText(Ogre::ColourValue::Red, Translation::tr("spell.hint.not_enough_mana", {{"text", formatCastSpell(SpellType::blessing, price)}}));
         return;
     }
 

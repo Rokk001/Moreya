@@ -15,7 +15,7 @@ assert 'visibleLoadEntries(collectLoadEntries()' in load
 assert 'openingLoadKind(collectLoadEntries())' in load
 # The layout is a mixed file: as the game reads it only with its own rows from the content
 if content_packages.has_content(ROOT):
-    layout_text = content_packages.read_text(ROOT, "gui/MenuLoad.layout")
+    layout_text = content_packages.read_layout_text(ROOT, "gui/MenuLoad.layout")
     layout = ET.ElementTree(ET.fromstring(layout_text))
     assert len(layout.findall('.//Window[@name="KindFilter"]')) == 1
     assert 'name="Sort" value="False"' in layout_text
@@ -37,6 +37,9 @@ assert 'updateFilesList();' in delete_body and 'activate();' not in delete_body
 
 PROBE = r'''
 #include "modes/LoadGameFilter.h"
+#include "utils/Translation.h"
+//! \brief Stand-in of the language texts: the probe does not look at texts, so a text is its key.
+std::string Translation::tr(const std::string& key) { return key; }
 #include <sstream>
 #include <iostream>
 //! \brief Checks save categories with a locked second campaign level.

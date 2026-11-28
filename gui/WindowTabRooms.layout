@@ -5,35 +5,35 @@
 <!--#@own 1-->
         <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
 <!--#@own 2-->
-        <Property name="TooltipText" value="Rooms" />
+        <Property name="TooltipText" value="@layout.window_tab_rooms.rooms.tooltip" />
         <Property name="MaxSize" value="{{1,0},{1,0}}" />
         <Property name="RiseOnClickEnabled" value="False" />
 
         <Window type="OD/GameTabButton" name="DestroyRoomButton" >
 <!--#@own 3-->
             <Property name="NormalImage" value="OpenDungeonsIcons/DestroyRoomButton" />
-            <Property name="TooltipText" value="Destroy a room (returns half its price)" />
+            <Property name="TooltipText" value="@layout.window_tab_rooms.rooms.destroy_room_button.tooltip" />
             <Property name="InheritsAlpha" value="False" />
         </Window>
         <Window type="OD/GameTabButton" name="TreasuryButton" >
 <!--#@own 4-->
             <Property name="Visible" value="False" />
 <!--#@own 5-->
-            <Property name="TooltipText" value="Build a treasury" />
+            <Property name="TooltipText" value="@layout.window_tab_rooms.rooms.treasury_button.tooltip" />
             <Property name="InheritsAlpha" value="False" />
         </Window>
         <Window type="OD/GameTabButton" name="DormitoryButton" >
 <!--#@own 6-->
             <Property name="Visible" value="False" />
 <!--#@own 7-->
-            <Property name="TooltipText" value="Build sleeping places for your creatures" />
+            <Property name="TooltipText" value="@layout.window_tab_rooms.rooms.dormitory_button.tooltip" />
             <Property name="InheritsAlpha" value="False" />
         </Window>
         <Window type="OD/GameTabButton" name="HatcheryButton" >
 <!--#@own 8-->
             <Property name="Visible" value="False" />
 <!--#@own 9-->
-            <Property name="TooltipText" value="Build a Hatchery" />
+            <Property name="TooltipText" value="@layout.window_tab_rooms.rooms.hatchery_button.tooltip" />
             <Property name="InheritsAlpha" value="False" />
         </Window>
 <!--#@own 10-->
@@ -45,28 +45,28 @@
 <!--#@own 12-->
             <Property name="Visible" value="False" />
 <!--#@own 13-->
-            <Property name="TooltipText" value="Build a Library" />
+            <Property name="TooltipText" value="@layout.window_tab_rooms.rooms.library_button.tooltip" />
             <Property name="InheritsAlpha" value="False" />
         </Window>
         <Window type="OD/GameTabButton" name="TrainingHallButton" >
 <!--#@own 14-->
             <Property name="Visible" value="False" />
 <!--#@own 15-->
-            <Property name="TooltipText" value="Build a Training Hall" />
+            <Property name="TooltipText" value="@layout.window_tab_rooms.rooms.training_hall_button.tooltip" />
             <Property name="InheritsAlpha" value="False" />
         </Window>
         <Window type="OD/GameTabButton" name="WorkshopButton" >
 <!--#@own 16-->
             <Property name="Visible" value="False" />
 <!--#@own 17-->
-            <Property name="TooltipText" value="Build a Workshop (for traps)" />
+            <Property name="TooltipText" value="@layout.window_tab_rooms.rooms.workshop_button.tooltip" />
             <Property name="InheritsAlpha" value="False" />
         </Window>
         <Window type="OD/GameTabButton" name="CryptButton" >
 <!--#@own 18-->
             <Property name="Visible" value="False" />
 <!--#@own 19-->
-            <Property name="TooltipText" value="Build a Crypt" />
+            <Property name="TooltipText" value="@layout.window_tab_rooms.rooms.crypt_button.tooltip" />
             <Property name="InheritsAlpha" value="False" />
         </Window>
 <!--#@own 20-->
@@ -78,35 +78,35 @@
 <!--#@own 22-->
             <Property name="Visible" value="False" />
 <!--#@own 23-->
-            <Property name="TooltipText" value="Build a Prison" />
+            <Property name="TooltipText" value="@layout.window_tab_rooms.rooms.prison_button.tooltip" />
             <Property name="InheritsAlpha" value="False" />
         </Window>
         <Window type="OD/GameTabButton" name="WoodenBridgeButton" >
 <!--#@own 24-->
             <Property name="Visible" value="False" />
 <!--#@own 25-->
-            <Property name="TooltipText" value="Build a wooden bridge" />
+            <Property name="TooltipText" value="@layout.window_tab_rooms.rooms.wooden_bridge_button.tooltip" />
             <Property name="InheritsAlpha" value="False" />
         </Window>
         <Window type="OD/GameTabButton" name="StoneBridgeButton" >
 <!--#@own 26-->
             <Property name="Visible" value="False" />
 <!--#@own 27-->
-            <Property name="TooltipText" value="Build a stone bridge" />
+            <Property name="TooltipText" value="@layout.window_tab_rooms.rooms.stone_bridge_button.tooltip" />
             <Property name="InheritsAlpha" value="False" />
         </Window>
         <Window type="OD/GameTabButton" name="ArenaButton" >
 <!--#@own 28-->
             <Property name="Visible" value="False" />
 <!--#@own 29-->
-            <Property name="TooltipText" value="Build an arena" />
+            <Property name="TooltipText" value="@layout.window_tab_rooms.rooms.arena_button.tooltip" />
             <Property name="InheritsAlpha" value="False" />
         </Window>
         <Window type="OD/GameTabButton" name="CasinoButton" >
 <!--#@own 30-->
             <Property name="Visible" value="False" />
 <!--#@own 31-->
-            <Property name="TooltipText" value="Build a casino" />
+            <Property name="TooltipText" value="@layout.window_tab_rooms.rooms.casino_button.tooltip" />
             <Property name="InheritsAlpha" value="False" />
         </Window>
 <!--#@own 32-->
@@ -118,21 +118,21 @@
 <!--#@own 34-->
             <Property name="Visible" value="False" />
 <!--#@own 35-->
-            <Property name="TooltipText" value="Build a torture room" />
+            <Property name="TooltipText" value="@layout.window_tab_rooms.rooms.torture_button.tooltip" />
             <Property name="InheritsAlpha" value="False" />
         </Window>
         <Window type="OD/GameTabButton" name="TempleButton" >
 <!--#@own 36-->
             <Property name="Visible" value="False" />
 <!--#@own 37-->
-            <Property name="TooltipText" value="Build a Temple (3x3)" />
+            <Property name="TooltipText" value="@layout.window_tab_rooms.rooms.temple_button.tooltip" />
             <Property name="InheritsAlpha" value="False" />
         </Window>
         <Window type="OD/GameTabButton" name="PortalButton" >
 <!--#@own 38-->
             <Property name="Visible" value="False" />
             <Property name="NormalImage" value="OpenDungeonsIcons/PortalButton" />
-            <Property name="TooltipText" value="Build a Portal (3x3)" />
+            <Property name="TooltipText" value="@layout.window_tab_rooms.rooms.portal_button.tooltip" />
             <Property name="InheritsAlpha" value="False" />
         </Window>
 <!--#@own 39-->
@@ -172,7 +172,7 @@
 <!--#@own 53-->
             <Property name="Visible" value="False" />
             <Property name="NormalImage" value="OpenDungeonsIcons/WavePortalButton" />
-            <Property name="TooltipText" value="Build a Wave portal (3x3), the room that sends waves of enemies" />
+            <Property name="TooltipText" value="@layout.window_tab_rooms.rooms.wave_portal_button.tooltip" />
             <Property name="InheritsAlpha" value="False" />
         </Window>
     </Window>

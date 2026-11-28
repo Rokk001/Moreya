@@ -35,6 +35,7 @@
 
 #include "utils/ConfigManager.h"
 #include <CEGUI/EventArgs.h>
+#include <CEGUI/String.h>
 #include <map>
 #include <chrono>
 #include <cstdint>
@@ -298,6 +299,9 @@ class GameMode final : public GameEditorModeBase, public InputCommand
     bool cycleLabMode(const CEGUI::EventArgs& e);
     //! \brief Displays a validated owner-seat laboratory snapshot.
     void setLabWindowData(const LabWindowData& data);
+    //! \brief Sets the item and potion names of the merchant stock and laboratory tooltips again after the language
+    //! changed (checked every frame, R2.4).
+    void refreshItemNameTexts();
     //! \brief Updates the mode label and client seat from an authoritative setting.
     void setLabModeShown(int32_t mode);
 
@@ -391,7 +395,8 @@ class GameMode final : public GameEditorModeBase, public InputCommand
     bool toggleControlPanel(const CEGUI::EventArgs& = {});
 
     void toggleAllowTileDebugWindow(){ showTileDebugWindow = !showTileDebugWindow ;};
-    //! \brief Refreshes the player current goals.
+    //! \brief Refreshes the player current goals. The text holds one text or text reference per line (Translation::
+    //! resolveLines); it is kept and shown again when the language changes.
     void refreshPlayerGoals(const std::string& goalsDisplayString);
 
     //! \brief Refreshed the main ui data, such as mana, gold, ...
@@ -607,6 +612,10 @@ private:
     std::string mSandboxScoreShown;
     std::string mSandboxRoomShown;
 
+    //! \brief The goals text as received from the server (with text references) and the language it is shown in
+    std::string mPlayerGoalsRaw;
+    std::string mPlayerGoalsLanguage;
+
     //! \brief Skills pending (Client side). This is copied from the seat for temporary changes while the
     //! player clicks on the skill tree window
     std::vector<SkillType> mSkillPending;
@@ -659,6 +668,24 @@ private:
     //! \brief Lists the game controls and their keyboard shortcuts.
     //! \brief Describes the current game controls, including the merchant shortcut.
     void setHelpWindowText();
+
+    //! \brief Sets the tooltips of the buttons of the worker and the fighter creature group.
+    void setCreatureGroupTooltips();
+
+    //! \brief Shows the hero level of the sandbox window on its button.
+    void setSandboxHeroLevelText();
+
+    //! \brief The title of the window that defines the user cameras, with the number of the chosen slot.
+    CEGUI::String getUserCameraTitle() const;
+
+    //! \brief Sets the texts again that this mode set once, after the language changed.
+    void onLanguageChanged();
+
+    //! \brief Id of the registered language listener of Translation (0 as long as none is registered)
+    unsigned int mLanguageListener = 0;
+
+    //! \brief True when the options window shows the end of the game page, false for the options page
+    bool mOptionsEndGame = false;
 
     //! \brief Picks room floors through walls and uses normal surface picking for other actions.
     //! While dragging, any tile (also a wall) may end the drag so the valid floors inside are built.
@@ -797,6 +824,12 @@ private:
     std::vector<std::string> mInfirmaryPatientNames;
     //! \brief Latest stock entries and stable indices received from the server.
     std::vector<std::pair<uint32_t, ItemInstance>> mMerchantItems;
+    //! \brief The latest laboratory snapshot, shown again when the language changes.
+    LabWindowData mLabWindowData;
+    //! \brief True once a laboratory snapshot was received.
+    bool mLabWindowDataReceived = false;
+    //! \brief The language the item and potion names of the merchant and laboratory windows were last set for.
+    std::string mItemNameLanguage;
     //! \brief Tracks the pending purchase across live stock snapshots.
     //! \brief Stable pending stock identity; snapshots never substitute another item.
     uint32_t mMerchantPendingId = 0;

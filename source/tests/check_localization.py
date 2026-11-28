@@ -7,10 +7,15 @@ Package.cfg has a line "Language=<code>"; their texts lie in texts/*.txt as "<ke
 German and English are there, every key has a text in both, both texts of a key have the same placeholders, every
 file is valid UTF-8 and every line follows the rules of Translation::parseTexts.
 
-Expected: 6 test cases, 0 failures; EXPECTED_ENTRIES entries in each language (counted once for this branch).
+Expected: 7 test cases, 0 failures; EXPECTED_ENTRIES entries in each language (counted once for this branch).
 
 Calls (from the repository root):
   python source/tests/check_localization.py
+
+Layout texts (plan R6): every Text and TooltipText value of the layouts of gui/ and of the content packages is a text
+reference "@<key>" with a text in both languages, except the fixed, named exceptions below (LAYOUT_LITERALS); every
+key with the prefix "layout." of the language packages is used by a layout. The fit of the German texts in their
+windows is measured by check_window_content_fit.py (plan R3.2).
 
 The language packages are found through scripts/content_packages.py; without the content the package checks are
 named as not checked and the test cases still run.
@@ -29,10 +34,26 @@ import content_packages  # noqa: E402
 HAS_CONTENT = content_packages.has_content(repo)
 
 # Test cases of test_Translation.cpp
-EXPECTED_CASES = 6
+EXPECTED_CASES = 7
 # Languages of the game at the start (plan D1) and entries of each language, counted once for this branch
 EXPECTED_LANGUAGES = {'de': 'Deutsch', 'en': 'English'}
-EXPECTED_ENTRIES = 2
+EXPECTED_ENTRIES = 9379
+# Keys of the server messages and goal texts (prefixes msg. and goal.) that the code of source/ names, counted once for
+# this branch (localization plan R5): 85 messages and 20 goal texts
+EXPECTED_SERVER_KEYS = 105
+# Text keys of the layouts (prefix "layout.") in each language, counted once for this branch
+EXPECTED_LAYOUT_KEYS = 631
+# The literal Text/TooltipText values with letters (two or more ASCII letters) that stay in the layouts, counted once
+# for this branch and named by the three rules below. All other values are "@<key>" or have no letters.
+EXPECTED_LAYOUT_LITERALS = {
+    # the developer widget gallery: no code loads it, its texts are the names of the widget types
+    'widget gallery': 35,
+    # the placeholder of the version line; the code replaces it by the version at the start
+    'version placeholder': 12,
+    # a caption that is only an image tag, no words
+    'image tag': 7,
+}
+IMAGE_TAG = re.compile(r"^\[image-size='[^']*'\]\[image='[^']*'\]$")
 
 boost_shim = r'''
 #include <functional>
@@ -227,6 +248,23 @@ def read(path):
     return (repo / path).read_text(encoding='utf-8', errors='replace')
 
 
+# R5: the texts that the server sends are text references; every key of them that the code names has a text in both
+# languages and no text of the prefixes msg. and goal. is unused
+if HAS_CONTENT and 'en' in texts:
+    named = set()
+    for path in sorted((repo / 'source').rglob('*.cpp')):
+        if 'tests' in path.relative_to(repo / 'source').parts:
+            continue
+        named.update(re.findall(r'"((?:msg|goal)\.[a-z0-9._-]+)"', path.read_text(encoding='utf-8', errors='replace')))
+    if len(named) != EXPECTED_SERVER_KEYS:
+        errors.append('server message keys named in source/: %d, expected %d' % (len(named), EXPECTED_SERVER_KEYS))
+    for code_ in sorted(texts):
+        for key in sorted(named - set(texts[code_])):
+            errors.append('language %s: server message key %s has no text' % (code_, key))
+        for key in sorted(k for k in texts[code_] if k.startswith(('msg.', 'goal.')) and k not in named):
+            errors.append('language %s: text %s is not used by the code' % (code_, key))
+
+
 # R3.1: the font of the texts above the creatures holds the German letters and the typographic quotes
 fontdef = read('gui/fonts/ogrefonts.fontdef')
 ranges = [tuple(int(v) for v in r.split('-')) for line in fontdef.splitlines() if line.strip().startswith('code_points')
@@ -258,14 +296,47 @@ for needle in ('name="LanguageCombo"', 'value="@settings.language"', 'value="@se
     if needle not in layout:
         errors.append('gui/WindowSettings.layout: %s missing' % needle)
 
-# Every text key of a layout (public tree and content) has an English text
-if HAS_CONTENT and 'en' in texts:
-    layouts = sorted(set((repo / 'gui').glob('*.layout')) | set(content_packages.data_glob(repo, 'gui', '*.layout')))
-    for path in layouts:
-        for key in re.findall(r'<Property name="(?:Text|TooltipText)" value="@([^"]+)"',
-                              path.read_text(encoding='utf-8', errors='replace')):
-            if key not in texts['en']:
-                errors.append('%s: text key %s has no English text' % (path.name, key))
+# R6: the Text and TooltipText values of every layout (public tree and content, in both spellings of a property)
+LAYOUT_PROPERTY = re.compile(r'<Property name="(Text|TooltipText)"\s*(?:value="([^"]*)"\s*/>|>([^<]*)</Property>)')
+layout_files = sorted(set((repo / 'gui').glob('*.layout')) | set(content_packages.data_glob(repo, 'gui', '*.layout')))
+used_keys = set()
+literals = {name: 0 for name in EXPECTED_LAYOUT_LITERALS}
+for path in layout_files:
+    layout_text = path.read_text(encoding='utf-8', errors='replace')
+    for match in LAYOUT_PROPERTY.finditer(layout_text):
+        value = match.group(2) if match.group(2) is not None else match.group(3)
+        if value.startswith('@'):
+            used_keys.add(value[1:])
+            continue
+        if not re.search(r'[A-Za-z]{2}', value):
+            continue
+        line_start = layout_text.rfind('\n', 0, match.start()) + 1
+        window = re.findall(r'<Window\b[^>]*\bname="([^"]*)"', layout_text[:match.start()])
+        if path.name == 'WidgetsTest.layout':
+            literals['widget gallery'] += 1
+        elif value.lower() == 'undefined' and window and window[-1] == 'VersionText':
+            literals['version placeholder'] += 1
+        elif IMAGE_TAG.match(value):
+            literals['image tag'] += 1
+        else:
+            errors.append('%s: literal %s text %r outside the named exceptions' % (path.name, match.group(1), value))
+if HAS_CONTENT:
+    # the own rows of the content are scanned too; without the content only the public rows are
+    for name, expected in EXPECTED_LAYOUT_LITERALS.items():
+        if literals[name] != expected:
+            errors.append('layout literals (%s): %d found, expected %d' % (name, literals[name], expected))
+
+# Every text key of a layout (public tree and content) has a text in both languages
+if HAS_CONTENT and 'en' in texts and 'de' in texts:
+    for key in sorted(used_keys):
+        for code_ in ('en', 'de'):
+            if key not in texts[code_]:
+                errors.append('layout text key %s has no %s text' % (key, code_))
+    layout_keys = set(key for key in texts['en'] if key.startswith('layout.'))
+    if len(layout_keys) != EXPECTED_LAYOUT_KEYS:
+        errors.append('layout keys: %d in the language packages, expected %d' % (len(layout_keys), EXPECTED_LAYOUT_KEYS))
+    for key in sorted(layout_keys - used_keys):
+        errors.append('layout text key %s is not used by any layout' % key)
 
 for error in errors:
     print('FAIL: ' + error)

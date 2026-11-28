@@ -20,6 +20,7 @@
 #include "network/ODPacket.h"
 #include "utils/Helper.h"
 #include "utils/NameAliases.h"
+#include "utils/Translation.h"
 
 namespace Skills
 {
@@ -196,158 +197,166 @@ std::string toString(SkillType type)
     }
 }
 
+//! \brief The key research.<type id>.name (the key of skillTypeToPlayerVisibleString) with the player-visible string
+//! as the text for a language without it.
+std::string skillTypeToReference(SkillType type)
+{
+    return Translation::makeNameReference("research." + Translation::toKeyPart(toString(type)) + ".name",
+        skillTypeToPlayerVisibleString(type));
+}
+
 //! \brief Returns the player-visible name of a research type.
-//! \brief Returns the approved player-facing research entry name.
+//! \brief Returns the approved player-facing research entry name, in the chosen language.
 std::string skillTypeToPlayerVisibleString(SkillType type)
 {
     switch(type)
     {
         case SkillType::nullSkillType:
-            return "No Skill type";
+            return Translation::tr("research.nullskilltype.name");
         case SkillType::roomArena:
-            return "The Arena Room";
+            return Translation::tr("research.roomarena.name");
         case SkillType::roomBridgeStone:
-            return "The Stone Bridge Room";
+            return Translation::tr("research.roombridgestone.name");
         case SkillType::roomBridgeWooden:
-            return "The Wooden Bridge Room";
+            return Translation::tr("research.roombridgewooden.name");
         case SkillType::roomCasino:
-            return "The Casino Room";
+            return Translation::tr("research.roomcasino.name");
         case SkillType::roomCrypt:
-            return "The Crypt Room";
+            return Translation::tr("research.roomcrypt.name");
         case SkillType::roomDormitory:
-            return "The Dormitory Room";
+            return Translation::tr("research.roomdormitory.name");
         case SkillType::roomWorkshop:
-            return "The Workshop Room";
+            return Translation::tr("research.roomworkshop.name");
         case SkillType::roomHatchery:
-            return "The Hatchery Room";
+            return Translation::tr("research.roomhatchery.name");
         case SkillType::roomLibrary:
-            return "The Library Room";
+            return Translation::tr("research.roomlibrary.name");
         case SkillType::roomTrainingHall:
-            return "The TrainingHall Room";
+            return Translation::tr("research.roomtraininghall.name");
         case SkillType::roomTreasury:
-            return "The Treasury Room";
+            return Translation::tr("research.roomtreasury.name");
         case SkillType::roomPrison:
-            return "The Prison Room";
+            return Translation::tr("research.roomprison.name");
         case SkillType::roomInfirmary:
-            return "The Infirmary Room";
+            return Translation::tr("research.roominfirmary.name");
         case SkillType::roomGhostRoom:
-            return "Ghost room";
+            return Translation::tr("research.roomghostroom.name");
         case SkillType::roomGuardRoom:
-            return "The Guard Room";
+            return Translation::tr("research.roomguardroom.name");
         case SkillType::roomToilet:
-            return "The Toilet Room";
+            return Translation::tr("research.roomtoilet.name");
         case SkillType::roomTavern:
-            return "The Tavern Room";
+            return Translation::tr("research.roomtavern.name");
         case SkillType::tavernBeer:
-            return "Tavern: Beer";
+            return Translation::tr("research.tavernbeer.name");
         case SkillType::roomSpa:
-            return "The Lava Spa Room";
+            return Translation::tr("research.roomspa.name");
         case SkillType::roomTemple:
-            return "The Temple";
+            return Translation::tr("research.roomtemple.name");
         case SkillType::roomTorture:
-            return "The Torture Room";
+            return Translation::tr("research.roomtorture.name");
         case SkillType::spellCallToWar:
-            return "The 'Call to War' Spell";
+            return Translation::tr("research.spellcalltowar.name");
         case SkillType::spellSummonWorker:
-            return "The 'Summon Ziv' Spell";
+            return Translation::tr("research.spellsummonworker.name");
         case SkillType::spellCreatureHeal:
-            return "The 'Heal' Spell";
+            return Translation::tr("research.spellcreatureheal.name");
         case SkillType::spellCreatureDefense:
-            return "The 'Defense' Spell";
+            return Translation::tr("research.spellcreaturedefense.name");
         case SkillType::spellCreatureExplosion:
-            return "The 'Explosion' Spell";
+            return Translation::tr("research.spellcreatureexplosion.name");
         case SkillType::spellCreatureHaste:
-            return "The 'Haste' Spell";
+            return Translation::tr("research.spellcreaturehaste.name");
         case SkillType::spellCreatureSlow:
-            return "The 'Slow' Spell";
+            return Translation::tr("research.spellcreatureslow.name");
         case SkillType::spellCreatureStrength:
-            return "The 'Strength' Spell";
+            return Translation::tr("research.spellcreaturestrength.name");
         case SkillType::spellCreatureWeak:
-            return "The 'Weak' Spell";
+            return Translation::tr("research.spellcreatureweak.name");
         case SkillType::trapBoulder:
-            return "The Boulder Trap";
+            return Translation::tr("research.trapboulder.name");
         case SkillType::trapCannon:
-            return "The Cannon Trap";
+            return Translation::tr("research.trapcannon.name");
         case SkillType::trapSpike:
-            return "The Spike Trap";
+            return Translation::tr("research.trapspike.name");
         case SkillType::trapAlarm:
-            return "The Alarm Trap";
+            return Translation::tr("research.trapalarm.name");
         case SkillType::trapDoorWooden:
-            return "The Wooden Door";
+            return Translation::tr("research.trapdoorwooden.name");
         case SkillType::trapDoorIronbound:
-            return "The Ironbound Door";
+            return Translation::tr("research.trapdoorironbound.name");
         case SkillType::trapDoorSteel:
-            return "The Steel Door";
+            return Translation::tr("research.trapdoorsteel.name");
         case SkillType::trapDoorBarricade:
-            return "The Barricade";
+            return Translation::tr("research.trapdoorbarricade.name");
         case SkillType::trapFear:
-            return "The Fear Trap";
+            return Translation::tr("research.trapfear.name");
         case SkillType::trapGas:
-            return "The Gas Trap";
+            return Translation::tr("research.trapgas.name");
         case SkillType::trapLightning:
-            return "The Lightning Trap";
+            return Translation::tr("research.traplightning.name");
         case SkillType::trapFireburst:
-            return "The Fireburst Trap";
+            return Translation::tr("research.trapfireburst.name");
         case SkillType::trapWatchBanner:
-            return "The Watch Banner";
+            return Translation::tr("research.trapwatchbanner.name");
         case SkillType::trapDoorSecret:
-            return "The Secret Door";
+            return Translation::tr("research.trapdoorsecret.name");
         case SkillType::trapDoorRuned:
-            return "The Runed Door";
+            return Translation::tr("research.trapdoorruned.name");
         case SkillType::spellEyeEvil:
-            return "The 'Eye of evil' spell";
+            return Translation::tr("research.spelleyeevil.name");
         case SkillType::spellCreateGold:
-            return "The 'Create Gold' Spell";
+            return Translation::tr("research.spellcreategold.name");
         case SkillType::spellLightning:
-            return "The 'Lightning' Spell";
+            return Translation::tr("research.spelllightning.name");
         case SkillType::spellTremor:
-            return "The 'Tremor' Spell";
+            return Translation::tr("research.spelltremor.name");
         case SkillType::spellDefector:
-            return "The 'Defector' Spell";
+            return Translation::tr("research.spelldefector.name");
         case SkillType::spellHexenHen:
-            return "The 'Hexen Hen' Spell";
+            return Translation::tr("research.spellhexenhen.name");
         case SkillType::spellInferno:
-            return "The 'Inferno' Spell";
+            return Translation::tr("research.spellinferno.name");
         case SkillType::spellPossess:
-            return "The 'Possess' spell";
+            return Translation::tr("research.spellpossess.name");
         case SkillType::spellSummonChampion:
-            return "The 'Summon Champion' spell";
+            return Translation::tr("research.spellsummonchampion.name");
         case SkillType::trapTrigger:
-            return "The Trigger Trap";
+            return Translation::tr("research.traptrigger.name");
         case SkillType::trapFreeze:
-            return "The Freeze Trap";
+            return Translation::tr("research.trapfreeze.name");
         case SkillType::keeperDominion:
-            return "Keeper: Dominion";
+            return Translation::tr("research.keeperdominion.name");
         case SkillType::keeperHeartFortitude:
-            return "Keeper: Heart Fortitude";
+            return Translation::tr("research.keeperheartfortitude.name");
         case SkillType::keeperHeartMending:
-            return "Keeper: Heart Mending";
+            return Translation::tr("research.keeperheartmending.name");
         case SkillType::keeperManaFlow:
-            return "Keeper: Mana Flow";
+            return Translation::tr("research.keepermanaflow.name");
         case SkillType::roomMerchant:
-            return "The Merchant Room";
+            return Translation::tr("research.roommerchant.name");
         case SkillType::roomHerbGarden:
-            return "The Herb Garden";
+            return Translation::tr("research.roomherbgarden.name");
         case SkillType::roomAlchemyLab:
-            return "The Alchemy Lab";
+            return Translation::tr("research.roomalchemylab.name");
         case SkillType::trapFineTools:
-            return "Fine Tools";
+            return Translation::tr("research.trapfinetools.name");
         case SkillType::trapMasterTools:
-            return "Master Tools";
+            return Translation::tr("research.trapmastertools.name");
         case SkillType::spellSunthornCultivation:
-            return "Sunthorn Cultivation";
+            return Translation::tr("research.spellsunthorncultivation.name");
         case SkillType::spellCurse:
-            return "The 'Curse' Spell";
+            return Translation::tr("research.spellcurse.name");
         case SkillType::spellBlessing:
-            return "The 'Blessing' Spell";
+            return Translation::tr("research.spellblessing.name");
         case SkillType::spellInvisibility:
-            return "The 'Invisibility' Spell";
+            return Translation::tr("research.spellinvisibility.name");
         case SkillType::spellPlague:
-            return "The 'Plague' Spell";
+            return Translation::tr("research.spellplague.name");
         case SkillType::spellBreakWall:
-            return "The 'Break Wall' Spell";
+            return Translation::tr("research.spellbreakwall.name");
         case SkillType::spellRevealEnemy:
-            return "The 'Reveal Enemy' Spell";
+            return Translation::tr("research.spellrevealenemy.name");
         default:
             return "Unknown enum value:" + Helper::toString(static_cast<int>(type));
     }

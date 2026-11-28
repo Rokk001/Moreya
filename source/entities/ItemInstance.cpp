@@ -8,6 +8,7 @@
 #include "network/ODPacket.h"
 #include "utils/ConfigManager.h"
 #include "utils/Random.h"
+#include "utils/Translation.h"
 
 #include <algorithm>
 #include <cmath>
@@ -53,6 +54,20 @@ std::string itemNumber(double value)
     return stream.str();
 }
 
+//! \brief The text of a language key in the chosen language, as the label function of the item value lines.
+std::string translateLabel(const std::string& key)
+{
+    return Translation::tr(key);
+}
+
+//! \brief The text of a language key with one value, in the chosen language.
+std::string translateWith(const std::string& key, const std::string& name, const std::string& value)
+{
+    std::map<std::string, std::string> values;
+    values[name] = value;
+    return Translation::tr(key, values);
+}
+
 //! \brief The named value lines of a held weapon or shield (damage as min-max, no line for a value of 0).
 std::vector<std::string> describeWeaponValueLines(const Weapon& weapon)
 {
@@ -68,24 +83,27 @@ std::vector<std::string> describeWeaponValueLines(const Weapon& weapon)
     values.mElementDefense = weapon.getElementDefense();
     values.mAttackRating = weapon.getAttackRating();
     values.mDefenseRating = weapon.getDefenseRating();
-    return ItemValueLines::describeWeapon(values);
+    return ItemValueLines::describeWeapon(values, translateLabel);
 }
 
-//! \brief Returns the readable text of each configured bonus kind.
+//! \brief Returns the readable text of each configured bonus kind in the chosen language (the language entry
+//! "ui.itembonus.<name>"), or the kind itself when it is unknown.
 std::string bonusName(const std::string& kind)
 {
-    static const std::map<std::string, std::string> NAMES = {
-        {"Damage%", "Damage"}, {"MaxHP%", "Maximum health"}, {"CritChance", "Critical chance"},
-        {"Defense%", "Defense"}, {"AttackRating%", "Attack rating"}, {"DefenseRating%", "Defense rating"},
-        {"MoveSpeed%", "Movement speed"}, {"Avoid", "Avoidance"}, {"Cooldown%", "Cooldown reduction"},
-        {"DamageAttribute", "Damage attribute"}, {"Life", "Life"}, {"Mana", "Mana"},
-        {"ManaCost%", "Mana cost reduction"}, {"Wakefulness%", "Wakefulness"}, {"Dig%", "Digging"},
-        {"Claim%", "Claiming"}, {"Carry%", "Carrying"}
+    static const std::map<std::string, std::string> KEYS = {
+        {"Damage%", "ui.itembonus.damage"}, {"MaxHP%", "ui.itembonus.maxhp"}, {"CritChance", "ui.itembonus.critchance"},
+        {"Defense%", "ui.itembonus.defense"}, {"AttackRating%", "ui.itembonus.attackrating"},
+        {"DefenseRating%", "ui.itembonus.defenserating"}, {"MoveSpeed%", "ui.itembonus.movespeed"},
+        {"Avoid", "ui.itembonus.avoid"}, {"Cooldown%", "ui.itembonus.cooldown"},
+        {"DamageAttribute", "ui.itembonus.damageattribute"}, {"Life", "ui.itembonus.life"},
+        {"Mana", "ui.itembonus.mana"}, {"ManaCost%", "ui.itembonus.manacost"},
+        {"Wakefulness%", "ui.itembonus.wakefulness"}, {"Dig%", "ui.itembonus.dig"},
+        {"Claim%", "ui.itembonus.claim"}, {"Carry%", "ui.itembonus.carry"}
     };
-    std::map<std::string, std::string>::const_iterator found = NAMES.find(kind);
-    if(found == NAMES.end())
+    std::map<std::string, std::string>::const_iterator found = KEYS.find(kind);
+    if(found == KEYS.end())
         return kind;
-    return found->second;
+    return Translation::tr(found->second);
 }
 }
 
@@ -291,21 +309,22 @@ double ItemInstance::getBonus(const std::string& kind) const { return sumValues(
 //! \brief Returns this instance's contribution to one effect.
 double ItemInstance::getEffect(const std::string& id) const { return sumValues(mEffects, id); }
 
-//! \brief Resolves catalogue display names and the display name of the equipment of Poor spawn weapons.
+//! \brief Resolves catalogue display names and the display name of the equipment of Poor spawn weapons, in the
+//! chosen language (R7: the names of items, potions and equipment come from the language files).
 std::string ItemInstance::getDisplayName(const GameMap* map) const
 {
-    if(mSoulCrystal) return "Soul crystal";
-    if(mGhostItem == GhostItem::ectoplasm) return "Ectoplasm";
-    if(mGhostItem == GhostItem::manaCrystal) return "Mana crystal";
-    if(mGhostItem == GhostItem::researchBook) return "Research book";
+    if(mSoulCrystal) return Translation::tr("ui.item.soulcrystal");
+    if(mGhostItem == GhostItem::ectoplasm) return Translation::tr("ui.item.ectoplasm");
+    if(mGhostItem == GhostItem::manaCrystal) return Translation::tr("ui.item.manacrystal");
+    if(mGhostItem == GhostItem::researchBook) return Translation::tr("ui.item.researchbook");
     if(!mPotionId.empty())
     {
         const PotionDefinition* potion = ConfigManager::getSingleton().getPotion(mPotionId);
-        return potion == nullptr ? std::string() : potion->getDisplay();
+        return potion == nullptr ? std::string() : potion->getDisplayText();
     }
     const ItemDefinition* definition = resolveItemDefinition(mDefinitionId, map);
     if(definition != nullptr)
-        return definition->getQuality(mQuality).mDisplay;
+        return definition->getDisplayText(mQuality);
     const Weapon* weapon = ConfigManager::getSingleton().getWeapon(mDefinitionId);
     return mQuality == Quality::poor && weapon != nullptr ? weapon->getDisplayName() : std::string();
 }
@@ -395,8 +414,9 @@ std::string ItemInstance::describe(const GameMap* map, const Weapon* heldWeapon)
     if(heldWeapon != nullptr)
     {
         std::ostringstream values;
-        values << "\nQuality: " << qualityName(mQuality)
-            << "\nType: " << heldWeapon->getWeaponType() << "\nHands: " << heldWeapon->getHands();
+        values << "\n" << translateWith("ui.item.quality", "quality", qualityDisplayName(mQuality))
+            << "\n" << translateWith("ui.item.type", "type", heldWeapon->getWeaponType())
+            << "\n" << translateWith("ui.item.hands", "hands", std::to_string(heldWeapon->getHands()));
         for(const std::string& line : describeWeaponValueLines(*heldWeapon))
             values << "\n" << line;
         text += values.str();
@@ -409,7 +429,7 @@ std::string ItemInstance::describe(const GameMap* map, const Weapon* heldWeapon)
     }
     for(const std::pair<std::string, double>& effect : mEffects)
         text += "\n" + ItemEffects::getName(effect.first) + " " + itemNumber(effect.second);
-    return text + "\nLevel " + std::to_string(getLevelMin(map));
+    return text + "\n" + translateWith("ui.item.level", "level", std::to_string(getLevelMin(map)));
 }
 
 //! \brief Builds the item card tooltip (owner decision 1026, finding 5): large name and quality in the quality colour,
@@ -422,12 +442,13 @@ std::string ItemInstance::describeTooltip(const GameMap* map, const Weapon* held
     std::ostringstream text;
     text << "[font='MedievalSharp-13']" << quality
         << (heldWeapon == nullptr ? getDisplayName(map) : heldWeapon->getDisplayName())
-        << "\n[font='MedievalSharp-10']" << quality << qualityName(mQuality)
+        << "\n[font='MedievalSharp-10']" << quality << qualityDisplayName(mQuality)
         << "     [colour='FFF2C860'][image-size='w:" << size << " h:" << size << "'][image='OpenDungeonsIcons/GoldCoin'] "
         << itemNumber(getPrice(map)) << "[colour='FFE8DCC0']";
     if(heldWeapon != nullptr)
     {
-        text << "\nType: " << heldWeapon->getWeaponType() << "\nHands: " << heldWeapon->getHands();
+        text << "\n" << translateWith("ui.item.type", "type", heldWeapon->getWeaponType())
+            << "\n" << translateWith("ui.item.hands", "hands", std::to_string(heldWeapon->getHands()));
         for(const std::string& line : describeWeaponValueLines(*heldWeapon))
             text << "\n" << line;
     }
@@ -439,6 +460,6 @@ std::string ItemInstance::describeTooltip(const GameMap* map, const Weapon* held
     }
     for(const std::pair<std::string, double>& effect : mEffects)
         text << "\n" << ItemEffects::getName(effect.first) << " " << itemNumber(effect.second);
-    text << "\n[colour='FF9A9080']Level " << getLevelMin(map);
+    text << "\n[colour='FF9A9080']" << translateWith("ui.item.level", "level", std::to_string(getLevelMin(map)));
     return text.str();
 }

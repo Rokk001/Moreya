@@ -42,6 +42,7 @@
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
+#include "utils/Translation.h"
 
 #include <CEGUI/widgets/FrameWindow.h>
 #include <CEGUI/System.h>
@@ -2736,12 +2737,20 @@ void Tile::createStatsWindow()
         CEGUI::Event::Subscriber(&Tile::CloseStatsWindow, this));
 
     // Set the window title
-    mStatsWindow->setText(getName() + " ( TILE INFO )");
+    mStatsWindow->setText(getStatsWindowTitle());
 
     rootWindow->addChild(mStatsWindow);
     mStatsWindow->show();
 
-    updateStatsWindow("Loading...");
+    updateStatsWindow(Translation::tr("ui.loading"));
+}
+
+//! \brief The title of the tile info window ("<tile name> ( TILE INFO )") in the chosen language.
+CEGUI::String Tile::getStatsWindowTitle() const
+{
+    std::map<std::string, std::string> values;
+    values["name"] = getName();
+    return Gui::toCeguiText(Translation::tr("ui.tile.title", values));
 }
 
 void Tile::destroyStatsWindow()
@@ -2763,8 +2772,10 @@ void Tile::updateStatsWindow(const std::string& txt)
     if (mStatsWindow == nullptr)
         return;
 
+    // The title is set again, so that it follows a change of the language while the window is open
+    mStatsWindow->setText(getStatsWindowTitle());
     CEGUI::Window* textWindow = mStatsWindow->getChild(Gui::INFO_WINDOW_TEXT);
-    textWindow->setText(txt);
+    textWindow->setText(Gui::toCeguiText(txt));
 }
 
 std::string Tile::getStatsText()

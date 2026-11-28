@@ -77,6 +77,7 @@
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
+#include "utils/Translation.h"
 #include "ODApplication.h"
 
 #include <OgreSceneNode.h>
@@ -864,8 +865,13 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             std::string evtMsg;
             EventShortNoticeType type;
             OD_ASSERT_TRUE(packetReceived >> evtMsg >> type);
+            // The server sends a text reference (a plain text of an older game stays as it is): each client shows it
+            // in its own language
+            const bool isReferenceText = Translation::isReference(evtMsg);
+            evtMsg = Translation::resolve(evtMsg);
             // A creature notice carries the creature identity after the text: put the profile name of the
-            // creature card in front of it. No creature lookup, the creature may already be gone.
+            // creature card in front of it. No creature lookup, the creature may already be gone. The text of a
+            // reference starts without the space that a plain text of an older game has.
             if(!packetReceived.endOfPacket())
             {
                 std::string creatureName;
@@ -873,7 +879,7 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
                 bool worker = false;
                 OD_ASSERT_TRUE(packetReceived >> creatureName >> className >> worker);
                 evtMsg = social::SocialProfileCache::getSingleton().getProfile(
-                    creatureName, className, worker).getFullName() + evtMsg;
+                    creatureName, className, worker).getFullName() + (isReferenceText ? " " : "") + evtMsg;
             }
             addEventMessage(new EventMessage(evtMsg, type));
             break;
@@ -2408,7 +2414,9 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
                 break;
             }
             std::string text;
-            OD_ASSERT_TRUE(packetReceived >> text);            
+            OD_ASSERT_TRUE(packetReceived >> text);
+            // The server sends a text reference; each client shows it in its own language
+            text = Translation::resolve(text);
             if(frameListener->getModeManager()->getCurrentModeType() == ModeManager::ModeType::GAME )
             {
                 GameMode* gm = static_cast<GameMode*>(frameListener->getModeManager()->getCurrentMode());

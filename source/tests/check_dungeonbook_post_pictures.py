@@ -44,7 +44,7 @@ CONTENT_FILES = ('gui/WindowSocial.layout', 'gui/DungeonbookIcons.imageset', 'gu
 missing_content = [name for name in CONTENT_FILES if content_packages.data_file(repo, name) is None]
 social = (repo / 'source/render/SocialWindow.cpp').read_text(encoding='utf-8')
 if not missing_content:
-    layout_text = content_packages.read_text(repo, 'gui/WindowSocial.layout')
+    layout_text = content_packages.read_layout_text(repo, 'gui/WindowSocial.layout')
     book = ET.fromstring(layout_text).find('Window')
     imageset = ET.parse(content_packages.resolve(repo, 'gui/DungeonbookIcons.imageset')).getroot()
     images = {i.get('name'): tuple(int(i.get(k)) for k in ('xPos', 'yPos', 'width', 'height'))
@@ -164,7 +164,7 @@ if not content_packages.has_content(repo):
                                missing_content + ['gui/OD.looknfeel own rows (sheet, frame and title looks)'])
     print('check_dungeonbook_post_pictures ok')
     sys.exit(0)
-sheet_skin = ET.fromstring(content_packages.read_text(repo, 'gui/OD.looknfeel'))
+sheet_skin = ET.fromstring(content_packages.read_layout_text(repo, 'gui/OD.looknfeel'))
 sheet_look = sheet_skin.find("WidgetLook[@name='OD/SheetWindow']")
 assert sheet_look.find("Child[@nameSuffix='__auto_titlebar__']").get('type') == 'OD/SheetTitlebar'
 sheet_title = sheet_skin.find("WidgetLook[@name='OD/SheetTitlebar']")
@@ -192,7 +192,7 @@ if not missing_content:
     print('4. window frame of the menu sheet (%d px rails at 1920x1200, painted dark iron), centred title on the book' % T)
 
 # 5. Every other window keeps its frame and title
-skin = ET.fromstring(content_packages.read_text(repo, 'gui/OD.looknfeel'))
+skin = ET.fromstring(content_packages.read_layout_text(repo, 'gui/OD.looknfeel'))
 frame_look = skin.find("WidgetLook[@name='OD/FrameWindow']")
 title_look = skin.find("WidgetLook[@name='OD/GameTitlebar']")
 
@@ -250,7 +250,7 @@ room_manager_overrides = {
 # The Room Manager had a copy of these overrides of the book; both now use the frame of the menu sheet and no layout
 # sets a property of the old frame or title band any more.
 if not missing_content:
-    room_manager = ET.parse(content_packages.resolve(repo, 'gui/WindowRoomManager.layout')).getroot()
+    room_manager = ET.ElementTree(ET.fromstring(content_packages.read_layout_text(repo, 'gui/WindowRoomManager.layout'))).getroot()
     room_manager_properties = {node.get('name'): node.get('value') for node in room_manager.iter('Property')}
     assert room_manager.find('Window').get('type') == 'OD/SheetWindow', 'the Room Manager uses the frame of the menu sheet'
     assert not set(room_manager_overrides) & set(room_manager_properties), 'Room Manager still sets the ornate frame'

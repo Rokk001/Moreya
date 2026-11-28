@@ -37,7 +37,7 @@ missing_content = [name for name in ('gui/WindowSocial.layout', 'gui/Dungeonbook
 if missing_content:
     content_packages.unchecked('check_dungeonbook_rework_b1', missing_content)
     sys.exit(0)
-layout_text = content_packages.read_text(repo, 'gui/WindowSocial.layout')
+layout_text = content_packages.read_layout_text(repo, 'gui/WindowSocial.layout')
 book = ET.fromstring(layout_text).find('Window')
 social = (repo / 'source/render/SocialWindow.cpp').read_text()
 header = (repo / 'source/render/SocialWindow.h').read_text()
@@ -146,8 +146,8 @@ for row in range(3):
         assert thumbs[2 * row - 2][3] <= left[1], 'three rows from top to bottom'
 assert 'MAX_OWN_POSTS = 6' in social
 posts = social[social.index('// The posts of the creature'):social.index('//! \\brief Fills the values sheet')]
-for fragment in ('findPostPicture(*it)', 'thumb->setTooltipText(text', '->setVisible(false)', '"PostsEmpty"',
-                 '"Posts (" + std::to_string(count) + ")"'):
+for fragment in ('findPostPicture(*it)', 'thumb->setTooltipText(', '->setVisible(false)', '"PostsEmpty"',
+                 'trWith("ui.dungeonbook.posts", "count", std::to_string(count))'):
     assert fragment in posts, fragment
 print('2. profile: portrait left without window centring, social data in the middle, 2 x 3 post pictures right')
 
@@ -184,7 +184,7 @@ for page in ('HomePage', 'FeedPage'):
         assert boxes[base + '/Head'][0][3] <= boxes[base + '/Text'][0][1] + 1e-9, base
 feed = social[social.index('void SocialWindow::rebuildFeed'):social.index('void SocialWindow::refreshPage')]
 assert 'setImage(picture->getChild("Clip/Image"), findPostPicture(post));' in feed
-assert 'escapeMarkup(profile.getFullName()) + FEED_TIME_COLOUR' in feed and 'escapeMarkup(text));' in feed
+assert 'escapeMarkup(profile.getFullName()) +\n            FEED_TIME_COLOUR' in feed and 'escapeMarkup(text)));' in feed
 for shortening in ('elideToWidth', 'fitTextToWindow', '"..."', 'getTextExtent'):
     assert shortening not in feed, 'the feed shortens its texts: ' + shortening
 # the list rows: the whole name word wrapped on two lines above level and mood

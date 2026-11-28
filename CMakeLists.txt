@@ -681,6 +681,7 @@ set(OD_SOURCEFILES
 
     ${SRC}/sound/MusicPlayer.cpp
     ${SRC}/sound/SoundEffectsManager.cpp
+    ${SRC}/sound/VoiceLanguage.cpp
 
     ${SRC}/spawnconditions/SpawnCondition.cpp
     ${SRC}/spawnconditions/SpawnConditionCreature.cpp

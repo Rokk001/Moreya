@@ -19,6 +19,9 @@ import re
 import shutil
 import subprocess
 import sys
+from pathlib import Path as _LangPath
+sys.path.insert(0, str(_LangPath(__file__).resolve().parent))
+from language_texts import english  # noqa: E402
 import tempfile
 import time
 
@@ -177,7 +180,8 @@ create = function(game, 'void GameMode::createPossessionBar()')
 for needle in ('PossessionBarRules::MAX_SLOTS', 'POSSESSION_BAR_EXIT_PLATE', 'PossessionBarRules::keyLabel(index)',
                'POSSESSION_BAR_RECOVERY'):
     need(needle in create, 'GameMode::createPossessionBar: %s missing' % needle)
-need('POSSESSION_BAR_EXIT_TEXT = "Leave   Esc";' in game, 'the exit plate must name the Esc key')
+need('POSSESSION_BAR_EXIT_TEXT = "mode.game.possession.exit";' in game
+     and english('mode.game.possession.exit') == 'Leave   Esc', 'the exit plate must name the Esc key')
 refresh = function(game, 'void GameMode::refreshPossessionBar()')
 for needle in ('PossessionBarRules::computeLayout(', 'PossessionBarRules::recoveryShare(data)',
                'slot->setEnabled(data.mUsable);'):

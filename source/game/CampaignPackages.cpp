@@ -19,6 +19,7 @@
 
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
+#include "utils/Translation.h"
 
 #include <boost/filesystem.hpp>
 
@@ -29,13 +30,18 @@
 
 const std::string CampaignPackages::DEFINITION_FILE = "Package.cfg";
 const std::string CampaignPackages::CONTENT_VARIABLE = "MOREYA_CONTENT_DIR";
-const std::string CampaignPackages::MISSING_WING_TEXT = "Coming in Early Access";
 
 namespace
 {
 //! Folder of the packages below the game data
 const std::string GAME_PACKAGE_FOLDER = "levels/campaign/";
 } // namespace
+
+//! \brief The text of a wing whose package is missing (language key campaign.code.missing_wing).
+std::string CampaignPackages::getMissingWingText()
+{
+    return Translation::tr("campaign.code.missing_wing");
+}
 
 //! \brief levels/campaign/ of the game data, then the folder of MOREYA_CONTENT_DIR when it is set.
 std::vector<std::string> CampaignPackages::getPackageFolders(const std::string& gameDataPath)

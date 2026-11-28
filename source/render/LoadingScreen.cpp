@@ -2,9 +2,11 @@
 #include "render/LoadingSettle.h"
 
 #include "ODApplication.h"
+#include "render/Gui.h"
 #include "render/ODFrameListener.h"
 #include "render/RenderManager.h"
 #include "utils/LogManager.h"
+#include "utils/Translation.h"
 
 #include <OgreCamera.h>
 #include <OgreHighLevelGpuProgramManager.h>
@@ -126,11 +128,17 @@ CEGUI::Event::Connection rootDestruction;
 std::vector<std::pair<CEGUI::Window*, bool> > previousVisibility;
 std::vector<CEGUI::Window*> independentAlpha;
 
+//! \brief The status text of a loading level in the chosen language, as a CEGUI text.
+CEGUI::String getLoadingStatusText()
+{
+    return Gui::trCegui("ui.loading");
+}
+
 //! \brief Finds the existing loading text without creating a new widget or changing a layout.
 CEGUI::Window* findLoadingText(CEGUI::Window* window)
 {
     if(window->getName() == "LoadingText" ||
-       (window->getName() == "LevelMessageText" && window->getText() == "Loading..."))
+       (window->getName() == "LevelMessageText" && window->getText() == getLoadingStatusText()))
         return window;
     if(!window->isVisible())
         return nullptr;
@@ -174,7 +182,7 @@ void restoreLoadingInterface()
     {
         loadingText->setAlpha(previousTextAlpha);
         loadingText->setInheritsAlpha(previousTextInheritsAlpha);
-        if(hasDeferredStatus && loadingText->getText() == "Loading...")
+        if(hasDeferredStatus && loadingText->getText() == getLoadingStatusText())
             loadingText->setText(deferredStatusText);
     }
     if(statusOverride != nullptr)
@@ -339,7 +347,7 @@ void createLoadingText(const std::string& fontName, const std::string& fontGroup
     loadingTextArea->setCharHeight(LOADING_TEXT_HEIGHT);
     loadingTextArea->setAlignment(Ogre::TextAreaOverlayElement::Center);
     loadingTextArea->setColour(Ogre::ColourValue(0.86f, 0.82f, 0.76f));
-    loadingTextArea->setCaption("Loading...");
+    loadingTextArea->setCaption(Translation::tr("ui.loading"));
     loadingTextPanel->addChild(loadingTextArea);
     // The version sits small in the bottom right corner, right-aligned at its position.
     loadingVersionArea = static_cast<Ogre::TextAreaOverlayElement*>(overlays.createOverlayElement("TextArea", "LoadingScreenVersion"));
@@ -623,7 +631,7 @@ LoadingScreen::LoadingScreen(CEGUI::Window* existingStatus) : mContinueLoading(f
         {
             statusOverride = existingStatus;
             previousStatusText = existingStatus->getText();
-            existingStatus->setText("Loading...");
+            existingStatus->setText(getLoadingStatusText());
         }
         update();
         // Updating only the render target avoids recursively processing input, sockets or mode changes.
@@ -749,11 +757,11 @@ void LoadingScreen::update()
     if(root == hiddenRoot)
     {
         // Existing editor success messages are restored after the asynchronous load finishes.
-        if(loadingText != nullptr && loadingText->getText() != "Loading...")
+        if(loadingText != nullptr && loadingText->getText() != getLoadingStatusText())
         {
             deferredStatusText = loadingText->getText();
             hasDeferredStatus = true;
-            loadingText->setText("Loading...");
+            loadingText->setText(getLoadingStatusText());
         }
         return;
     }
@@ -767,7 +775,7 @@ void LoadingScreen::update()
         temporaryLoadingText = CEGUI::WindowManager::getSingleton().createWindow("OD/StaticText");
         temporaryLoadingText->setArea(CEGUI::URect(CEGUI::UDim(0, 0), CEGUI::UDim(0.8f, 0),
             CEGUI::UDim(1, 0), CEGUI::UDim(0.8f, 20)));
-        temporaryLoadingText->setText("Loading...");
+        temporaryLoadingText->setText(getLoadingStatusText());
         temporaryLoadingText->setProperty("FrameEnabled", "False");
         temporaryLoadingText->setProperty("BackgroundEnabled", "False");
         temporaryLoadingText->setProperty("HorzFormatting", "CentreAligned");

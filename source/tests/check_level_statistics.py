@@ -423,6 +423,7 @@ struct ODPacket
 {
     std::vector<std::string> tokens;
     ODPacket& operator<<(const char*) { tokens.push_back("text"); return *this; }
+    ODPacket& operator<<(const std::string&) { tokens.push_back("text"); return *this; }
     ODPacket& operator<<(EventShortNoticeType) { return *this; }
     ODPacket& operator<<(int32_t v) { tokens.push_back("i" + std::to_string(v)); return *this; }
     ODPacket& operator<<(uint32_t v) { tokens.push_back("u" + std::to_string(v)); return *this; }
@@ -632,6 +633,8 @@ int main()
 }
 '''
 notify_probe = notify_probe.replace('NOTIFY_METHOD', notify_method)
+# The messages are text references (utils/Translation.h); the probe has no language system
+notify_probe = notify_probe.replace('#define OD_LOG_INF(x)', '#define OD_LOG_INF(x)\n' + (Path(__file__).resolve().parent / 'translation_probe_stub.h').read_text(), 1)
 
 # ---------------------------------------------------------------------------
 # Static wiring checks on the production sources

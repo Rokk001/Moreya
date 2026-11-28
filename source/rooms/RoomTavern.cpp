@@ -41,6 +41,7 @@
 #include "utils/LogManager.h"
 #include "utils/MakeUnique.h"
 #include "utils/Random.h"
+#include "utils/Translation.h"
 
 #include <algorithm>
 #include <cmath>
@@ -53,7 +54,7 @@
 #include <string>
 
 const std::string RoomTavernName = "Tavern";
-const std::string RoomTavernNameDisplay = "Tavern room";
+const std::string RoomTavernNameKey = "room.tavern.name";
 const RoomType RoomTavern::mRoomType = RoomType::tavern;
 const TileVisual RoomTavern::mRoomVisual = TileVisual::tavernRoom;
 
@@ -536,8 +537,9 @@ class RoomTavernFactory : public RoomFactory
     const std::string& getName() const override
     { return RoomTavernName; }
 
-    const std::string& getNameReadable() const override
-    { return RoomTavernNameDisplay; }
+    //! \brief The name shown to the player, in the chosen language.
+    std::string getNameReadable() const override
+    { return Translation::tr(RoomTavernNameKey); }
 
     int getCostPerTile() const override
     { return ConfigManager::getSingleton().getRoomConfigInt32("TavernCostPerTile"); }

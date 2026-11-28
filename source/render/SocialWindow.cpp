@@ -38,6 +38,7 @@
 #include "social/SocialGenerator.h"
 #include "social/SocialProfileCache.h"
 #include "utils/ConfigManager.h"
+#include "utils/Translation.h"
 #include "ODApplication.h"
 
 #include <CEGUI/Font.h>
@@ -58,8 +59,10 @@
 #include <algorithm>
 #include <cmath>
 #include <deque>
+#include <functional>
 #include <iomanip>
 #include <locale>
+#include <map>
 #include <sstream>
 
 namespace
@@ -93,8 +96,10 @@ const char* const FEED_NAME_COLOUR = "[colour='FFF2C860']";
 const char* const FEED_TIME_COLOUR = "[colour='FFB8AC90']";
 const char* const FEED_TEXT_COLOUR = "[colour='FFE8DCC0']";
 
-//! Labels of the filter choices and names of the navigation buttons, in their displayed order
-const char* const FILTER_LABELS[] = {"All", "Zivs", "Fighters", "Unhappy"};
+//! Language keys of the labels of the filter choices, in their displayed order
+const char* const FILTER_KEYS[] = {"ui.dungeonbook.filter.all", "ui.dungeonbook.filter.zivs",
+    "ui.dungeonbook.filter.fighters", "ui.dungeonbook.filter.unhappy"};
+//! Names of the navigation buttons, in their displayed order
 //! The highlighted list row of the chosen menu sheet and the caption colour of its list and buttons (OD/MenuCompactButton
 //! NormalTextColour), used for the entries of the creature filter (INGAME-QS-12 K8)
 const char* const FILTER_SELECTION_BRUSH = "ODMenuTemplate/LoadRowSelected";
@@ -146,19 +151,41 @@ std::string escapeMarkup(const std::string& text)
     return result;
 }
 
+//! \brief The age of a post in words ("just now", "5 min ago") in the chosen language.
 std::string formatAge(int64_t turns)
 {
     double seconds = static_cast<double>(turns) / ODApplication::turnsPerSecond;
-    std::ostringstream stream;
+    std::map<std::string, std::string> values;
     if(seconds < AGE_JUST_NOW_SECONDS)
-        stream << "just now";
-    else if(seconds < SECONDS_PER_MINUTE)
-        stream << static_cast<int32_t>(seconds) << " sec ago";
-    else if(seconds < SECONDS_PER_HOUR)
-        stream << static_cast<int32_t>(seconds / SECONDS_PER_MINUTE) << " min ago";
-    else
-        stream << static_cast<int32_t>(seconds / SECONDS_PER_HOUR) << " h ago";
-    return stream.str();
+        return Translation::tr("ui.dungeonbook.age.justnow");
+    if(seconds < SECONDS_PER_MINUTE)
+    {
+        values["count"] = std::to_string(static_cast<int32_t>(seconds));
+        return Translation::tr("ui.dungeonbook.age.seconds", values);
+    }
+    if(seconds < SECONDS_PER_HOUR)
+    {
+        values["count"] = std::to_string(static_cast<int32_t>(seconds / SECONDS_PER_MINUTE));
+        return Translation::tr("ui.dungeonbook.age.minutes", values);
+    }
+    values["count"] = std::to_string(static_cast<int32_t>(seconds / SECONDS_PER_HOUR));
+    return Translation::tr("ui.dungeonbook.age.hours", values);
+}
+
+//! \brief The text of the key with one value, in the chosen language (UTF-8).
+std::string trWith(const char* key, const char* name, const std::string& value)
+{
+    std::map<std::string, std::string> values;
+    values[name] = value;
+    return Translation::tr(key, values);
+}
+
+//! \brief The level text of a creature row ("Lv. 3", the crown for the champion) as markup text.
+std::string levelText(bool champion, uint32_t level)
+{
+    if(champion)
+        return CHAMPION_CROWN_MARKUP;
+    return trWith("ui.dungeonbook.level", "level", std::to_string(level));
 }
 
 //! \brief Uses locally recorded creatures when roster snapshots cannot be requested.
@@ -329,7 +356,7 @@ std::string postPictureName(const social::Post& post)
 //! (check_dungeonbook_profile_layout.py measures it with the shipped font).
 void setFullText(CEGUI::Window* window, const std::string& text)
 {
-    window->setText(escapeMarkup(text));
+    window->setText(Gui::toCeguiText(escapeMarkup(text)));
 }
 
 //! \brief The length of the longest start of the UTF-8 text that is at most the given number of bytes long and does
@@ -359,7 +386,7 @@ std::size_t countWrappedTextLines(const CEGUI::Font& font, const std::string& te
         while(words >> word)
         {
             const std::string trial = current.empty() ? word : current + " " + word;
-            if(!current.empty() && font.getTextExtent(trial) > width)
+            if(!current.empty() && font.getTextExtent(Gui::toCeguiText(trial)) > width)
             {
                 ++lines;
                 current = word;
@@ -383,13 +410,13 @@ bool textFitsWindow(const CEGUI::Window* window, const std::string& text, bool w
 
     const CEGUI::Sizef size = window->getPixelSize();
     if(!wrapped)
-        return text.find('\n') == std::string::npos && font->getTextExtent(text) <= size.d_width;
+        return text.find('\n') == std::string::npos && font->getTextExtent(Gui::toCeguiText(text)) <= size.d_width;
 
     std::istringstream words(text);
     std::string word;
     while(words >> word)
     {
-        if(font->getTextExtent(word) > size.d_width)
+        if(font->getTextExtent(Gui::toCeguiText(word)) > size.d_width)
             return false;
     }
     const std::size_t lines = std::max<std::size_t>(1, static_cast<std::size_t>(size.d_height / font->getLineSpacing()));
@@ -404,8 +431,8 @@ void setFittedText(CEGUI::Window* window, const std::string& text, bool wrapped,
     const std::string flat = wrapped ? text : text.substr(0, text.find('\n'));
     if(textFitsWindow(window, flat, wrapped))
     {
-        window->setText(escapeMarkup(flat));
-        window->setTooltipText(escapeMarkup(tooltip));
+        window->setText(Gui::toCeguiText(escapeMarkup(flat)));
+        window->setTooltipText(Gui::toCeguiText(escapeMarkup(tooltip)));
         return;
     }
 
@@ -421,9 +448,9 @@ void setFittedText(CEGUI::Window* window, const std::string& text, bool wrapped,
         if(textFitsWindow(window, shortened, wrapped))
             break;
     }
-    window->setText(escapeMarkup(shortened));
+    window->setText(Gui::toCeguiText(escapeMarkup(shortened)));
     // The whole text, then the explaining text of the window when it has one
-    window->setTooltipText(escapeMarkup(tooltip.empty() ? text : text + "\n" + tooltip));
+    window->setTooltipText(Gui::toCeguiText(escapeMarkup(tooltip.empty() ? text : text + "\n" + tooltip)));
 }
 
 //! \brief Joins the entries of a social line with commas ("Shiny rocks, Warm puddles").
@@ -618,20 +645,21 @@ SocialWindow::SocialWindow(CEGUI::Window* rootWindow, GameMap& gameMap) :
     mSinceRefreshCheck(0.0f),
     mSinceFeedRebuild(0.0f),
     mShownProfilePostVersion(0),
-    mSinceProfileRefresh(0.0f)
+    mSinceProfileRefresh(0.0f),
+    mLanguageListener(0)
 {
     CEGUI::Window* home = mWindow->getChild("HomePage");
     CEGUI::Combobox* filter = static_cast<CEGUI::Combobox*>(home->getChild("Filter"));
     for(std::size_t i = 0; i < 4; ++i)
     {
-        CEGUI::ListboxTextItem* item = new CEGUI::ListboxTextItem(FILTER_LABELS[i], static_cast<CEGUI::uint>(i));
+        CEGUI::ListboxTextItem* item = new CEGUI::ListboxTextItem(Gui::trCegui(FILTER_KEYS[i]), static_cast<CEGUI::uint>(i));
         // The entries of the drop-down look like the list rows of the chosen menu sheet (INGAME-QS-12 K8): its caption
         // colour, and the sheet's highlighted row for the chosen entry
         item->setSelectionBrushImage(FILTER_SELECTION_BRUSH);
         item->setTextColours(CEGUI::PropertyHelper<CEGUI::Colour>::fromString(FILTER_TEXT_COLOUR));
         filter->addItem(item);
     }
-    filter->setText(FILTER_LABELS[0]);
+    filter->setText(Gui::trCegui(FILTER_KEYS[0]));
     connect(filter, CEGUI::Combobox::EventListSelectionAccepted, CEGUI::Event::Subscriber(&SocialWindow::onFilterClicked, this));
     for(std::size_t i = 0; i < 4; ++i)
     {
@@ -649,6 +677,8 @@ SocialWindow::SocialWindow(CEGUI::Window* rootWindow, GameMap& gameMap) :
         button->setUserString("Row", std::to_string(i));
         connect(button, CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&SocialWindow::onListRowClicked, this));
     }
+    const std::function<void()> languageChanged = std::bind(&SocialWindow::onLanguageChanged, this);
+    mLanguageListener = Translation::addListener(languageChanged);
     // The back arrow sits in the title bar of the book (book-switch-variant-1)
     connect(mWindow->getChild("BackButton"), CEGUI::PushButton::EventClicked,
         CEGUI::Event::Subscriber(&SocialWindow::onBackClicked, this));
@@ -683,8 +713,25 @@ SocialWindow::SocialWindow(CEGUI::Window* rootWindow, GameMap& gameMap) :
 //! \brief Disconnects the controls of the book.
 SocialWindow::~SocialWindow()
 {
+    Translation::removeListener(mLanguageListener);
     for(CEGUI::Event::Connection& connection : mLinkConnections)
         connection->disconnect();
+}
+
+//! \brief Writes the filter choices in the chosen language and, while the book is open, draws every page again, so
+//! that a language change shows at once.
+void SocialWindow::onLanguageChanged()
+{
+    CEGUI::Combobox* filter = static_cast<CEGUI::Combobox*>(mWindow->getChild("HomePage/Filter"));
+    for(std::size_t i = 0; i < 4; ++i)
+    {
+        CEGUI::ListboxItem* item = filter->getListboxItemFromIndex(i);
+        if(item != nullptr)
+            item->setText(Gui::trCegui(FILTER_KEYS[i]));
+    }
+    filter->setText(Gui::trCegui(FILTER_KEYS[static_cast<std::size_t>(mFilter)]));
+    if(mWindow->isVisible())
+        rebuildCreatureList();
 }
 
 void SocialWindow::connect(CEGUI::Window* window, const CEGUI::String& event, const CEGUI::Event::Subscriber& subscriber)
@@ -695,7 +742,7 @@ void SocialWindow::connect(CEGUI::Window* window, const CEGUI::String& event, co
 void SocialWindow::setTabState(CEGUI::Window* tab, const std::string& label, bool active)
 {
     // A bare '[' starts a CEGUI markup tag and would swallow the caption
-    tab->setText(active ? "\\[ " + label + " ]" : label);
+    tab->setText(Gui::toCeguiText(active ? "\\[ " + label + " ]" : label));
     tab->setProperty("NormalTextColour", active ? TAB_COLOUR_ACTIVE : TAB_COLOUR_INACTIVE);
 }
 
@@ -712,7 +759,7 @@ void SocialWindow::show()
         mFilter = CreatureFilter::All;
         CEGUI::Combobox* filter = static_cast<CEGUI::Combobox*>(mWindow->getChild("HomePage/Filter"));
         filter->setItemSelectState(static_cast<std::size_t>(0), true);
-        filter->setText(FILTER_LABELS[0]);
+        filter->setText(Gui::trCegui(FILTER_KEYS[0]));
     }
     if(!mWindow->isVisible() && !useLocalCreatureRoster())
     {
@@ -732,7 +779,7 @@ void SocialWindow::showCreature(const std::string& creatureName)
     mFilter = CreatureFilter::All;
     CEGUI::Combobox* filter = static_cast<CEGUI::Combobox*>(mWindow->getChild("HomePage/Filter"));
     filter->setItemSelectState(static_cast<std::size_t>(0), true);
-    filter->setText(FILTER_LABELS[0]);
+    filter->setText(Gui::trCegui(FILTER_KEYS[0]));
     mSelectedCreature = creatureName;
     mPage = Page::Inventory;
     show();
@@ -755,7 +802,10 @@ std::string SocialWindow::describeLatestPost(const std::string& creatureName, in
     if(text.empty())
         return text;
 
-    return "Latest: " + text + "  (" + formatAge(turnNow - post->mTurn) + ")";
+    std::map<std::string, std::string> values;
+    values["text"] = text;
+    values["age"] = formatAge(turnNow - post->mTurn);
+    return Translation::tr("ui.dungeonbook.latest", values);
 }
 
 //! \brief Closes the Dungeonbook and stops its roster updates.
@@ -969,12 +1019,12 @@ void showSkillTreeNode(CEGUI::Window* tree, const std::string& name, const Creat
     std::string tooltip;
     for(std::size_t i = 0; i < node.mTooltip.size(); ++i)
         tooltip += (i == 0 ? "" : "\n") + node.mTooltip[i];
-    button->setTooltipText(escapeMarkup(tooltip));
+    button->setTooltipText(Gui::toCeguiText(escapeMarkup(tooltip)));
     // The rank is shown as stars, one per rank the skill can reach: learned ranks gold, the others greyed. The thin
     // progress bar under the icon is no longer shown, and the text "x/y" stays in the tooltip of the label
     bar->setVisible(false);
-    rank->setText(skillRankStars(node.mRank, node.mMaxRank, rank->getPixelSize().d_height));
-    rank->setTooltipText(escapeMarkup(node.mBarText));
+    rank->setText(Gui::toCeguiText(skillRankStars(node.mRank, node.mMaxRank, rank->getPixelSize().d_height)));
+    rank->setTooltipText(Gui::toCeguiText(escapeMarkup(node.mBarText)));
 }
 }
 
@@ -1003,7 +1053,7 @@ bool SocialWindow::refreshSkills()
         CEGUI::Window* title = tree->getChild(prefix + "Title");
         const bool hasColumn = column < view.mColumns.size();
         title->setVisible(hasColumn);
-        title->setText(hasColumn ? escapeMarkup(view.mColumns[column].mPath) : std::string());
+        title->setText(hasColumn ? Gui::toCeguiText(escapeMarkup(view.mColumns[column].mTitle)) : CEGUI::String());
         title->setProperty("TextColours", (hasColumn && view.mColumns[column].mHighlighted) ?
             SKILL_TREE_HIGHLIGHT_TEXT : SKILL_TREE_NORMAL_TEXT);
         for(uint32_t tier = 1; tier <= CreatureSkillTree::MAX_TIER; ++tier)
@@ -1065,7 +1115,7 @@ void SocialWindow::selectCreature(const std::string& creatureName, Page page)
         mFilter = CreatureFilter::All;
         CEGUI::Combobox* filter = static_cast<CEGUI::Combobox*>(mWindow->getChild("HomePage/Filter"));
         filter->setItemSelectState(static_cast<std::size_t>(0), true);
-        filter->setText(FILTER_LABELS[0]);
+        filter->setText(Gui::trCegui(FILTER_KEYS[0]));
     }
     mSelectedCreature = creatureName;
     rebuildCreatureList();
@@ -1206,30 +1256,30 @@ void SocialWindow::describeMood(const social::DungeonbookEntry& entry, std::stri
     const uint32_t bits = creature == nullptr ? 0 : creature->getOverlayMoodValue();
     icon = "DungeonbookIcons/MoodUnhappy";
     if((bits & CreatureMoodValues::Hungry) != 0)
-        text = "Hungry";
+        text = Translation::tr("ui.mood.hungry");
     else if((bits & CreatureMoodValues::Tired) != 0)
-        text = "Tired";
+        text = Translation::tr("ui.mood.tired");
     else if(level == CreatureMoodLevel::Happy)
     {
-        text = "Happy";
+        text = Translation::tr("ui.mood.happy");
         icon = "DungeonbookIcons/MoodHappy";
     }
     else if(level == CreatureMoodLevel::Neutral)
     {
-        text = "Neutral";
+        text = Translation::tr("ui.mood.neutral");
         icon = "DungeonbookIcons/MoodNeutral";
     }
     else if(level == CreatureMoodLevel::Upset)
-        text = "Upset";
+        text = Translation::tr("ui.mood.upset");
     else if(level == CreatureMoodLevel::Angry)
-        text = "Angry";
+        text = Translation::tr("ui.mood.angry");
     else if(level == CreatureMoodLevel::Furious)
-        text = "Furious";
+        text = Translation::tr("ui.mood.furious");
     else if(entry.unhappy)
-        text = "Unhappy";
+        text = Translation::tr("ui.mood.unhappy");
     else
     {
-        text = "Content";
+        text = Translation::tr("ui.mood.content");
         icon = "DungeonbookIcons/MoodHappy";
     }
 }
@@ -1294,15 +1344,15 @@ void SocialWindow::rebuildCreatureList()
         mSelectedCreature.clear();
 
     CEGUI::Window* home = mWindow->getChild("HomePage");
-    std::ostringstream label;
-    label << (localRoster ? "Known creatures (" : "Creatures (") << mListedCreatures.size();
-    if(mListedCreatures.size() != mEntries.size())
-        label << " of " << mEntries.size();
-    label << ")";
-    setFullText(home->getChild("CreaturesLabel"), label.str());
-    home->getChild("ListRows")->setTooltipText(localRoster ?
-        "Only locally known creatures are shown; detailed server statistics are unavailable." :
-        "Click a creature to see its pages.");
+    std::map<std::string, std::string> labelValues;
+    labelValues["count"] = std::to_string(mListedCreatures.size());
+    labelValues["total"] = std::to_string(mEntries.size());
+    const bool filtered = mListedCreatures.size() != mEntries.size();
+    const char* labelKey = localRoster ? (filtered ? "ui.dungeonbook.list.localof" : "ui.dungeonbook.list.local") :
+        (filtered ? "ui.dungeonbook.list.serverof" : "ui.dungeonbook.list.server");
+    setFullText(home->getChild("CreaturesLabel"), Translation::tr(labelKey, labelValues));
+    home->getChild("ListRows")->setTooltipText(Gui::trCegui(localRoster ? "ui.dungeonbook.list.tooltip.local" :
+        "ui.dungeonbook.list.tooltip.server"));
 
     refreshListRows();
     if(mPage != Page::Home && mSelectedCreature.empty())
@@ -1335,7 +1385,7 @@ void SocialWindow::refreshListRows()
         setImage(row->getChild("Portrait"), findPortrait(entry->name, entry->className, entry->worker, false));
         setFullText(row->getChild("Name"), profile.getFullName());
         // The champion shows a crown instead of its level
-        row->getChild("Level")->setText(entry->champion ? CHAMPION_CROWN_MARKUP : "Lv. " + std::to_string(entry->level));
+        row->getChild("Level")->setText(Gui::toCeguiText(levelText(entry->champion, entry->level)));
         std::string mood;
         std::string icon;
         describeMood(*entry, mood, icon);
@@ -1344,8 +1394,11 @@ void SocialWindow::refreshListRows()
         // The keeper the creature serves (INGAME-QS-7 U-2): a nick longer than its place is shortened, the tooltip of
         // the row names it whole
         setFittedText(row->getChild("Keeper"), entry->keeper, false, "");
-        row->getChild("Button")->setTooltipText(profile.getFullName() + " (" +
-            social::SocialGenerator::displayClassName(cache.getData(), entry->className) + "), keeper " + entry->keeper);
+        std::map<std::string, std::string> rowValues;
+        rowValues["name"] = profile.getFullName();
+        rowValues["class"] = CreatureDefinition::getDisplayNameOf(entry->className);
+        rowValues["keeper"] = entry->keeper;
+        row->getChild("Button")->setTooltipText(Gui::toCeguiText(Translation::tr("ui.dungeonbook.row.tooltip", rowValues)));
     }
 }
 
@@ -1397,29 +1450,29 @@ void SocialWindow::rebuildFeed()
         const std::string text = renderPostText(post, profile);
         setImage(row->getChild("Portrait"), findPortrait(post.mCreature, post.mClassName, post.mIsWorker, false));
         // The portrait of the post says whose it is (no picture of the book without a hover text)
-        row->getChild("Portrait")->setTooltipText(escapeMarkup(profile.getFullName()));
+        row->getChild("Portrait")->setTooltipText(Gui::toCeguiText(escapeMarkup(profile.getFullName())));
         // Name, then the level of a listed creature (the crown for the champion) and the age of the post
         const social::DungeonbookEntry* entry = findEntry(post.mCreature);
         std::string level;
         if(entry != nullptr)
-            level = (entry->champion ? std::string(CHAMPION_CROWN_MARKUP) : "Lv. " + std::to_string(entry->level)) + " - ";
+            level = levelText(entry->champion, entry->level) + " - ";
         const std::string age = formatAge(turnNow - post.mTurn);
         // The whole name, then level and age; the head word wraps, so nothing is shortened
         CEGUI::Window* head = row->getChild("Head");
-        head->setText(std::string(FEED_NAME_COLOUR) + escapeMarkup(profile.getFullName()) + FEED_TIME_COLOUR + "   " +
-            level + age);
+        head->setText(Gui::toCeguiText(std::string(FEED_NAME_COLOUR) + escapeMarkup(profile.getFullName()) +
+            FEED_TIME_COLOUR + "   " + level + age));
         // The whole post text, word wrapped; the text window holds the longest post of config/social-texts.cfg
         CEGUI::Window* textWindow = row->getChild("Text");
-        textWindow->setText(std::string(FEED_TEXT_COLOUR) + escapeMarkup(text));
-        textWindow->setTooltipText(text);
+        textWindow->setText(Gui::toCeguiText(std::string(FEED_TEXT_COLOUR) + escapeMarkup(text)));
+        textWindow->setTooltipText(Gui::toCeguiText(text));
         // The painted scene of the post kind below its text, filling the frame like the concept
         CEGUI::Window* picture = row->getChild("Picture");
         setImage(picture->getChild("Clip/Image"), findPostPicture(post));
-        picture->setTooltipText(text);
+        picture->setTooltipText(Gui::toCeguiText(text));
     }
     CEGUI::Window* empty = page->getChild("FeedEmpty");
     empty->setVisible(posts.empty());
-    empty->setText(all ? "Quiet in the dungeon. Somewhere, a kobold is shovelling." : "Nothing posted yet.");
+    empty->setText(Gui::trCegui(all ? "ui.dungeonbook.feed.quiet" : "ui.dungeonbook.feed.empty"));
 }
 
 void SocialWindow::refreshPage()
@@ -1460,7 +1513,7 @@ void SocialWindow::refreshHeader(const social::DungeonbookEntry& entry)
         // The name box shrinks to the name (at most to the room of the layout, HEADER_NAME_HALF_WIDTH on each side of
         // the middle) and the arrows stand right beside it
         const float nameHalf = std::min(HEADER_NAME_HALF_WIDTH,
-            font->getTextExtent(profile.getFullName()) / headerWidth / 2.0f + HEADER_NAME_PADDING);
+            font->getTextExtent(Gui::toCeguiText(profile.getFullName())) / headerWidth / 2.0f + HEADER_NAME_PADDING);
         Gui& gui = ODFrameListener::getSingleton().getModeManager()->getGui();
         CEGUI::URect nameArea = nameText->getArea();
         nameArea.d_min.d_x = CEGUI::UDim(HEADER_CENTRE - nameHalf, 0.0f);
@@ -1504,15 +1557,16 @@ void SocialWindow::refreshProfile(const social::DungeonbookEntry& entry)
     const CEGUI::Font& nameFont = fonts.get(PROFILE_NAME_FONT);
     const CEGUI::Font& handleFont = fonts.get(PROFILE_HANDLE_FONT);
     const float room = nameText->getPixelSize().d_width -
-        handleFont.getTextExtent(std::string(PROFILE_HANDLE_GAP) + handle);
+        handleFont.getTextExtent(Gui::toCeguiText(std::string(PROFILE_HANDLE_GAP) + handle));
     std::string shownName = fullName;
-    while(!shownName.empty() && nameFont.getTextExtent(shownName == fullName ? shownName : shownName + "...") > room)
+    while(!shownName.empty() &&
+        nameFont.getTextExtent(Gui::toCeguiText(shownName == fullName ? shownName : shownName + "...")) > room)
         shownName = shownName.substr(0, utf8Prefix(shownName, shownName.size() - 1));
     if(shownName != fullName)
         shownName += "...";
-    nameText->setText(std::string("[font='") + PROFILE_NAME_FONT + "']" + escapeMarkup(shownName) + "[font='" +
-        PROFILE_HANDLE_FONT + "']" + PROFILE_HANDLE_GAP + escapeMarkup(handle));
-    nameText->setTooltipText(shownName == fullName ? std::string() : escapeMarkup(fullName + " " + handle));
+    nameText->setText(Gui::toCeguiText(std::string("[font='") + PROFILE_NAME_FONT + "']" + escapeMarkup(shownName) +
+        "[font='" + PROFILE_HANDLE_FONT + "']" + PROFILE_HANDLE_GAP + escapeMarkup(handle)));
+    nameText->setTooltipText(Gui::toCeguiText(shownName == fullName ? std::string() : escapeMarkup(fullName + " " + handle)));
 
     // The relationship comes from the real relationships while the creature is known here, else from its profile; path
     // and skills come from the roster, or from the creature itself while the roster has none
@@ -1533,8 +1587,8 @@ void SocialWindow::refreshProfile(const social::DungeonbookEntry& entry)
     setFittedText(page->getChild("QuoteText"), "\"" + profile.mBio + "\"", true, "");
     refreshProfileSocialLines(page, profile, creature);
     // The portrait explains who it shows (no picture of the book without a hover text)
-    page->getChild("Portrait")->setTooltipText(escapeMarkup(profile.getFullName() + ", " +
-        social::SocialGenerator::displayClassName(cache.getData(), entry.className)));
+    page->getChild("Portrait")->setTooltipText(Gui::toCeguiText(escapeMarkup(profile.getFullName() + ", " +
+        CreatureDefinition::getDisplayNameOf(entry.className))));
 
     // The posts of the creature: their number and the pictures of the newest ones, the text in the tooltip
     social::PostLog& log = social::PostLog::getSingleton();
@@ -1557,16 +1611,19 @@ void SocialWindow::refreshProfile(const social::DungeonbookEntry& entry)
             CEGUI::Window* thumb = page->getChild("PostThumb" + std::to_string(rows));
             thumb->setVisible(true);
             setImage(thumb->getChild("Clip/Image"), findPostPicture(*it));
-            thumb->setTooltipText(text + "  (" + formatAge(turnNow - it->mTurn) + ")");
+            std::map<std::string, std::string> thumbValues;
+            thumbValues["text"] = text;
+            thumbValues["age"] = formatAge(turnNow - it->mTurn);
+            thumb->setTooltipText(Gui::toCeguiText(Translation::tr("ui.dungeonbook.withage", thumbValues)));
             ++rows;
         }
     }
     for(std::size_t i = rows; i < MAX_OWN_POSTS; ++i)
         page->getChild("PostThumb" + std::to_string(i))->setVisible(false);
-    page->getChild("PostsTitle")->setText("Posts (" + std::to_string(count) + ")");
+    page->getChild("PostsTitle")->setText(Gui::toCeguiText(trWith("ui.dungeonbook.posts", "count", std::to_string(count))));
     CEGUI::Window* empty = page->getChild("PostsEmpty");
     empty->setVisible(rows == 0);
-    empty->setText(std::string(FEED_TEXT_COLOUR) + "Nothing posted yet.");
+    empty->setText(Gui::toCeguiText(std::string(FEED_TEXT_COLOUR) + Translation::tr("ui.dungeonbook.feed.empty")));
 }
 
 void SocialWindow::refreshProfileSocialLines(CEGUI::Window* page, const social::CreatureProfile& profile,
@@ -1587,13 +1644,14 @@ void SocialWindow::refreshProfileSocialLines(CEGUI::Window* page, const social::
         }
     }
 
-    const std::string likes = info.mLikes.empty() ? std::string("nothing in particular") : joinSocialList(info.mLikes);
-    const std::string dislikes = info.mDislikes.empty() ? std::string("nothing in particular") :
+    const std::string likes = info.mLikes.empty() ? Translation::tr("ui.dungeonbook.likes.none") :
+        joinSocialList(info.mLikes);
+    const std::string dislikes = info.mDislikes.empty() ? Translation::tr("ui.dungeonbook.likes.none") :
         joinSocialList(info.mDislikes);
-    setFittedText(page->getChild("LikesText"), "Likes: " + likes, false,
-        "Likes: " + likes + ". What this creature enjoys, from its social profile.");
-    setFittedText(page->getChild("DislikesText"), "Dislikes: " + dislikes, false,
-        "Dislikes: " + dislikes + ". What this creature cannot stand, from its social profile.");
+    setFittedText(page->getChild("LikesText"), trWith("ui.dungeonbook.likes", "list", likes), false,
+        trWith("ui.dungeonbook.likes.tooltip", "list", likes));
+    setFittedText(page->getChild("DislikesText"), trWith("ui.dungeonbook.dislikes", "list", dislikes), false,
+        trWith("ui.dungeonbook.dislikes.tooltip", "list", dislikes));
 
     // Friends, foe and status are only known for the creatures of the local player and its allies
     CEGUI::Window* friends = page->getChild("FriendsText");
@@ -1604,13 +1662,14 @@ void SocialWindow::refreshProfileSocialLines(CEGUI::Window* page, const social::
     status->setVisible(info.mAllied);
     if(info.mAllied)
     {
-        const std::string friendNames = info.mFriends.empty() ? std::string("none yet") : joinSocialList(info.mFriends);
-        setFittedText(friends, "Friends: " + friendNames, false, "Friends: " + friendNames +
-            ". The creatures of your side this one gets along with best.");
-        const std::string foeName = info.mFoe.empty() ? std::string("none") : info.mFoe;
-        setFittedText(foe, "Foe: " + foeName, false, "Foe: " + foeName +
-            ". The creature of your side this one gets along with worst.");
-        setFittedText(status, info.mStatus, true, info.mStatus + "\nWhat the creature says about its mood right now.");
+        const std::string friendNames = info.mFriends.empty() ? Translation::tr("ui.dungeonbook.friends.none") :
+            joinSocialList(info.mFriends);
+        setFittedText(friends, trWith("ui.dungeonbook.friends", "list", friendNames), false,
+            trWith("ui.dungeonbook.friends.tooltip", "list", friendNames));
+        const std::string foeName = info.mFoe.empty() ? Translation::tr("ui.dungeonbook.foe.none") : info.mFoe;
+        setFittedText(foe, trWith("ui.dungeonbook.foe", "name", foeName), false,
+            trWith("ui.dungeonbook.foe.tooltip", "name", foeName));
+        setFittedText(status, info.mStatus, true, trWith("ui.dungeonbook.status.tooltip", "status", info.mStatus));
     }
 
     // The running buffs and debuffs of an own creature, one line each with the text that explains it; more than the
@@ -1632,13 +1691,14 @@ void SocialWindow::refreshProfileSocialLines(CEGUI::Window* page, const social::
         std::string tooltip;
         for(std::size_t k = i; k < info.mEffectTooltips.size(); ++k)
             tooltip += (tooltip.empty() ? "" : "\n") + info.mEffectTooltips[k];
-        setFittedText(line, std::to_string(info.mEffects.size() - i) + " more buffs and debuffs", false, tooltip);
+        setFittedText(line, trWith("ui.dungeonbook.effects.more", "count", std::to_string(info.mEffects.size() - i)),
+            false, tooltip);
     }
 
     CEGUI::Window* remarks = page->getChild("RemarksText");
     remarks->setVisible(!info.mRemarks.empty());
     if(!info.mRemarks.empty())
-        setFittedText(remarks, info.mRemarks, true, "Remarks that match the picture of this creature.");
+        setFittedText(remarks, info.mRemarks, true, Translation::tr("ui.dungeonbook.remarks.tooltip"));
 }
 
 //! \brief Fills the values sheet: the statistics column, the portrait ring, the attributes, the combat and defense
@@ -1649,38 +1709,46 @@ void SocialWindow::refreshValues(const social::DungeonbookEntry& entry)
     const bool known = !useLocalCreatureRoster();
     setImage(page->getChild("Portrait/Image"), findPortrait(entry.name, entry.className, entry.worker, true));
     social::SocialProfileCache& cache = social::SocialProfileCache::getSingleton();
-    page->getChild("Portrait")->setTooltipText(escapeMarkup(cache.getProfile(entry.name, entry.className,
-        entry.worker).getFullName() + ", level " + std::to_string(entry.level)));
+    std::map<std::string, std::string> portraitValues;
+    portraitValues["name"] = cache.getProfile(entry.name, entry.className, entry.worker).getFullName();
+    portraitValues["level"] = std::to_string(entry.level);
+    page->getChild("Portrait")->setTooltipText(Gui::toCeguiText(escapeMarkup(
+        Translation::tr("ui.dungeonbook.values.level", portraitValues))));
 
-    // The column of the former statistics page: window, label in the statistics text, how the value is shown
+    // The column of the former statistics page: window, id of the label in the statistics text (Creature::statsLabel,
+    // the same in every language), how the value is shown
     struct StatisticsLine { const char* window; const char* label; bool slots; };
     const StatisticsLine lines[] = {
-        {"Experience", "Experience", false}, {"HitPoints", "HP", false}, {"Gold", "Gold", false},
-        {"SightRadius", "Sight radius", false}, {"Potions", "Potions", true}, {"Inventory", "Inventory", true},
-        {"DamagePerSecond", "Raw damage per second", false}, {"SkillPoints", "Skill points earned / spent", false}};
+        {"Experience", "experience", false}, {"HitPoints", "hp", false}, {"Gold", "gold", false},
+        {"SightRadius", "sight_radius", false}, {"Potions", "potions", true}, {"Inventory", "inventory", true},
+        {"DamagePerSecond", "damage_per_second", false}, {"SkillPoints", "skill_points", false}};
     for(const StatisticsLine& line : lines)
     {
-        const std::string value = known ? findStatisticsValue(entry.stats, line.label) : std::string();
+        const std::string value = known ? findStatisticsValue(entry.stats, Creature::statsLabel(line.label)) :
+            std::string();
         CEGUI::Window* valueWindow = page->getChild(std::string(line.window) + "Value");
         // The item names of the potion and inventory slots and the meaning of the skill points stay readable
         std::string tooltip = value;
         if(std::string(line.window) == "SkillPoints" && !value.empty())
-            tooltip = "Skill points earned / spent: " + value;
+            tooltip = trWith("ui.dungeonbook.values.skillpoints.tooltip", "value", value);
         // The whole value, word wrapped after a " / " (the column holds the widest value on two lines)
         setFullText(valueWindow, line.slots ? countFilledSlots(value) : formatStatisticsNumbers(value));
-        valueWindow->setTooltipText(tooltip);
-        page->getChild(std::string(line.window) + "Label")->setTooltipText(tooltip);
+        valueWindow->setTooltipText(Gui::toCeguiText(tooltip));
+        page->getChild(std::string(line.window) + "Label")->setTooltipText(Gui::toCeguiText(tooltip));
     }
 
     // The four attributes side by side in one row (book-variant-2, owner decision 816): the label on top, the rounded
     // value on the line below, a long value continues on further lines of its cell
     const char* names[] = {"Strength", "Dexterity", "Life", "Mana"};
+    const char* const nameKeys[] = {"ui.dungeonbook.values.strength", "ui.dungeonbook.values.dexterity",
+        "ui.dungeonbook.values.life", "ui.dungeonbook.values.mana"};
     const double values[] = {entry.strength, entry.dexterity, entry.life, entry.mana};
     for(std::size_t i = 0; i < 4; ++i)
     {
         std::ostringstream text;
-        text << names[i] << "\n" << (known ? breakAttributeValue(formatProfileValue(values[i])) : std::string("-"));
-        page->getChild(names[i])->setText(text.str());
+        text << Translation::tr(nameKeys[i]) << "\n"
+            << (known ? breakAttributeValue(formatProfileValue(values[i])) : std::string("-"));
+        page->getChild(names[i])->setText(Gui::toCeguiText(text.str()));
     }
     // The labels are fixed in the layout; the value column holds one line per label, right aligned.
     std::ostringstream combat;
@@ -1697,17 +1765,22 @@ void SocialWindow::refreshValues(const social::DungeonbookEntry& entry)
         combat << "-\n-\n-";
         defense << "-\n-\n-";
     }
-    page->getChild("CombatValues")->setText(combat.str());
-    page->getChild("DefenseValues")->setText(defense.str());
+    page->getChild("CombatValues")->setText(Gui::toCeguiText(combat.str()));
+    page->getChild("DefenseValues")->setText(Gui::toCeguiText(defense.str()));
 
     // The tiles are display tiles with symbol and title as in book-variant-2, no buttons; path and skills are rows of
     // the profile page and the hands are on the inventory page. The tooltip shows the whole text.
     const char* const tiles[] = {"Equipment", "Path", "Skills"};
+    const char* const tileKeys[] = {"ui.dungeonbook.values.equipment", "ui.dungeonbook.values.path",
+        "ui.dungeonbook.values.skills"};
     const std::string tileValues[] = {entry.equipment, entry.path, entry.skills};
     for(std::size_t i = 0; i < 3; ++i)
     {
         const std::string value = (known && !tileValues[i].empty()) ? tileValues[i] : std::string("-");
-        const std::string tooltip = std::string(tiles[i]) + ": " + value;
+        std::map<std::string, std::string> tileText;
+        tileText["tile"] = Translation::tr(tileKeys[i]);
+        tileText["value"] = value;
+        const CEGUI::String tooltip = Gui::toCeguiText(Translation::tr("ui.dungeonbook.values.tiletooltip", tileText));
         page->getChild(std::string(tiles[i]) + "Tile")->setTooltipText(tooltip);
         page->getChild(std::string(tiles[i]) + "Icon")->setTooltipText(tooltip);
         page->getChild(std::string(tiles[i]) + "Title")->setTooltipText(tooltip);
@@ -1719,8 +1792,8 @@ void SocialWindow::refreshInventory(const social::DungeonbookEntry& entry)
 {
     CEGUI::Window* page = mWindow->getChild("InventoryPage");
     setImage(page->getChild("Portrait/Clip/Image"), findPortrait(entry.name, entry.className, entry.worker, false));
-    page->getChild("Portrait")->setTooltipText(escapeMarkup(social::SocialProfileCache::getSingleton().getProfile(
-        entry.name, entry.className, entry.worker).getFullName()));
+    page->getChild("Portrait")->setTooltipText(Gui::toCeguiText(escapeMarkup(
+        social::SocialProfileCache::getSingleton().getProfile(entry.name, entry.className, entry.worker).getFullName())));
     std::vector<CEGUI::Window*> slots;
     for(std::size_t slot = 0; slot < ITEM_SLOTS; ++slot)
         slots.push_back(page->getChild("SlotBox" + std::to_string(slot) + "/Slot" + std::to_string(slot)));
@@ -1733,14 +1806,15 @@ void SocialWindow::refreshInventory(const social::DungeonbookEntry& entry)
     for(CEGUI::Window* slot : slots)
     {
         if(slot->getTooltipText().empty())
-            Gui::setPlainTooltip(slot, std::string(slot->getParent()->getChild("Label")->getText().c_str()) + ": empty");
+            Gui::setPlainTooltip(slot, trWith("ui.dungeonbook.inventory.empty", "slot",
+                std::string(slot->getParent()->getChild("Label")->getText().c_str())));
         Gui::copyTooltip(slot, slot->getParent());
     }
 
     std::string hint;
     if(creature == nullptr)
-        hint = "This creature is out of sight; its items are not known here.";
+        hint = Translation::tr("ui.dungeonbook.inventory.hint.unseen");
     else if(mGameMap.getLocalPlayer() == nullptr || creature->getSeat() != mGameMap.getLocalPlayer()->getSeat())
-        hint = "Only the hands of a creature of another keeper can be seen.";
-    page->getChild("HintText")->setText(hint);
+        hint = Translation::tr("ui.dungeonbook.inventory.hint.foreign");
+    page->getChild("HintText")->setText(Gui::toCeguiText(hint));
 }

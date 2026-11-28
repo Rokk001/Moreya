@@ -1,6 +1,8 @@
 #include "entities/ItemDefinition.h"
 
 #include "network/ODPacket.h"
+#include "utils/Translation.h"
+#include "utils/DisplayText.h"
 
 #include <memory>
 #include <sstream>
@@ -77,6 +79,14 @@ bool readItemQuality(std::stringstream& stream, Quality& quality, ItemQuality& r
 const std::string& qualityName(Quality quality)
 {
     return QUALITY_NAMES.at(static_cast<size_t>(quality));
+}
+
+//! \brief The quality name for the player: the language entry "ui.quality.<lower case catalogue name>".
+std::string qualityDisplayName(Quality quality)
+{
+    static const std::array<std::string, 4> KEYS = {{"ui.quality.poor", "ui.quality.common", "ui.quality.rare",
+        "ui.quality.epic"}};
+    return Translation::tr(KEYS.at(static_cast<size_t>(quality)));
 }
 
 //! \brief Parses the four quality spellings from definition files.
@@ -159,6 +169,18 @@ ItemDefinition* ItemDefinition::load(std::stringstream& stream)
 const ItemQuality& ItemDefinition::getQuality(Quality quality) const
 {
     return mQualities.at(static_cast<size_t>(quality));
+}
+
+//! \brief Returns the key "item.<id>.<quality>.name" of the language files, id and quality in lower case.
+std::string ItemDefinition::getNameKey(Quality quality) const
+{
+    return DisplayText::makeKey("item", mId, QUALITY_NAMES.at(static_cast<size_t>(quality)));
+}
+
+//! \brief Returns the name of the quality from the language files, else the English Display of the catalogue.
+std::string ItemDefinition::getDisplayText(Quality quality) const
+{
+    return DisplayText::translated(getNameKey(quality), getQuality(quality).mDisplay);
 }
 
 //! \brief Writes every definition field and preserves the bonus roll order.

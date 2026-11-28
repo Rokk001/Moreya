@@ -69,6 +69,62 @@ def parse_entries(text):
             for block in re.split(r'^\[Level\]\s*$', text, flags=re.M)[1:]]
 
 
+#: The language package whose texts the checks read for the texts that wing packages and level files hold as
+#: references "@<key>" (the English texts are the texts the game shows without a translation)
+LANGUAGE_PACKAGE = 'lang-en'
+#: Cache of english_texts() by content folder
+_ENGLISH_TEXTS = {}
+
+
+# The English texts of the language package as {key: text} ("<key>=<text>" lines of the files in its texts/ folder, "#"
+# lines are comments). A text reads like the text of the wing package or level file it replaced: a double backslash
+# is one backslash and "\n" stays the two characters of the Package.cfg line break. Empty without content.
+def english_texts(repo):
+    folder = content_folder(repo)
+    if folder is None:
+        return {}
+    key = str(folder)
+    if key not in _ENGLISH_TEXTS:
+        texts = {}
+        for path in sorted((Path(folder) / LANGUAGE_PACKAGE / 'texts').glob('*.txt')):
+            for line in path.read_text(encoding='utf-8').replace('\r', '').split('\n'):
+                if line and not line.startswith('#') and '=' in line:
+                    name, value = line.split('=', 1)
+                    texts[name] = value.replace('\\\\', '\\')
+        _ENGLISH_TEXTS[key] = texts
+    return _ENGLISH_TEXTS[key]
+
+
+# The text of a wing package or level file as the game shows it in English: the English text of a reference "@<key>",
+# any other text unchanged (a reference without a text stays as it is, so that a check reports it).
+def resolve_text(repo, text):
+    if len(text) > 1 and text.startswith('@'):
+        return english_texts(repo).get(text[1:], text)
+    return text
+
+
+#: The level script actions whose last field is a player text
+TEXT_ACTIONS = ('message', 'objective', 'hint', 'objectiveid', 'mainobjectiveid', 'optionalobjectiveid',
+                'conditionalobjectiveid')
+
+
+# The text of a level file with every player text that is a reference "@<key>" ([Info] Name and Description, the
+# actions of TEXT_ACTIONS) replaced by its English text, the text the game showed before the texts moved into the
+# language files. The rest of the file stays as it is.
+def resolve_level_text(repo, text):
+    lines = text.split('\n')
+    for index, line in enumerate(lines):
+        carriage = '\r' if line.endswith('\r') else ''
+        fields = line.rstrip('\r').split('\t')
+        if len(fields) < 2 or '@' not in fields[-1]:
+            continue
+        if (fields[0] in ('Name', 'Description') and len(fields) == 2) or \
+                (fields[0] == 'Action' and fields[1] in TEXT_ACTIONS):
+            fields[-1] = resolve_text(repo, fields[-1])
+            lines[index] = '\t'.join(fields) + carriage
+    return '\n'.join(lines)
+
+
 # Package folders with a Package.cfg below a folder, in name order.
 def _package_dirs(folder):
     if folder is None or not Path(folder).is_dir():
@@ -86,7 +142,8 @@ def packages(repo, with_content=True):
     if with_content:
         sources += [(path, False) for path in _package_dirs(content_folder(repo))]
     for path, public in sources:
-        entries = [entry for entry in parse_entries((path / DEFINITION_FILE).read_text(encoding='utf-8'))
+        entries = [{key: resolve_text(repo, value) for key, value in entry.items()}
+                   for entry in parse_entries((path / DEFINITION_FILE).read_text(encoding='utf-8'))
                    if entry.get('File')]
         if not entries:
             continue
@@ -114,9 +171,11 @@ def entries(repo, with_content=True):
     return result
 
 
-# The definition texts of all packages joined in campaign order, as one Campaign.cfg-like text.
+# The definition texts of all packages joined in campaign order, as one Campaign.cfg-like text. The texts that are
+# references "@<key>" to the language files stand as their English texts (resolve_text).
 def definition_text(repo, with_content=True):
-    return '\n'.join((path / DEFINITION_FILE).read_text(encoding='utf-8').replace('\r', '')
+    return '\n'.join(re.sub(r'^(\w+)=(@\S+)$', lambda match: match.group(1) + '=' + resolve_text(repo, match.group(2)),
+                            (path / DEFINITION_FILE).read_text(encoding='utf-8').replace('\r', ''), flags=re.M)
                      for path, _, _, _ in packages(repo, with_content))
 
 
@@ -162,7 +221,12 @@ def has_public_campaign(repo):
 
 # The text of a level file (see level_path).
 def read_level(repo, name):
-    return level_path(repo, name).read_text(encoding='utf-8')
+    return resolve_level_text(repo, level_path(repo, name).read_text(encoding='utf-8'))
+
+
+# The text of a level file at a path, with its text references replaced by the English texts (resolve_level_text).
+def read_level_file(repo, path):
+    return resolve_level_text(repo, Path(path).read_text(encoding='utf-8'))
 
 
 # Wings that have no package.

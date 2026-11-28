@@ -28,6 +28,11 @@ import tempfile
 repo = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(repo / 'scripts'))
 import content_packages  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import language_texts  # noqa: E402
+# The language system stands in for the probe: Translation::tr answers with the English texts of the language
+# files, and Gui::trCegui / Gui::toCeguiText hand the text on as it is
+TEXT_STUB = language_texts.translation_stub() + ('namespace Gui {inline std::string trCegui(const std::string& key) {return Translation::tr(key);} inline std::string toCeguiText(const std::string& text) {return text;}}\n')
 HAS_CONTENT = content_packages.has_content(repo)
 deps = Path(os.environ.get('BUILD_DEPS_ROOT', str(Path.home() / 'build-deps')))
 game_mode = (repo / 'source/modes/GameMode.cpp').read_text()
@@ -663,7 +668,7 @@ def run(executable, arguments, work):
 
 with tempfile.TemporaryDirectory(prefix='odp-heart-burst-') as directory:
     work = Path(directory)
-    (work / 'pure.cpp').write_text(pure)
+    (work / 'pure.cpp').write_text(TEXT_STUB + pure)
     subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17', '/W1', '/I', str(repo / 'source'), 'pure.cpp', '/Fepure.exe'],
                    cwd=work, check=True)
     run('pure.exe', [], work)
@@ -672,7 +677,7 @@ with tempfile.TemporaryDirectory(prefix='odp-heart-burst-') as directory:
     if not HAS_CONTENT:
         content_packages.unchecked('check_defeat_heart_burst', ['render probe'])
         sys.exit(0)
-    (work / 'render.cpp').write_text(render)
+    (work / 'render.cpp').write_text(TEXT_STUB + render)
     subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17', '/W1', '/I', str(deps / 'install/include/OGRE'),
                     '/I', str(deps / 'install/include/OGRE/RTShaderSystem'), '/I', str(repo / 'source'),
                     'render.cpp', '/Ferender.exe', '/link', '/LIBPATH:' + str(deps / 'install/lib'),

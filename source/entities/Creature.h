@@ -304,6 +304,10 @@ public:
     std::string getStatsText();
     //! \brief Returns statistics with only hand items visible to a foreign viewing seat.
     std::string getStatsText(const Seat* viewer);
+    //! \brief The label of a line "<label>: <value>" of the statistics text (getStatsText): the text reference
+    //! "@creature.stats.<id>", the same in every language. The server writes it, the client finds a value by it
+    //! (SocialWindow) and shows the label in its own language with Translation::resolve.
+    static std::string statsLabel(const std::string& id);
     //! \brief Writes a value rounded to at most two decimals, without zeros at the end: "51.6" for 51.59700000000005,
     //! "70", "4.59", "-1234.5", "0"; from 1e15 on in exponent form ("9.88e+20"). Used for the game values of the
     //! statistics text and of the Dungeonbook, which are sums of floating point steps (owner decision 830).

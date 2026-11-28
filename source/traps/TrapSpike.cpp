@@ -28,9 +28,10 @@
 #include "utils/ConfigManager.h"
 #include "utils/Random.h"
 #include "utils/LogManager.h"
+#include "utils/Translation.h"
 
 const std::string TrapSpikeName = "Spike";
-const std::string TrapSpikeNameDisplay = "Spike trap";
+const std::string TrapSpikeNameKey = "trap.spike.name";
 const TrapType TrapSpike::mTrapType = TrapType::spike;
 
 namespace
@@ -43,8 +44,9 @@ class TrapSpikeFactory : public TrapFactory
     const std::string& getName() const override
     { return TrapSpikeName; }
 
-    const std::string& getNameReadable() const override
-    { return TrapSpikeNameDisplay; }
+    //! \brief The name shown to the player, in the chosen language.
+    std::string getNameReadable() const override
+    { return Translation::tr(TrapSpikeNameKey); }
 
     int getCostPerTile() const override
     { return ConfigManager::getSingleton().getTrapConfigInt32("SpikeCostPerTile"); }

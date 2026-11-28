@@ -6,6 +6,9 @@ appears, the marks are saved and loaded, they give no worker any dig work and th
 """
 from pathlib import Path
 import re
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from language_texts import english  # noqa: E402
 
 repo = Path(__file__).resolve().parents[2]
 
@@ -64,15 +67,16 @@ pressed = body(game_mode, 'bool GameMode::mousePressed(')
 assert 'isDigEdgePlace(inputManager.mXPos, inputManager.mYPos)' in pressed
 assert 'mDigSetBool = !mGameMap->getLocalPlayer()->getSeat()->isEdgePlaceMarked(' in pressed
 # Other actions beyond the edge stay as before: the refusal remains for them (hand drops, building, spells).
-assert 'Point at a tile inside the map.' in pressed
+assert 'mode.input.outside_map' in pressed and english('mode.input.outside_map') == 'Point at a tile inside the map.'
 check_input = body(game_mode, 'void GameMode::checkInputCommand()')
 assert '!isDigEdgePlace(inputManager.mXPos, inputManager.mYPos)' in check_input
-assert 'Point at a tile inside the map.' in check_input
+assert 'mode.input.outside_map' in check_input
 
 # Hover reads like an undiscovered tile; the selection reaches over the edge and reports no refusal for edge places.
 none_action = body(game_mode, 'void GameMode::handlePlayerActionNone()')
 edge_hover = none_action[none_action.index('tile == nullptr && isDigEdgePlace'):none_action.index('if(tile != nullptr && (!tile->getEverVisible()')]
-assert '"Unexplored. Click or drag to mark for digging."' in edge_hover
+assert 'mode.game.cursor.unexplored' in edge_hover
+assert english('mode.game.cursor.unexplored') == 'Unexplored. Click or drag to mark for digging.'
 assert 'ColourValue::Red' not in edge_hover
 select = body(game_mode, 'void GameMode::handlePlayerActionSelectTile()')
 assert 'EdgePlaces::inRectangle(' in select

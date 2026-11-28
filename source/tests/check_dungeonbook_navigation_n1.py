@@ -15,7 +15,8 @@ sys.path.insert(0, str(repo / 'scripts'))
 import content_packages  # noqa: E402
 
 source = (repo / 'source/render/SocialWindow.cpp').read_text(encoding='utf-8')
-assert all(label in source for label in ('"All", "Zivs", "Fighters", "Unhappy"',))
+assert all(label in source for label in ('"ui.dungeonbook.filter.all", "ui.dungeonbook.filter.zivs",',
+                                          '"ui.dungeonbook.filter.fighters", "ui.dungeonbook.filter.unhappy"'))
 
 def body(signature):
     return source.split(signature, 1)[1].split('\n}', 1)[0]

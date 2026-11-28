@@ -71,7 +71,8 @@ uint32_t toUInt32(const std::string& value) { return static_cast<uint32_t>(std::
 }
 '''
     for signature in ("Weapon* Weapon::load(", "bool Weapon::update(", "std::string Weapon::getWeaponType(",
-                      "std::string Weapon::makeReadableName(", "std::string Weapon::getDisplayName() const"):
+                      "std::string Weapon::makeReadableName(", "std::string Weapon::getDisplayName() const",
+                      "std::string Weapon::getNameKey() const"):
         probe += "\n" + function(source("source/entities/Weapon.cpp"), signature)
     probe += r'''
 //! \brief Checks real parser data, exact-equipment pictures, precision, quality and authoritative overrides.

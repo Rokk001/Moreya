@@ -33,9 +33,10 @@
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
+#include "utils/Translation.h"
 
 const std::string SpellInvisibilityName = "invisibility";
-const std::string SpellInvisibilityNameDisplay = "Invisibility";
+const std::string SpellInvisibilityNameKey = "spell.invisibility.name";
 const std::string SpellInvisibilityCooldownKey = "InvisibilityCooldown";
 const SpellType SpellInvisibility::mSpellType = SpellType::invisibility;
 
@@ -53,8 +54,9 @@ class SpellInvisibilityFactory : public SpellFactory
     const std::string& getCooldownKey() const override
     { return SpellInvisibilityCooldownKey; }
 
-    const std::string& getNameReadable() const override
-    { return SpellInvisibilityNameDisplay; }
+    //! \brief The name shown to the player, in the chosen language.
+    std::string getNameReadable() const override
+    { return Translation::tr(SpellInvisibilityNameKey); }
 
     virtual void checkSpellCast(GameMap* gameMap, const InputManager& inputManager, InputCommand& inputCommand) const override
     { SpellInvisibility::checkSpellCast(gameMap, inputManager, inputCommand); }
@@ -82,7 +84,7 @@ void SpellInvisibility::checkSpellCast(GameMap* gameMap, const InputManager& inp
     Tile* tileSelected = gameMap->getTile(inputManager.mXPos, inputManager.mYPos);
     if(tileSelected == nullptr)
     {
-        inputCommand.displayText(Ogre::ColourValue::Red, "Point at a tile inside the map.");
+        inputCommand.displayText(Ogre::ColourValue::Red, Translation::tr("spell.hint.point_at_tile"));
         return;
     }
 
@@ -95,26 +97,25 @@ void SpellInvisibility::checkSpellCast(GameMap* gameMap, const InputManager& inp
     Creature* closestCreature = tileSelected->getClosestCreature(SelectionEntityWanted::creatureAliveOwned);
     if(closestCreature == nullptr)
     {
-        inputCommand.displayText(Ogre::ColourValue::Red, "Select one of your living creatures.");
+        inputCommand.displayText(Ogre::ColourValue::Red, Translation::tr("spell.hint.select_own_living_creature"));
         return;
     }
 
     if(closestCreature->isKo())
     {
-        inputCommand.displayText(Ogre::ColourValue::Red, "The creature is knocked out.");
+        inputCommand.displayText(Ogre::ColourValue::Red, Translation::tr("spell.hint.creature_knocked_out"));
         return;
     }
 
     if(closestCreature->isInContainment())
     {
-        inputCommand.displayText(Ogre::ColourValue::Red, "The creature is a prisoner.");
+        inputCommand.displayText(Ogre::ColourValue::Red, Translation::tr("spell.hint.creature_is_prisoner"));
         return;
     }
 
     if(playerMana < price)
     {
-        inputCommand.displayText(Ogre::ColourValue::Red, "Not enough mana. " +
-            formatCastSpell(SpellType::invisibility, price));
+        inputCommand.displayText(Ogre::ColourValue::Red, Translation::tr("spell.hint.not_enough_mana", {{"text", formatCastSpell(SpellType::invisibility, price)}}));
         return;
     }
 

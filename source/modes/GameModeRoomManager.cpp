@@ -6,7 +6,9 @@
 #include "rooms/Room.h"
 #include "rooms/RoomManager.h"
 #include "rooms/RoomManagerStatus.h"
+#include "render/Gui.h"
 #include "utils/Helper.h"
+#include "utils/Translation.h"
 
 #include <CEGUI/CEGUI.h>
 #include <CEGUI/widgets/PushButton.h>
@@ -75,7 +77,9 @@ void GameMode::refreshRoomManager()
         closeRoomManager();
         return;
     }
-    frame->getChild("RoomsLabel")->setText("Rooms (" + Helper::toString(mRoomManagerNavigation.listedCount()) + ")");
+    std::map<std::string, std::string> roomCountValues;
+    roomCountValues["count"] = Helper::toString(mRoomManagerNavigation.listedCount());
+    frame->getChild("RoomsLabel")->setText(Gui::toCeguiText(Translation::tr("mode.game.rooms.title", roomCountValues)));
     std::size_t visibleRow = 0;
     for(std::size_t index = 0; index < counts.size(); ++index)
     {
@@ -84,7 +88,7 @@ void GameMode::refreshRoomManager()
         if(counts[index] == 0)
             continue;
         row->setYPosition(CEGUI::UDim(0, static_cast<float>(visibleRow++) * row->getSize().d_height.d_offset));
-        row->getChild("Name")->setText(RoomManager::getRoomReadableName(entries[index].type));
+        row->getChild("Name")->setText(Gui::toCeguiText(RoomManager::getRoomReadableName(entries[index].type)));
         row->getChild("Icon")->setProperty("Image", ROOM_ICONS[index]);
         row->getChild("Highlight")->setVisible(entries[index].type == mRoomManagerNavigation.selected());
         showRoomDot(row->getChild("Dot"), entries[index].dot);

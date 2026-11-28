@@ -2,7 +2,7 @@
 
 <GUILayout version="4" >
 <!--#@own 1-->
-        <Property name="Text" value="Warning" />
+        <Property name="Text" value="@layout.window_apply_changes.confirm_restart.text" />
         <Property name="Alpha" value="0.8" />
         <Property name="AlwaysOnTop" value="True" />
         <Property name="SizingEnabled" value="False" />

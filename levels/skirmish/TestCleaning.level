@@ -1,8 +1,8 @@
 OpenDungeons_Version:0.7.1  # The version of OpenDungeons which created this file (for compatibility reasons).
 
 [Info]
-Name	\[Test\] Cleaning and toilets
-Description	A small test map for dirt, cleaning and toilets: dirty rooms, piles, a toilet room, Zivs and fighters...
+Name	@level.testcleaning.name
+Description	@level.testcleaning.description
 Music	Searching_yd.ogg
 FightMusic	TheDarkAmulet_MP.ogg
 [/Info]

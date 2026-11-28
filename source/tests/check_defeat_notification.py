@@ -34,6 +34,7 @@ enum class RoomType {dungeonTemple};
 enum class SoundRelativeKeeperStatements {Lost, Defeat, AllyDefeated};
 struct ODPacket {std::vector<std::string> texts;std::vector<int32_t> ints;
  ODPacket& operator<<(const char* t){texts.push_back(t);return *this;}
+ ODPacket& operator<<(const std::string& t){texts.push_back(t);return *this;}
  ODPacket& operator<<(EventShortNoticeType){return *this;}
  ODPacket& operator<<(int32_t v){ints.push_back(v);return *this;}
  ODPacket& operator<<(uint32_t){return *this;}ODPacket& operator<<(bool){return *this;}};
@@ -115,6 +116,8 @@ method = function(source, 'void Player::notifyNoMoreDungeonTemple(')
 method += function(source, 'void Player::notifyDefeat(')
 method += function(source, 'void Player::sendLevelStatistics(')
 probe = probe.replace('RECORD', record).replace('METHOD', method)
+# The messages are text references (utils/Translation.h); the probe has no language system
+probe = probe.replace('#define OD_LOG_INF(x)', '#define OD_LOG_INF(x)\n' + (repo / 'source/tests/translation_probe_stub.h').read_text(), 1)
 
 # Static wiring checks on the production sources (client handler and enum position).
 handler = client[client.index('case ServerNotificationType::playerDefeated:'):]

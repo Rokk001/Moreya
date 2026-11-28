@@ -46,7 +46,7 @@ def gui_file(name):
 
 def gui_xml(name):
     """The root element of an XML file of gui/ as the game reads it (a mixed file joined with its own rows)."""
-    return ET.fromstring(content_packages.read_text(repo, 'gui/' + str(name)))
+    return ET.fromstring(content_packages.read_layout_text(repo, 'gui/' + str(name)))
 
 
 #: The gui files the check reads besides the menu layouts (the layouts are listed in MENU_LAYOUTS below)
@@ -184,7 +184,7 @@ x, y, w, h = pieces['LoadRowSelected']
 assert np.abs(atlas[y:y + h, x:x + w, :3] - sheet[484:524, 1272:1792]).mean() < 0.5, 'selected row is not the sheet row'
 
 # ------------------------------------------------------------------------------------------------ 2. looks
-look_text = content_packages.read_text(repo, 'gui/OD.looknfeel')
+look_text = content_packages.read_layout_text(repo, 'gui/OD.looknfeel')
 looks = {wl.get('name'): wl for wl in ET.fromstring(look_text).findall('WidgetLook')}
 
 
@@ -234,7 +234,7 @@ for state, template_state in EXPECTED_STATES.items():
                                                   'Pushed' if state == 'Pushed' else 'Hover')):
         expected = sorted('ODMenuTemplate/Compact' + chosen + n for n in ('LeftCap', 'Fill', 'RightCap'))
         assert sorted(state_images('OD/MenuFilterButton', prefix + state)) == expected, ('filter', prefix + state)
-scheme = content_packages.read_text(repo, 'gui/ODSkin.scheme')
+scheme = content_packages.read_layout_text(repo, 'gui/ODSkin.scheme')
 for window_type, target in (('OD/MenuTextButton', 'CEGUI/PushButton'), ('OD/MenuCompactButton', 'CEGUI/PushButton'),
                             ('OD/MenuFilterButton', 'CEGUI/RadioButton'), ('OD/LoadListbox', 'CEGUI/Listbox')):
     assert re.search(r'lookNFeel="%s" renderer="[^"]+" targetType="%s" windowType="%s"' % (window_type, target, window_type),
@@ -283,7 +283,7 @@ fonts = {}
 for font_file in content_packages.data_glob(repo, 'gui/fonts', '*.font'):
     if '.own.' in font_file.name:
         continue   # the own rows of a font are part of its joined file
-    spec = ET.fromstring(content_packages.read_text(repo, content_packages.relative_path(repo, font_file)))
+    spec = ET.fromstring(content_packages.read_layout_text(repo, content_packages.relative_path(repo, font_file)))
     fonts[spec.get('name')] = (ImageFont.truetype(str(gui_file('fonts/' + spec.get('filename'))), 1024),
                                float(spec.get('size')) * (96.0 / 72.0) / 1024.0)
 skin_set = gui_xml('ODSkin.imageset')
@@ -459,7 +459,7 @@ BELOW_THE_WINDOW = {('MenuLoad.layout', 'MapDescriptionText')}
 # 0.5 and 3 above the ground; its centre x is -0.0375. The column centre may be at most 2 screen pixels beside it.
 ENTRANCE_LOCAL = (-0.0375, -3.0, 1.75)
 ENTRANCE_TOLERANCE = 2.0
-scene_cfg = content_packages.read_text(repo, 'config/mainmenuscene.cfg')
+scene_cfg = content_packages.read_layout_text(repo, 'config/mainmenuscene.cfg')
 camera_code = (repo / 'source/camera/CameraManager.cpp').read_text(encoding='utf-8')
 OVERVIEW_POSE = [float(v) for v in re.search(r'(?m)^Pose overview ([-\d. ]+)$', scene_cfg)[1].split()]
 GATE_POSITION = [float(v) for v in re.search(r'(?m)^AddEntity Gate MenuGate\.mesh ([-\d. ]+)$', scene_cfg)[1].split()]

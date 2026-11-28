@@ -23,24 +23,24 @@ assert "SocialProfileCache" not in notice
 short = body(player, "void Player::notifyCreatureEvent(Creature& creature, const std::string& suffix)")
 assert "notifyCreatureEvent(creature, suffix, EventShortNoticeType::aboutCreatures);" in short
 killed = body(player, "void Player::notifyCreatureKilled(")
-assert 'notifyCreatureEvent(creature, " has been killed");' in killed
+assert 'notifyCreatureEvent(creature, Translation::makeReference("msg.creature.killed"));' in killed
 assert killed.index("mCreatureKilledTime > 0.0f") < killed.index("notifyCreatureEvent(")
 creature = read("source/entities/Creature.cpp")
-for name, suffix in (("LeftDungeon", " left your dungeon"), ("LeavingDungeon", " is leaving your dungeon"),
-                     ("BecameRogue", " is not under your control anymore !"),
-                     ("Unhappy", " is unhappy !"), ("Furious", " is furious !")):
+for name, suffix in (("LeftDungeon", "msg.creature.left"), ("LeavingDungeon", "msg.creature.leaving"),
+                     ("BecameRogue", "msg.creature.uncontrolled"),
+                     ("Unhappy", "msg.creature.unhappy"), ("Furious", "msg.creature.furious")):
     function = body(creature, "void Creature::fireChatMsg" + name + "()")
-    assert 'notifyCreatureEvent(*this, "' + suffix + '");' in function
+    assert 'notifyCreatureEvent(*this, Translation::makeReference("' + suffix + '"));' in function
     assert "getName()" not in function
     assert "getHasLost()" in function and "getIsHuman()" in function
 fee = body(creature, "void Creature::fireChatMsgTookFee(int goldTaken)")
 assert "getPlayer()->notifyCreatureEvent(*this, suffix);" in fee
 assert "getName()" not in fee and "chatServer" not in fee
-assert '" took its fee: "' in fee and '" from its fee"' in fee
-for kind, suffix in (("Bed", " cannot find room for a bed. Build or enlarge a Dormitory."),
-                     ("Food", " cannot find food. Build a Hatchery.")):
+assert '"msg.creature.fee.all"' in fee and '"msg.creature.fee.part"' in fee
+for kind, suffix in (("Bed", "msg.creature.nobed"),
+                     ("Food", "msg.creature.nofood")):
     supply = body(player, "void Player::notifyCreatureCannotFind" + kind + "(")
-    assert 'notifyCreatureEvent(creature, "' + suffix + '", EventShortNoticeType::genericGameInfo);' in supply
+    assert 'notifyCreatureEvent(creature, Translation::makeReference("' + suffix + '"), EventShortNoticeType::genericGameInfo);' in supply
     assert "creature.getName()" not in supply
     assert "mCreatureCannotFind" + kind + " <= 0.0f" in supply
     assert "SoundRelativeKeeperStatements::CreatureNo" + kind in supply
@@ -52,7 +52,7 @@ assert "packetReceived >> evtMsg >> type" in notice
 assert "if(!packetReceived.endOfPacket())" in notice
 assert "packetReceived >> creatureName >> className >> worker" in notice
 assert "SocialProfileCache::getSingleton().getProfile(" in notice
-assert "creatureName, className, worker).getFullName() + evtMsg" in notice
+assert 'creatureName, className, worker).getFullName() + (isReferenceText ? " " : "") + evtMsg' in notice
 assert "getCreature(" not in notice, "notice must still resolve after the client entity disappears"
 # The Dungeonbook resolves the names with the same cache key and arguments (the creature card and the shared profile
 # page that did it before were deleted, owner decision 2026-11-18)

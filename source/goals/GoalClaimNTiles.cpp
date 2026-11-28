@@ -19,6 +19,7 @@
 
 #include "game/Player.h"
 #include "game/Seat.h"
+#include "utils/Translation.h"
 
 #include <sstream>
 #include <iostream>
@@ -35,25 +36,21 @@ bool GoalClaimNTiles::isMet(const Seat &s, const GameMap&)
     return (s.getNumClaimedTiles() >= mNumberOfTiles);
 }
 
+//! \brief The text reference goal.claim.success with the number of tiles.
 std::string GoalClaimNTiles::getSuccessMessage(const Seat&)
 {
-    std::stringstream tempSS;
-    tempSS << "You have claimed more than " << mNumberOfTiles << " tiles.";
-    return tempSS.str();
+    return Translation::makeReference("goal.claim.success", {{"tiles", std::to_string(mNumberOfTiles)}});
 }
 
+//! \brief The text reference goal.claim.failed with the number of tiles.
 std::string GoalClaimNTiles::getFailedMessage(const Seat&)
 {
-    std::stringstream tempSS;
-    tempSS << "You have failed to claim more than " << mNumberOfTiles
-            << " tiles.";
-    return tempSS.str();
+    return Translation::makeReference("goal.claim.failed", {{"tiles", std::to_string(mNumberOfTiles)}});
 }
 
+//! \brief The text reference goal.claim.description with the claimed tiles and the number of tiles to claim.
 std::string GoalClaimNTiles::getDescription(const Seat& s)
 {
-    std::stringstream tempSS;
-    tempSS << "Claimed " << s.getNumClaimedTiles() << " of "
-            << mNumberOfTiles << " tiles.";
-    return tempSS.str();
+    return Translation::makeReference("goal.claim.description",
+        {{"claimed", std::to_string(s.getNumClaimedTiles())}, {"tiles", std::to_string(mNumberOfTiles)}});
 }

@@ -76,7 +76,8 @@ Refusal refusal(bool limitActive, bool fightingCreature, uint32_t fightersInHand
 //! \brief Whole seconds shown for a running cooldown: rounded up, at least 1 while it runs, 0 when it is over.
 uint32_t displaySeconds(double cooldownLeft);
 
-//! \brief The short message a human keeper gets when a pickup is refused (HL2); empty for Refusal::none.
+//! \brief The short message a human keeper gets when a pickup is refused (HL2) as a text reference that each client
+//! shows in its own language; empty for Refusal::none.
 std::string refusalMessage(Refusal reason, double cooldownLeft);
 
 //! \brief The number shown under the prohibition picture while the cooldown runs (HL2, K5): the whole seconds as

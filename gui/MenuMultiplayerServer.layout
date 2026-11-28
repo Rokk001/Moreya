@@ -10,7 +10,7 @@
 <!--#@own 2-->
         <Window type="OD/StaticText" name="LoadingText" >
 <!--#@own 3-->
-            <Property name="Text" value="Loading..." />
+            <Property name="Text" value="@layout.menu_multiplayer_server.loading_text.text" />
             <Property name="MaxSize" value="{{1,0},{1,0}}" />
             <Property name="FrameEnabled" value="False" />
 <!--#@own 4-->
@@ -32,12 +32,12 @@
         </Window>
 <!--#@own 7-->
             <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
-            <Property name="Text" value="Please choose a Level..." />
+            <Property name="Text" value="@layout.menu_multiplayer_server.level_window_frame.text" />
             <Property name="AlwaysOnTop" value="True" />
 <!--#@own 8-->
             <Property name="MousePassThroughEnabled" value="True" />
 <!--#@own 9-->
-                <Property name="Text" value="Host Game" />
+                <Property name="Text" value="@layout.menu_multiplayer_server.level_window_frame.page_title.text" />
 <!--#@own 10-->
             <Window type="OD/Combobox" name="LevelTypeSelect" >
 <!--#@own 11-->
@@ -57,13 +57,13 @@
                 <Property name="BackgroundEnabled" value="False" />
             </Window>
 <!--#@own 15-->
-                <Property name="Text" value="Host Game" />
+                <Property name="Text" value="@layout.menu_multiplayer_server.level_window_frame.server_button.text" />
             </Window>
 <!--#@own 16-->
             </Window>
             <Window type="OD/StaticText" name="NickText" >
 <!--#@own 17-->
-                <Property name="Text" value="Nickname:" />
+                <Property name="Text" value="@layout.menu_multiplayer_server.level_window_frame.nick_text.text" />
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
                 <Property name="FrameEnabled" value="False" />
                 <Property name="BackgroundEnabled" value="False" />

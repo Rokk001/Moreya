@@ -46,6 +46,9 @@ enum class ServerNotificationType
     playerConfigChange,
 
     chat,
+    //! A message of the server: + string text (a text reference, see Translation::makeReference, that each client
+    //! shows in its own language), EventShortNoticeType, and for a creature notice string creature name, string
+    //! class name, bool worker.
     chatServer,
 
     turnStarted,
@@ -98,6 +101,7 @@ enum class ServerNotificationType
 
     playerEvents,
     
+    //! A text for the pointer or the context line: + string text (a text reference that each client resolves)
     displayText,
 
     //! \brief Answer to the editor asking what the waves of a wave portal are
@@ -126,11 +130,11 @@ enum class ServerNotificationType
     //! The team of a seat changed (an alliance of a level script): + int32_t seatId, int32_t teamId
     seatTeam,
     //! Score and room timer of a sandbox level: + int32_t score, int32_t target (0: none), string name of the
-    //! next room that becomes available (empty: none), int32_t seconds until it, uint32_t number of bonus
-    //! objectives, then per bonus: string text, int32_t points, bool awarded.
+    //! next room that becomes available (empty: none; a text reference), int32_t seconds until it, uint32_t number of
+    //! bonus objectives, then per bonus: string text (a text reference or a plain text), int32_t points, bool awarded.
     sandboxStatus,
     //! The score of a sandbox realm reached its target: + string name of the realm, string level file of the
-    //! next realm (empty: none), string text.
+    //! next realm (empty: none), string text (a text reference).
     sandboxRealmComplete,
 
     // Owner-only start of the defeat sequence for a defeated human player:
@@ -211,7 +215,8 @@ enum class ServerNotificationType
     //! The time left until the level is lost: + int32_t seconds (-1: there is no time limit), then an
     //! int32_t with the seconds left until the next hero wave of a level script (-1: none is shown)
     timeLimit,
-    //! \brief Owner-only campaign victory after levelStatistics and saved progress: string goalsDisplay.
+    //! \brief Owner-only campaign victory after levelStatistics and saved progress: string goalsDisplay (one text or
+    //! text reference per line).
     //! Appended so existing notification values remain unchanged.
     campaignVictory,
     //! \brief Owner-only merchant stock, deal history, margin and reservation-mode snapshot.

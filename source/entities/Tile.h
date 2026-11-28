@@ -23,6 +23,7 @@
 #include "entities/GameEntity.h"
 
 #include <CEGUI/EventArgs.h>
+#include <CEGUI/String.h>
 #include <Ogre.h>
 
 
@@ -690,6 +691,8 @@ public:
     void destroyStatsWindow();
     bool CloseStatsWindow(const CEGUI::EventArgs& /*e*/);
     void updateStatsWindow(const std::string& txt);
+    //! \brief The title of the tile info window in the chosen language.
+    CEGUI::String getStatsWindowTitle() const;
     //! \brief Server side. The text of the stats window of the tile, with the dirt stage of its room (clean, dirty or
     //! filthy) when the tile belongs to a room whose dirt is shown.
     std::string getStatsText();

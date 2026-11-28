@@ -34,11 +34,12 @@
 #include "game/SkillType.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
+#include "utils/Translation.h"
 
 #include <algorithm>
 
 const std::string SpellSummonWorkerName = "summonWorker";
-const std::string SpellSummonWorkerNameDisplay = "Summon Ziv";
+const std::string SpellSummonWorkerNameKey = "spell.summonworker.name";
 const std::string SpellSummonWorkerCooldownKey = "SummonWorkerCooldown";
 const SpellType SpellSummonWorker::mSpellType = SpellType::summonWorker;
 //! Turns the arrival look stays on a worker that was just summoned
@@ -57,8 +58,9 @@ class SpellSummonWorkerFactory : public SpellFactory
     const std::string& getCooldownKey() const override
     { return SpellSummonWorkerCooldownKey; }
 
-    const std::string& getNameReadable() const override
-    { return SpellSummonWorkerNameDisplay; }
+    //! \brief The name shown to the player, in the chosen language.
+    std::string getNameReadable() const override
+    { return Translation::tr(SpellSummonWorkerNameKey); }
 
     virtual void checkSpellCast(GameMap* gameMap, const InputManager& inputManager, InputCommand& inputCommand) const override
     { SpellSummonWorker::checkSpellCast(gameMap, inputManager, inputCommand); }
@@ -117,7 +119,7 @@ void SpellSummonWorker::checkSpellCast(GameMap* gameMap, const InputManager& inp
     if(targets.empty())
     {
         inputCommand.unselectAllTiles();
-        inputCommand.displayText(Ogre::ColourValue::Red, "Summon Zivs on your claimed ground.");
+        inputCommand.displayText(Ogre::ColourValue::Red, Translation::tr("spell.hint.summon_on_claimed_ground"));
         return;
     }
 
@@ -155,8 +157,7 @@ void SpellSummonWorker::checkSpellCast(GameMap* gameMap, const InputManager& inp
     if(tiles.empty())
     {
         inputCommand.unselectAllTiles();
-        inputCommand.displayText(Ogre::ColourValue::Red, "Not enough mana. " +
-            formatCastSpell(SpellType::summonWorker, getNextWorkerPriceForPlayer(gameMap, player)));
+        inputCommand.displayText(Ogre::ColourValue::Red, Translation::tr("spell.hint.not_enough_mana", {{"text", formatCastSpell(SpellType::summonWorker, getNextWorkerPriceForPlayer(gameMap, player))}}));
         return;
     }
     inputCommand.displayText(Ogre::ColourValue::White, formatCastSpell(SpellType::summonWorker, priceTotal));

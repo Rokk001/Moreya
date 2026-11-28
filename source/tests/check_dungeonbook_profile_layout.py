@@ -17,6 +17,7 @@ import xml.etree.ElementTree as ET
 repo = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(repo / 'scripts'))
 import content_packages  # noqa: E402
+import language_package_texts  # noqa: E402
 import room_packages  # noqa: E402
 
 gui = (repo / 'source/render/Gui.cpp').read_text()
@@ -48,7 +49,7 @@ from PIL import ImageFont
 
 social = (repo / 'source/render/SocialWindow.cpp').read_text()
 social_header = (repo / 'source/render/SocialWindow.h').read_text()
-social_layout = content_packages.read_text(repo, 'gui/WindowSocial.layout')
+social_layout = content_packages.read_layout_text(repo, 'gui/WindowSocial.layout')
 book = ET.fromstring(social_layout).find('Window')
 size = re.search(r'name="Area" value="\{\{0\.5,(-?\d+)\},\{0\.5,(-?\d+)\},\{0\.5,(\d+)\},\{0\.5,(\d+)\}\}"', social_layout)
 book_w, book_h = int(size[3]) - int(size[1]), int(size[4]) - int(size[2])
@@ -67,7 +68,7 @@ assert 'type="OD/Listbox"' not in social_layout
 font_files = {}
 for name in ('MedievalSharp-6', 'MedievalSharp-8', 'MedievalSharp-10', 'MedievalSharp-12', 'MedievalSharp-13', 'MedievalSharp-20'):
     # the font as the game reads it (a mixed font with its own rows from the content packages)
-    spec = ET.fromstring(content_packages.read_text(repo, 'gui/fonts/' + name + '.font'))
+    spec = ET.fromstring(content_packages.read_layout_text(repo, 'gui/fonts/' + name + '.font'))
     font_files[name] = (ImageFont.truetype(str(content_packages.resolve(repo, 'gui/fonts/' + spec.get('filename'))), 1024),
                         float(spec.get('size')) * (96.0 / 72.0) * (1024.0 / 800.0) / 1024.0)
 
@@ -208,7 +209,7 @@ icon_names = {i.get('name') for i in icons.findall('Image')}
 for value in re.findall(r'value="DungeonbookIcons/(\w+)"', social_layout) + re.findall(r'"DungeonbookIcons/(\w+)"', social):
     assert value in icon_names, value
 assert content_packages.data_file(repo, 'gui/' + icons.get('imagefile')) is not None
-scheme = ET.fromstring(content_packages.read_text(repo, 'gui/ODSkin.scheme'))
+scheme = ET.fromstring(content_packages.read_layout_text(repo, 'gui/ODSkin.scheme'))
 assert scheme.find("Imageset[@filename='DungeonbookIcons.imageset'][@name='DungeonbookIcons']") is not None
 assert scheme.find("Imageset[@filename='DungeonbookFrame.imageset'][@name='DungeonbookFrame']") is not None
 # The row of the moved atlas stands in the CREDITS of the content repository (public CREDITS plus that one)
@@ -216,10 +217,20 @@ assert 'gui/DungeonbookIcons.png' in room_packages.credits_text(repo)
 
 # Code: real game data only, every value of today kept, rounded to at most two decimals (owner decision 830: no raw
 # float sums such as 51.59700000000005), and the slots filled by the creature code
-for label in ('"Experience"', '"HP"', '"Gold"', '"Sight radius"', '"Potions"', '"Inventory"', '"Raw damage per second"',
-              '"Skill points earned / spent"'):
-    assert label in social, label
-assert 'findStatisticsValue(entry.stats, line.label)' in social
+# The labels of the statistics text are the text references "@creature.stats.<id>" (Creature::statsLabel), the same in
+# every language; their English texts are the labels of before
+STATISTICS_LABELS = (('experience', 'Experience'), ('hp', 'HP'), ('gold', 'Gold'), ('sight_radius', 'Sight radius'),
+                     ('potions', 'Potions'), ('inventory', 'Inventory'), ('damage_per_second', 'Raw damage per second'),
+                     ('skill_points', 'Skill points earned / spent'))
+for label, _ in STATISTICS_LABELS:
+    assert '"%s"' % label in social, label
+assert 'findStatisticsValue(entry.stats, Creature::statsLabel(line.label))' in social
+if content_packages.has_content(repo):
+    english_labels = language_package_texts.english(repo)
+    for label, text in STATISTICS_LABELS:
+        assert english_labels.get('creature.stats.' + label) == text, label
+else:
+    content_packages.unchecked('check_dungeonbook_profile_layout', ['English labels of the statistics text'])
 for field in ('critical', 'attackRating', 'defenseRating', 'physicalDefense', 'magicalDefense', 'elementDefense'):
     assert 'formatProfileValue(entry.%s)' % field in social, field
 assert 'formatProfileValue(values[i])' in social
@@ -255,9 +266,9 @@ for fragment in ('stream << std::fixed;', 'stream << std::scientific;', 'if(std:
     assert fragment in rounded, fragment
 assert re.search(r'ROUNDED_DECIMALS = 2;', creature_cpp) and re.search(r'ROUNDED_FIXED_MAX = 1e15;', creature_cpp)
 stats_text = function_of(creature_cpp, 'std::string Creature::getStatsText(const Seat* viewer)')
-for fragment in ('"Experience: " << formatRoundedNumber(mExp)',
-                 '"HP: " << formatRoundedNumber(getHP()) << " / " << formatRoundedNumber(mMaxHP)',
-                 '"Gold: " << formatRoundedNumber(mGoldCarried)'):
+for fragment in ('statsLabel("experience") << ": " << formatRoundedNumber(mExp)',
+                 'statsLabel("hp") << ": " << formatRoundedNumber(getHP()) << " / " << formatRoundedNumber(mMaxHP)',
+                 'statsLabel("gold") << ": " << formatRoundedNumber(mGoldCarried)'):
     assert fragment in stats_text, fragment
 server_text = (repo / 'source/network/ODServer.cpp').read_text()
 for getter in ('getAttackRating', 'getDefenseRating', 'getRawDamagePerSecond'):
@@ -317,7 +328,7 @@ for fragment in ('while(rest.size() > ATTRIBUTE_LINE_CHARS)', 'std::string::size
     assert fragment in break_value, fragment
 values_fill = function_of(social, 'void SocialWindow::refreshValues(')
 assert 'const char* names[] = {"Strength", "Dexterity", "Life", "Mana"};' in values_fill
-assert ('text << names[i] << "\\n" << (known ? breakAttributeValue(formatProfileValue(values[i])) : std::string("-"));'
+assert ('text << Translation::tr(nameKeys[i]) << "\\n"\n            << (known ? breakAttributeValue(formatProfileValue(values[i])) : std::string("-"));'
         in values_fill), 'the attribute cells show label and rounded value, broken into the lines of the cell'
 
 
@@ -367,7 +378,7 @@ assert not any(re.fullmatch(r'ValuesPage/(Strength|Dexterity|Life|Mana)\w+', n) 
 # path and skills are rows of the profile page (plan INGAME-QS-11 K1)
 assert 'entry.equipment, entry.path, entry.skills' in social and 'fitTextToWindow' not in social
 tiles = function_of(social, 'void SocialWindow::refreshValues(')
-for fragment in ('const std::string tooltip = std::string(tiles[i]) + ": " + value;',
+for fragment in ('tileText["tile"] = Translation::tr(tileKeys[i]);', 'tileText["value"] = value;',
                  'page->getChild(std::string(tiles[i]) + "Tile")->setTooltipText(tooltip);',
                  'page->getChild(std::string(tiles[i]) + "Title")->setTooltipText(tooltip);'):
     assert fragment in tiles, fragment
@@ -399,13 +410,13 @@ profile_range = (social.index('void SocialWindow::refreshProfile('), social.inde
 assert dots and all(fitted_range[0] < d < fitted_range[1] or profile_range[0] < d < profile_range[1] for d in dots), \
     'only the profile shortens its texts'
 assert 'void setFullText(CEGUI::Window* window, const std::string& text)' in social
-assert 'window->setText(escapeMarkup(text));' in function_of(social, 'void setFullText(')
-for call in ('setFullText(home->getChild("CreaturesLabel"), label.str());',
+assert 'window->setText(Gui::toCeguiText(escapeMarkup(text)));' in function_of(social, 'void setFullText(')
+for call in ('setFullText(home->getChild("CreaturesLabel"), Translation::tr(labelKey, labelValues));',
              'setFullText(row->getChild("Name"), profile.getFullName());',
              'setFullText(header->getChild("NameText"), profile.getFullName());',
              'setFullText(valueWindow, line.slots ? countFilledSlots(value) : formatStatisticsNumbers(value));',
-             'head->setText(std::string(FEED_NAME_COLOUR) + escapeMarkup(profile.getFullName()) + FEED_TIME_COLOUR',
-             'textWindow->setText(std::string(FEED_TEXT_COLOUR) + escapeMarkup(text));'):
+             'head->setText(Gui::toCeguiText(std::string(FEED_NAME_COLOUR) + escapeMarkup(profile.getFullName()) +',
+             'textWindow->setText(Gui::toCeguiText(std::string(FEED_TEXT_COLOUR) + escapeMarkup(text)));'):
     assert call in social, call
 assert 'Creature::fillItemSlotWindows(creature, slots, true)' in social
 creature_text = (repo / 'source/entities/Creature.cpp').read_text()
@@ -432,7 +443,7 @@ assert 'fillProfilePage(' not in social and 'fillProfilePage(' not in creature_t
 # pixels do not depend on the resolution); Gui::getWindowFitFactor shrinks a window larger than the screen together
 # with its children but not the fonts, so the texts are compared with the shrunk boxes.
 # The title is the sheet title (OD/SheetTitlebar): one line of the 13 point title font of OD/SheetWindow.
-sheet_look = ET.fromstring(content_packages.read_text(repo, 'gui/OD.looknfeel')).find("WidgetLook[@name='OD/SheetWindow']")
+sheet_look = ET.fromstring(content_packages.read_layout_text(repo, 'gui/OD.looknfeel')).find("WidgetLook[@name='OD/SheetWindow']")
 assert sheet_look.find("PropertyLinkDefinition[@name='TitlebarFont']").get('initialValue') == 'MedievalSharp-13'
 TITLE_LINE = line_height('MedievalSharp-13')
 need = {}
@@ -469,7 +480,7 @@ def wrap_lines(font, text, width):
 # post template of config/social-texts.cfg with each slot filled by its widest values (names, hometowns, jobs, likes,
 # dislikes, quirks, rooms of CreaturePosts::getRoomName, item names of items.cfg and potions.cfg, level 30).
 name_groups = []
-for line in content_packages.read_text(repo, 'config/social-names.cfg').split('\n'):
+for line in content_packages.read_layout_text(repo, 'config/social-names.cfg').split('\n'):
     cells = line.split('\t')
     if cells[0] == '[NameGroup]':
         name_groups.append({'given': [], 'last': [], 'home': []})
@@ -491,7 +502,7 @@ WIDEST_NAMES_8 = widest(full_names) + sorted(full_names, key=len)[-1:]
 WIDEST_NAMES_10 = widest(full_names, 'MedievalSharp-10') + sorted(full_names, key=len)[-1:]
 pools = {'job': [], 'like': [], 'dislike': [], 'quirk': []}
 templates = []
-for line in content_packages.read_text(repo, 'config/social-texts.cfg').split('\n'):
+for line in content_packages.read_layout_text(repo, 'config/social-texts.cfg').split('\n'):
     cells = line.split('\t')
     if cells[0].lower() in pools:
         pools[cells[0].lower()].append(cells[-1])
@@ -500,9 +511,14 @@ for line in content_packages.read_text(repo, 'config/social-texts.cfg').split('\
 assert len(templates) > 300 and all(pools.values()), 'post templates and slot pools are read'
 items = ['Soul crystal', 'Ectoplasm', 'Mana crystal', 'Research book']
 for cfg in ('items.cfg', 'potions.cfg'):
-    items += re.findall(r'^\s*Display\s+(.+?)\s*$', content_packages.read_text(repo, 'config/' + cfg), re.M)
+    items += re.findall(r'^\s*Display\s+(.+?)\s*$', content_packages.read_layout_text(repo, 'config/' + cfg), re.M)
 posts_source = (repo / 'source/social/CreaturePosts.cpp').read_text()
-rooms = re.findall(r'return "([a-z ]+)";', posts_source[posts_source.index('CreaturePosts::getRoomName'):][:3000])
+# The room names are entries of the language files (getSocialCodeText(key, English fallback)); the English text of
+# the key is measured, the fallback stands in for it without the content
+room_keys = re.findall(r'getSocialCodeText\("(social\.code\.room\.[a-z_]+)", "([a-z ]+)"\)',
+                       posts_source[posts_source.index('CreaturePosts::getRoomName'):][:3000])
+english_rooms = language_package_texts.english(repo)
+rooms = [english_rooms.get(key, fallback) for key, fallback in room_keys]
 assert len(items) > 50 and len(rooms) > 15, (len(items), len(rooms))
 slot_values = {'name': WIDEST_NAMES_8, 'friend': WIDEST_NAMES_8, 'hometown': widest([h for g in name_groups for h in g['home']]),
                'job': widest(pools['job']), 'like': widest(pools['like']), 'dislike': widest(pools['dislike']),
@@ -547,9 +563,9 @@ handles = ['@' + max((g for group in name_groups for g in group['given']), key=l
 require('ProfilePage/NameText', 'MedievalSharp-12', texts=WIDEST_NAMES_12, pad_w=0.0)
 for label in ('Age', 'Gender', 'Relationship', 'Origin', 'Job', 'Path', 'Skills'):
     require('ProfilePage/%sLabel' % label, 'MedievalSharp-8', texts=(label + ':',))
-age_jokes = [c for line in content_packages.read_text(repo, 'config/social-names.cfg').split('\n')
+age_jokes = [c for line in content_packages.read_layout_text(repo, 'config/social-names.cfg').split('\n')
              for c in line.split('\t')[1:] if line.startswith('AgeJoke') and c]
-relations = [line.split('\t')[-1] for line in content_packages.read_text(repo, 'config/social-texts.cfg').split('\n')
+relations = [line.split('\t')[-1] for line in content_packages.read_layout_text(repo, 'config/social-texts.cfg').split('\n')
              if line.startswith('Relation\t')]
 require('ProfilePage/AgeValue', 'MedievalSharp-8', texts=tuple(age_jokes) + ('30',))
 require('ProfilePage/GenderValue', 'MedievalSharp-8', texts=('Female', 'Male', '-'))

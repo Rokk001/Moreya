@@ -15,6 +15,8 @@ enum class Quality : int32_t { poor, common, rare, epic };
 
 //! \brief Returns the spelling used in definition files and player displays.
 const std::string& qualityName(Quality quality);
+//! \brief The name of a quality as the player sees it, in the chosen language (the catalogue spelling stays the id).
+std::string qualityDisplayName(Quality quality);
 //! \brief Parses a quality name without accepting unknown qualities.
 bool parseQuality(const std::string& name, Quality& quality);
 //! \brief Writes a quality as an int32 value.
@@ -78,6 +80,12 @@ public:
     const std::string& getPoorEquipment() const { return mPoorEquipment; }
     //! \brief Returns one quality's bonuses, price and presentation.
     const ItemQuality& getQuality(Quality quality) const;
+    //! \brief Returns the key of the language files that holds the name of one quality, for example
+    //! "item.poor_head.poor.name".
+    std::string getNameKey(Quality quality) const;
+    //! \brief Returns the name of one quality in the chosen language; the English Display of the catalogue while the
+    //! language files have no text for it.
+    std::string getDisplayText(Quality quality) const;
     //! \brief Writes a complete definition block for network transfer.
     void exportToStream(std::ostream& stream) const;
     //! \brief Transfers a definition as its canonical textual block.

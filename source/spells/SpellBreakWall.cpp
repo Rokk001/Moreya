@@ -30,11 +30,12 @@
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
+#include "utils/Translation.h"
 
 #include <cmath>
 
 const std::string SpellBreakWallName = "breakWall";
-const std::string SpellBreakWallNameDisplay = "Break Wall";
+const std::string SpellBreakWallNameKey = "spell.breakwall.name";
 const std::string SpellBreakWallCooldownKey = "BreakWallCooldown";
 const SpellType SpellBreakWall::mSpellType = SpellType::breakWall;
 
@@ -52,8 +53,9 @@ class SpellBreakWallFactory : public SpellFactory
     const std::string& getCooldownKey() const override
     { return SpellBreakWallCooldownKey; }
 
-    const std::string& getNameReadable() const override
-    { return SpellBreakWallNameDisplay; }
+    //! \brief The name shown to the player, in the chosen language.
+    std::string getNameReadable() const override
+    { return Translation::tr(SpellBreakWallNameKey); }
 
     virtual void checkSpellCast(GameMap* gameMap, const InputManager& inputManager, InputCommand& inputCommand) const override
     { SpellBreakWall::checkSpellCast(gameMap, inputManager, inputCommand); }
@@ -104,7 +106,7 @@ void SpellBreakWall::checkSpellCast(GameMap* gameMap, const InputManager& inputM
     Tile* tile = gameMap->getTile(inputManager.mXPos, inputManager.mYPos);
     if(tile == nullptr)
     {
-        inputCommand.displayText(Ogre::ColourValue::Red, "Point at a tile inside the map.");
+        inputCommand.displayText(Ogre::ColourValue::Red, Translation::tr("spell.hint.point_at_tile"));
         return;
     }
 
@@ -117,13 +119,13 @@ void SpellBreakWall::checkSpellCast(GameMap* gameMap, const InputManager& inputM
 
     if(!tile->getLocalPlayerHasVision() || !isValidWall(*tile, player->getSeat()))
     {
-        inputCommand.displayText(Ogre::ColourValue::Red, "Select a wall claimed by an enemy keeper that you can see.");
+        inputCommand.displayText(Ogre::ColourValue::Red, Translation::tr("spell.hint.select_enemy_wall"));
         return;
     }
 
     if(playerMana < price)
     {
-        inputCommand.displayText(Ogre::ColourValue::Red, "Not enough mana. " + formatCastSpell(SpellType::breakWall, price));
+        inputCommand.displayText(Ogre::ColourValue::Red, Translation::tr("spell.hint.not_enough_mana", {{"text", formatCastSpell(SpellType::breakWall, price)}}));
         return;
     }
 

@@ -18,6 +18,7 @@
 #include "game/CampaignWorld.h"
 
 #include "game/Campaign.h"
+#include "utils/Translation.h"
 
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/property_tree/ptree.hpp>
@@ -79,18 +80,6 @@ bool readCavePlace(const Tree& node, bool withLabel, CampaignWorldCave& cave)
     return !withLabel || !node.get_child_optional("label") || readRect(node, "label", cave.mLabel);
 }
 
-//! \brief The number as a word for the counts of groups a level can send, else as digits
-std::string countText(uint32_t count)
-{
-    if(count == 1)
-        return "one";
-    if(count == 2)
-        return "two";
-
-    std::ostringstream os;
-    os << count;
-    return os.str();
-}
 } // namespace
 
 const uint32_t CampaignWorld::NUM_WINGS;
@@ -332,26 +321,31 @@ size_t CampaignWorld::findCurrentCave(const Campaign& campaign) const
     return cave;
 }
 
-//! \brief Writes the number and kind of the groups or raids and their size, e.g. "two groups of 10"
+//! \brief Writes the number and kind of the groups or raids and their size, e.g. "two groups of 10", in the chosen
+//! language
 std::string CampaignWorld::getRaidSizeText(const CampaignWorldGuild& guild)
 {
-    std::ostringstream os;
-    os << countText(guild.mGroups) << " " << (guild.mRaid ? "raid" : "group") << ((guild.mGroups == 1) ? "" : "s")
-        << " of " << guild.mSize;
-    return os.str();
+    // One and two have their own texts ("one raid of 5", "two groups of 10"), the other counts show the number
+    const std::string kind = guild.mRaid ? "raid" : "group";
+    const std::string form = (guild.mGroups == 1) ? "_one" : ((guild.mGroups == 2) ? "_two" : "_many");
+    std::ostringstream count;
+    count << guild.mGroups;
+    std::ostringstream size;
+    size << guild.mSize;
+    return Translation::tr("campaign.code.size_" + kind + form, {{"count", count.str()}, {"size", size.str()}});
 }
 
 //! \brief Writes one line for the leader (both leaders when the two raids have different ones), the raid size and
-//! the origin
+//! the origin, in the chosen language
 std::string CampaignWorld::getGuildDetailsText(const CampaignWorldGuild& guild)
 {
     std::string text;
     if(guild.mFirstLeader.empty())
-        text = "Leader: " + guild.mLeader;
+        text = Translation::tr("campaign.code.leader", {{"name", guild.mLeader}});
     else
-        text = "Leaders: " + guild.mFirstLeader + " and " + guild.mLeader;
+        text = Translation::tr("campaign.code.leaders", {{"first", guild.mFirstLeader}, {"second", guild.mLeader}});
 
-    text += "\nRaid size: " + getRaidSizeText(guild);
-    text += "\nOrigin: " + guild.mOrigin;
+    text += "\n" + Translation::tr("campaign.code.raid_size", {{"text", getRaidSizeText(guild)}});
+    text += "\n" + Translation::tr("campaign.code.origin", {{"text", guild.mOrigin}});
     return text;
 }

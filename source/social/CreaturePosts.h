@@ -75,10 +75,10 @@ public:
 
     //! \brief The relationship status of the profile: "In a relationship" (needs a partner, the lovers
     //! tier, which is not produced yet), "Sworn enemies", "It's complicated" (friends and enemies at the
-    //! same time) or "Single".
+    //! same time) or "Single", in the chosen language (keys social.code.status.<kind>).
     static std::string getRelationshipStatus(bool hasPartner, bool hasFriends, bool hasHated, bool hasNemesis);
 
-    //! \brief Name of a room type as used in the post texts ("training hall", "library", ...).
+    //! \brief Name of a room type as used in the post texts ("training hall", "library", ...) in the chosen language (keys social.code.room.<id>).
     static std::string getRoomName(int32_t roomType);
 };
 

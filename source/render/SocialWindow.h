@@ -98,6 +98,8 @@ private:
         Skills
     };
 
+    //! \brief Writes the filter choices in the chosen language and draws the open book again after a language change.
+    void onLanguageChanged();
     //! \brief The filter dropdown returns to the overview.
     bool onFilterClicked(const CEGUI::EventArgs& e);
     //! \brief A creature of the list (user string "Row"): opens its inventory page.
@@ -189,6 +191,8 @@ private:
     uint32_t mShownProfilePostVersion;
     //! Seconds since the creature page was last refreshed
     float mSinceProfileRefresh;
+    //! Id of the listener that calls onLanguageChanged when the language changes (Translation::addListener)
+    unsigned int mLanguageListener;
 };
 
 #endif // SOCIALWINDOW_H

@@ -62,14 +62,15 @@ def names_of(warden):
 
 
 def description_lines(path):
-    """The Description lines inside the [Info] block of a level file."""
+    """The Description lines inside the [Info] block of a level file. The description is a reference to an English
+    text of the language files; the check reads that text."""
     with open(path, "r", encoding="utf-8") as handle:
         text = handle.read()
     match = re.search(r"\[Info\](.*?)\[/Info\]", text, re.S)
     if match is None:
         return None
-    return [line.rstrip("\r")[len("Description\t"):] for line in match.group(1).split("\n")
-            if line.startswith("Description\t")]
+    return [campaign_packages.resolve_text(ROOT, line.rstrip("\r")[len("Description\t"):])
+            for line in match.group(1).split("\n") if line.startswith("Description\t")]
 
 
 def main():

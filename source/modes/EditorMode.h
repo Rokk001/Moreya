@@ -207,6 +207,9 @@ private:
     //! \brief True once the region markers have been asked for after the level arrived
     bool mRegionsRequested;
 
+    //! \brief Id of the listener that rewrites the texts set from code when the language changes (0 = none)
+    unsigned int mLanguageListener = 0;
+
     //! \brief The creature node name being dragged by the mouse
     std::string mDraggedCreature;
 
@@ -235,6 +238,14 @@ private:
 
     //! \brief Writes the list of the editor's keyboard shortcuts into the controls window.
     void fillControlsWindow();
+
+    //! \brief Writes the texts that the code sets (level type items, status texts, controls window, wave window
+    //! title and lists) again in the chosen language. Called after the language changed.
+    void onLanguageChanged();
+
+    //! \brief Writes the texts of the items of the Level type combo box in the chosen language; the items are
+    //! found by their id, so that the selection stays.
+    void translateLevelTypeItems();
 
     //! \brief Shows the name of the level being edited. Called on every frame because the
     //! name is only known once the client has been told about the level, which happens

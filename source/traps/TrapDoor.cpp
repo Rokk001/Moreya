@@ -38,6 +38,7 @@
 #include "utils/Helper.h"
 #include "utils/Random.h"
 #include "utils/LogManager.h"
+#include "utils/Translation.h"
 
 #include <algorithm>
 #include <iomanip>
@@ -53,13 +54,13 @@ public:
     //! \brief Creates the factory of one door type.
     //! \param doorType The door type this factory builds.
     //! \param name The internal name used in level files and the config.
-    //! \param nameReadable The name shown to the player.
+    //! \param nameReadableKey The language key of the name shown to the player.
     //! \param configPrefix The prefix of the config keys of this door type (for example Wooden for WoodenDoorCostPerTile).
-    TrapDoorFactory(TrapType doorType, const std::string& name, const std::string& nameReadable,
+    TrapDoorFactory(TrapType doorType, const std::string& name, const std::string& nameReadableKey,
             const std::string& configPrefix) :
         mDoorType(doorType),
         mName(name),
-        mNameReadable(nameReadable),
+        mNameReadableKey(nameReadableKey),
         mConfigPrefix(configPrefix)
     {
     }
@@ -76,7 +77,8 @@ private:
 
     TrapType mDoorType;
     std::string mName;
-    std::string mNameReadable;
+    //! \brief The language key of the name shown to the player
+    std::string mNameReadableKey;
     //! \brief Prefix of the doors parameters in traps.cfg
     std::string mConfigPrefix;
 
@@ -86,8 +88,9 @@ private:
     const std::string& getName() const override
     { return mName; }
 
-    const std::string& getNameReadable() const override
-    { return mNameReadable; }
+    //! \brief The name shown to the player, in the chosen language.
+    std::string getNameReadable() const override
+    { return Translation::tr(mNameReadableKey); }
 
     int getCostPerTile() const override
     { return ConfigManager::getSingleton().getTrapConfigInt32(mConfigPrefix + "DoorCostPerTile"); }
@@ -144,14 +147,14 @@ private:
         }
         if(!canBuildOn(gameMap, tile))
         {
-            inputCommand.displayText(Ogre::ColourValue::Red, "A door needs walls on two opposite sides.");
+            inputCommand.displayText(Ogre::ColourValue::Red, Translation::tr("trap.hint.door_needs_walls"));
             inputCommand.displayPointerText(Ogre::ColourValue::Red, Helper::toString(pricePerTarget));
             return;
         }
         if(playerGold < pricePerTarget)
         {
             inputCommand.displayText(Ogre::ColourValue::Red,
-                "Not enough gold. " + formatBuildTrap(type, pricePerTarget));
+                Translation::tr("trap.hint.not_enough_gold", {{"text", formatBuildTrap(type, pricePerTarget)}}));
             inputCommand.displayPointerText(Ogre::ColourValue::Red, Helper::toString(pricePerTarget));
             return;
         }
@@ -225,7 +228,7 @@ private:
             if(tile->getIsBuilding() ||
                !canBuildOn(gameMap, tile))
             {
-                inputCommand.displayText(Ogre::ColourValue::Red, "Cannot place door on this tile");
+                inputCommand.displayText(Ogre::ColourValue::Red, Translation::tr("trap.hint.door_cannot_place"));
             }
             else
             {
@@ -324,12 +327,12 @@ private:
 };
 
 // Register the factories
-static TrapRegister regWooden(new TrapDoorFactory(TrapType::doorWooden, "DoorWooden", "Wooden door", "Wooden"));
-static TrapRegister regIronbound(new TrapDoorFactory(TrapType::doorIronbound, "DoorIronbound", "Ironbound door", "Ironbound"));
-static TrapRegister regSteel(new TrapDoorFactory(TrapType::doorSteel, "DoorSteel", "Steel door", "Steel"));
-static TrapRegister regBarricade(new TrapDoorFactory(TrapType::doorBarricade, "DoorBarricade", "Barricade", "Barricade"));
-static TrapRegister regSecret(new TrapDoorFactory(TrapType::doorSecret, "DoorSecret", "Secret door", "Secret"));
-static TrapRegister regRuned(new TrapDoorFactory(TrapType::doorRuned, "DoorRuned", "Runed door", "Runed"));
+static TrapRegister regWooden(new TrapDoorFactory(TrapType::doorWooden, "DoorWooden", "trap.doorwooden.name", "Wooden"));
+static TrapRegister regIronbound(new TrapDoorFactory(TrapType::doorIronbound, "DoorIronbound", "trap.doorironbound.name", "Ironbound"));
+static TrapRegister regSteel(new TrapDoorFactory(TrapType::doorSteel, "DoorSteel", "trap.doorsteel.name", "Steel"));
+static TrapRegister regBarricade(new TrapDoorFactory(TrapType::doorBarricade, "DoorBarricade", "trap.doorbarricade.name", "Barricade"));
+static TrapRegister regSecret(new TrapDoorFactory(TrapType::doorSecret, "DoorSecret", "trap.doorsecret.name", "Secret"));
+static TrapRegister regRuned(new TrapDoorFactory(TrapType::doorRuned, "DoorRuned", "trap.doorruned.name", "Runed"));
 }
 
 const std::string TrapDoor::ANIMATION_OPEN = "Open";

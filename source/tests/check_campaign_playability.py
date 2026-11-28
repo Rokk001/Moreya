@@ -1206,7 +1206,7 @@ def inventory(root, paths, base):
               "Every goal-bearing briefing sentence is reproduced verbatim. Match yes means its gameplay requirement is checked by a registered goal or script; no identifies the exact unchecked clause, including mixed sentences. Narrative context is omitted. Route/order instructions are not treated as satisfied merely because enemies are eliminated.", "",
               "Static reachability is a necessary condition, not a combat or script-solvability proof. Only once triggers whose sole conditions are elapsed time may open terrain for this analysis; flags, kills and other conditions are never assumed fulfilled.", ""]
     for path in sorted(paths, key=lambda level: level.name):
-        text = path.read_text(encoding="utf-8")
+        text = campaign_packages.read_level_file(root, path)
         entry = entries.get("campaign/" + path.name)
         result += ["## " + path.stem, "", "File: `" + path.relative_to(base).as_posix() + "`" + (" (not listed in a campaign package)." if entry is None else "."), "", "| Source | Exact requirement | Match |", "| --- | --- | --- |"]
         for _, line in lines(section(text, "Goals")):
@@ -1272,7 +1272,7 @@ def inventory(root, paths, base):
 
 # Exercise bad fixtures with fixed expectations, including a sealed Mossgate enemy and portal.
 def self_test(root):
-    original = campaign_packages.level_path(root, "Mossgate").read_text(encoding="utf-8")
+    original = campaign_packages.read_level(root, "Mossgate")
     level = parse_level(original)
     # Tile 1,1 is a gold seam since the gold density pass; 1,7 is the first tile the level file does not list
     assert level["tiles"][1, 7] == (1, 100.0, None), "sparse defaults must be full dirt"
@@ -1331,7 +1331,7 @@ def self_test(root):
     if not campaign_packages.has_content(root):
         print("campaign playability self-test passed (public package only)")
         return
-    wraithwood = parse_level(campaign_packages.level_path(root, "Wraithwood").read_text(encoding="utf-8"))
+    wraithwood = parse_level(campaign_packages.read_level(root, "Wraithwood"))
     assert wraithwood["creatures"], "nested tuning sections must not replace actual creatures"
     assert not objective_errors(original, "Mossgate"), "all Mossgate objectives need exact completions"
     for old, new, message in (
@@ -1366,7 +1366,7 @@ def self_test(root):
         ("TwistingHalls", "Cond\tpossessed\t1\tExitHall", "Cond\tregion\t1\tExitHall"),
         ("SwarmNight", "Cond\tevent\tDefaultWorker1\tkilled\t==\t0", "Cond\tevent\tDefaultWorker1\tincapacitated\t==\t0")
     ):
-        trial = campaign_packages.level_path(root, name).read_text(encoding="utf-8")
+        trial = campaign_packages.read_level(root, name)
         assert old in trial
         assert grouped_goal_errors(trial.replace(old, new), name), (name, old)
     for name, old, new in (
@@ -1380,10 +1380,10 @@ def self_test(root):
         ("Coldwell", "Cond\tminedregion\t1\tUndercroft\t>=\t600", "Cond\tmined\t1\t>=\t600"),
         ("Coldwell", "Cond\ttrapgone\tDoorWooden2", "Cond\ttrapgone\tDoorWooden1")
     ):
-        candidate = campaign_packages.level_path(root, name).read_text(encoding="utf-8")
+        candidate = campaign_packages.read_level(root, name)
         assert old in candidate
         assert grouped_goal_errors(candidate.replace(old, new), name), (name, old)
-    tinmoor = campaign_packages.level_path(root, "Tinmoor").read_text(encoding="utf-8")
+    tinmoor = campaign_packages.read_level(root, "Tinmoor")
     for old, new in (
         ("Action\tdiscover\tcampaign/CrowshotGallery.level", "Action\tdiscover\tcampaign/BoulderCourse.level"),
         ("Cond\tdeliveredstone\tvault-stone", "Cond\ttime\t0"),
@@ -1394,7 +1394,7 @@ def self_test(root):
     ):
         assert old in tinmoor
         assert objective_errors(tinmoor.replace(old, new), "Tinmoor"), old
-    wolfscar = campaign_packages.level_path(root, "Wolfscar").read_text(encoding="utf-8")
+    wolfscar = campaign_packages.read_level(root, "Wolfscar")
     for old, new in (
         ("Cond\tflag\tsouthRavineCrossed\t1", "Cond\ttrigger\tsouthCrossed"),
         ("Cond\tcrossed\t1\tMainStoneBridge5\tnorth", "Cond\tregion\t1\tMainStoneBridge5"),
@@ -1415,7 +1415,7 @@ def self_test(root):
     marker = "[Trigger]\nName\tmainHeart\n"
     early_narration = early_narration.replace(marker, narration_block + "\n" + marker, 1)
     assert any("narration must follow" in error for error in grouped_goal_errors(early_narration, "Wolfscar"))
-    ironbridge = campaign_packages.level_path(root, "Ironbridge").read_text(encoding="utf-8")
+    ironbridge = campaign_packages.read_level(root, "Ironbridge")
     for old, new in (
         ("Cond\tcrossed\t1\tMainStoneBridge3\teast\tafter\tmainSpan1", "Cond\tcrossed\t1\tMainStoneBridge3\teast"),
         ("Cond\tcrossed\t1\tMainStoneBridge6\teast\tafter\tmainSpan2", "Cond\tcrossed\t1\tMainStoneBridge6\teast"),
@@ -1430,7 +1430,7 @@ def self_test(root):
     ):
         assert old in ironbridge
         assert objective_errors(ironbridge.replace(old, new), "Ironbridge"), old
-    dunmarrow = campaign_packages.level_path(root, "Dunmarrow").read_text(encoding="utf-8")
+    dunmarrow = campaign_packages.read_level(root, "Dunmarrow")
     for old, new in (
         ("Cond\tflag\tgoalCampArrived\t1", "Cond\ttrigger\tcampEntered"),
         ("Cond\tflag\tburiedRouteUsed\t1", "Cond\ttrigger\tbarrowsEntered"),
@@ -1443,7 +1443,7 @@ def self_test(root):
     ):
         assert old in dunmarrow
         assert objective_errors(dunmarrow.replace(old, new), "Dunmarrow"), old
-    saltmere = campaign_packages.level_path(root, "Saltmere").read_text(encoding="utf-8")
+    saltmere = campaign_packages.read_level(root, "Saltmere")
     for old, new in (
         ("Cond\ttrigger\tlagoonReached", "Cond\ttime\t0"),
         ("Cond\ttrapgone\tDoorWooden2", "Cond\ttrapgone\tDoorWooden3"),
@@ -1457,7 +1457,7 @@ def self_test(root):
     ):
         assert old in saltmere
         assert objective_errors(saltmere.replace(old, new), "Saltmere"), old
-    crowshot = campaign_packages.level_path(root, "CrowshotGallery").read_text(encoding="utf-8")
+    crowshot = campaign_packages.read_level(root, "CrowshotGallery")
     for old, new in (
         ("Cond\tshotkilled\t1\tCrow1", "Cond\tevent\tCrow1\tkilled"),
         ("Cond\tshotkilled\t1\tRook8", "Cond\tevent\tRook8\tincapacitated"),
@@ -1469,7 +1469,7 @@ def self_test(root):
     ):
         assert old in crowshot
         assert objective_errors(crowshot.replace(old, new), "CrowshotGallery"), old
-    hollin = campaign_packages.level_path(root, "HollinFen").read_text(encoding="utf-8")
+    hollin = campaign_packages.read_level(root, "HollinFen")
     for old, new in (
         ("Cond\tfurniture\t1\tDormitory\t>=\t9", "Cond\tfurniture\t1\tDormitory\t>=\t2"),
         ("Cond\tclaimed\t1\tCauseway\t40", "Cond\tregion\t1\tWard"),
@@ -1482,7 +1482,7 @@ def self_test(root):
     ):
         assert old in hollin
         assert objective_errors(hollin.replace(old, new), "HollinFen"), old
-    greywater = campaign_packages.level_path(root, "Greywater").read_text(encoding="utf-8")
+    greywater = campaign_packages.read_level(root, "Greywater")
     for old, new in (
         ("Cond\tattackedregion\t1\t3\tSiege", "Cond\tregion\t1\tSiege"),
         ("Cond\tattackedregion\t1\t3\tSiege", "Cond\tattackedregion\t2\t3\tSiege"),
@@ -1495,7 +1495,7 @@ def self_test(root):
     ):
         assert old in greywater
         assert objective_errors(greywater.replace(old, new), "Greywater"), old
-    ravensledge = campaign_packages.level_path(root, "Ravensledge").read_text(encoding="utf-8")
+    ravensledge = campaign_packages.read_level(root, "Ravensledge")
     for old, new in (
         ("Cond\tcrossed\t1\tCrossLowerWest\tnorth", "Cond\tregion\t1\tShelf"),
         ("Cond\tcrossed\t1\tCrossUpperWest\tnorth\tafter\tshelfHeld", "Cond\tcrossed\t1\tCrossUpperWest\tnorth"),
@@ -1508,7 +1508,7 @@ def self_test(root):
         assert objective_errors(ravensledge.replace(old, new), "Ravensledge"), old
     wrong_trap = ravensledge.replace("trapgone\tDoorWooden1", "trapgone\tNoSuchDoor")
     assert any("no initial named trap" in error for error in objective_errors(wrong_trap, "Ravensledge"))
-    bellwick = campaign_packages.level_path(root, "Bellwick").read_text(encoding="utf-8")
+    bellwick = campaign_packages.read_level(root, "Bellwick")
     assert not objective_errors(bellwick, "Bellwick"), "advisory hint must not renumber later IDs"
     assert "objectiveid\t1\tbellwick-o03\t" not in bellwick, "the removed survival goal must stay undeclared"
     assert "objectiveid\t1\tbellwick-o04\t" in bellwick
@@ -1518,20 +1518,20 @@ def self_test(root):
     # The advisory hint line stays (its text belongs to the content package, so its fixed SHA-256 is compared)
     assert any(hashlib.sha256(line.encode("utf-8")).hexdigest() == "018d287445837138811473b22d9b228e4b566e418017c24d4f76b795c5330471"
                for line in bellwick.replace("\r", "").split("\n"))
-    legacy = campaign_packages.level_path(root, "Campaign1").read_text(encoding="utf-8")
+    legacy = campaign_packages.read_level(root, "Campaign1")
     assert not objective_errors(legacy, "Campaign1"), "broadcast declarations must keep matching status seats"
-    kingsfall = campaign_packages.level_path(root, "Kingsfall").read_text(encoding="utf-8")
+    kingsfall = campaign_packages.read_level(root, "Kingsfall")
     assert not objective_errors(kingsfall, "Kingsfall"), "army goal must use its exact temple location"
     assert "Cond\tcreaturesatheart\t1\t>=\t12" in kingsfall
-    coldwell = campaign_packages.level_path(root, "Coldwell").read_text(encoding="utf-8")
+    coldwell = campaign_packages.read_level(root, "Coldwell")
     assert not objective_errors(coldwell, "Coldwell"), "under-plaza mining must have an exact source"
     wrong_source = coldwell.replace("minedregion\t1\tUndercroft", "minedregion\t1\tMissingRegion")
     assert any("unknown presentation region" in error for error in objective_errors(wrong_source, "Coldwell"))
-    cinder = parse_level(campaign_packages.level_path(root, "Cinderhollow").read_text(encoding="utf-8"))
+    cinder = parse_level(campaign_packages.read_level(root, "Cinderhollow"))
     assert not cinder_seam_errors(cinder)
     cinder["tiles"][5, 55] = (6, 100.0, None)
     assert cinder_seam_errors(cinder), "infinite gem cannot replace the approved finite gold"
-    mire_text = campaign_packages.level_path(root, "Mirewatch").read_text(encoding="utf-8")
+    mire_text = campaign_packages.read_level(root, "Mirewatch")
     mire = parse_level(mire_text)
     assert not mirewatch_errors(mire), "all 69 original tower room fields must be reachable and claimable"
     for mutation in ("sealed", "full", "allied", "missing"):
@@ -1556,10 +1556,10 @@ def self_test(root):
             ("Cinderhollow", "slabs\t-1\tGoalWestGoldSeam\tgold\t==\t0", "slabs\t-1\tGoalWestGoldSeam\tgold\t>=\t0"),
             ("Lanternhill", "groundconnected\t1\t13\t57\t40\t22", "groundconnected\t1\t13\t57\t39\t22"),
             ("Mirewatch", "roomclaimed\t1\t44\t106\t47\t107", "roomclaimed\t1\t44\t106\t46\t107")):
-        original_map = campaign_packages.level_path(root, filename).read_text(encoding="utf-8")
+        original_map = campaign_packages.read_level(root, filename)
         assert needle in original_map
         assert any("conditions differ" in error for error in objective_errors(original_map.replace(needle, replacement), filename))
-    ash = campaign_packages.level_path(root, "Ashcombe").read_text(encoding="utf-8")
+    ash = campaign_packages.read_level(root, "Ashcombe")
     assert not ashcombe_escape_errors(ash)
     for old, new in (
             ("[/Triggers]", "[Trigger]\nName\twardenEscaped\nMode\tonce\nCond\treached\tLieslAshby\tregion\tHold\nAction\tlose\t1\n[/Trigger]\n[/Triggers]"),
@@ -1570,7 +1570,7 @@ def self_test(root):
         assert old in ash
         assert ashcombe_escape_errors(ash.replace(old, new)), "Ashby's old escape must stay replaced by the raid: " + old
     assert grouped_goal_errors(ash.replace("Cond\traid\tdefeated", "Cond\ttime\t0"), "Ashcombe")
-    lantern = campaign_packages.level_path(root, "Lanternhill").read_text(encoding="utf-8")
+    lantern = campaign_packages.read_level(root, "Lanternhill")
     assert not grouped_goal_errors(lantern, "Lanternhill")
     for needle, replacement in (
             ("Cond\tmined\t1\t>=\t700", "Cond\tmined\t1\t>=\t70"),
@@ -1583,7 +1583,7 @@ def self_test(root):
             ("Cond\tflag\tvictoryStoneReady\t1", "Cond\ttime\t5")):
         assert needle in lantern
         assert grouped_goal_errors(lantern.replace(needle, replacement), "Lanternhill"), "Lanternhill goal weakening must fail: " + needle
-    crossing = campaign_packages.level_path(root, "VarnsCrossing").read_text(encoding="utf-8")
+    crossing = campaign_packages.read_level(root, "VarnsCrossing")
     assert not grouped_goal_errors(crossing, "VarnsCrossing")
     for needle, replacement in (
             ("Cond\tclaimed\t1\tQuarter\t25", "Cond\tclaimed\t1\tQuarter\t2"),
@@ -1594,7 +1594,7 @@ def self_test(root):
             ("Cond\tobjective\t1\tvarnscrossing-main-keep\treached", "Cond\tregion\t1\tKeep")):
         assert needle in crossing
         assert grouped_goal_errors(crossing.replace(needle, replacement), "VarnsCrossing"), "Crossing requirement weakening must fail: " + needle
-    thorn = campaign_packages.level_path(root, "Thornreach").read_text(encoding="utf-8")
+    thorn = campaign_packages.read_level(root, "Thornreach")
     assert not grouped_goal_errors(thorn, "Thornreach")
     for needle, replacement in (
             ("Cond\tcrossed\t1\tThornMaze\teast", "Cond\tregion\t1\tClearing"),
@@ -1605,7 +1605,7 @@ def self_test(root):
             ("Cond\tobjective\t1\tthornreach-main-maze\treached", "Cond\tregion\t1\tClearing")):
         assert needle in thorn
         assert grouped_goal_errors(thorn.replace(needle, replacement), "Thornreach"), "Thornreach weakening must fail: " + needle
-    high = campaign_packages.level_path(root, "Highcairn").read_text(encoding="utf-8")
+    high = campaign_packages.read_level(root, "Highcairn")
     assert not objective_errors(high, "Highcairn")
     captain = next(block for block in re.findall(r"\[Trigger\](.*?)\[/Trigger\]", high, re.S) if "Name\tgoalCaptainKilled\n" in block)
     assert "Cond\tevent\tTerraceWatch8\tkilled" in captain
@@ -1616,7 +1616,7 @@ def self_test(root):
                      ("Cond\tevent\tTerraceWatch8\tkilled\nCond\tflag\tholdOpen\t1", "Cond\tevent\tTerraceWatch8\tkilled\nCond\tflag\tholdOpen\t0")):
         assert old in high
         assert objective_errors(high.replace(old, new), "Highcairn"), "captain death must remain completable after timed opening"
-    high_grouped = campaign_packages.level_path(root, "Highcairn").read_text(encoding="utf-8")
+    high_grouped = campaign_packages.read_level(root, "Highcairn")
     assert not grouped_goal_errors(high_grouped, "Highcairn")
     for needle, replacement in (
             ("Cond\tflag\tgoalTerrace4\t1", "Cond\tregion\t1\tTerrace4"),
@@ -1627,10 +1627,10 @@ def self_test(root):
             ("Cond\tobjective\t1\thighcairn-main-captain\treached", "Cond\tflag\tholdOpen\t1")):
         assert needle in high_grouped
         assert grouped_goal_errors(high_grouped.replace(needle, replacement), "Highcairn"), "Highcairn requirement weakening must fail: " + needle
-    high_retry = campaign_packages.level_path(root, "Highcairn").read_text(encoding="utf-8")
+    high_retry = campaign_packages.read_level(root, "Highcairn")
     revived_carrier = high_retry.replace("[/Triggers]", "[Trigger]\nName\tcarrierRecovery\nMode\trepeat\t0\nCond\ttime\t5\n[/Trigger]\n[/Triggers]")
     assert any("removed trigger is still present: carrierRecovery" in error for error in grouped_goal_errors(revived_carrier, "Highcairn"))
-    skittle = campaign_packages.level_path(root, "SkittleCavern").read_text(encoding="utf-8")
+    skittle = campaign_packages.read_level(root, "SkittleCavern")
     assert not grouped_goal_errors(skittle, "SkittleCavern")
     for needle, replacement in (
             ("Cond\tevent\tPin10\tboulderkilled:1", "Cond\tevent\tPin10\tkilled"),
@@ -1641,7 +1641,7 @@ def self_test(root):
             ("Cond\tobjective\t1\tskittlecavern-main-trial\treached", "Cond\tcreatures\t2\t<=\t0")):
         assert needle in skittle
         assert grouped_goal_errors(skittle.replace(needle, replacement), "SkittleCavern"), "Skittle requirement weakening must fail: " + needle
-    storm = campaign_packages.level_path(root, "Stormhaven").read_text(encoding="utf-8")
+    storm = campaign_packages.read_level(root, "Stormhaven")
     assert not grouped_goal_errors(storm, "Stormhaven")
     for needle, replacement in (
             ("Cond\tcrossed\t1\tMainSouthBridge\teast", "Cond\tregion\t1\tSouthSpan"),
@@ -1652,12 +1652,12 @@ def self_test(root):
             ("Cond\tregion\t1\tGaleCave", "Cond\tregion\t1\tLighthouse")):
         assert needle in storm
         assert grouped_goal_errors(storm.replace(needle, replacement), "Stormhaven"), "Stormhaven requirement weakening must fail: " + needle
-    cinder = campaign_packages.level_path(root, "Cinderhollow").read_text(encoding="utf-8")
+    cinder = campaign_packages.read_level(root, "Cinderhollow")
     assert "spawncleared\twave" not in cinder and "Name\tgoalThreeWavesDefeatedAtHeart\n" not in cinder
     for wave in ("waveOne", "waveTwo", "waveThree"):
         revived_wave = cinder.replace("[/Triggers]", "[Trigger]\nName\t" + wave + "\nMode\tonce\nCond\ttime\t420\n[/Trigger]\n[/Triggers]")
         assert any("removed trigger is still present: " + wave in error for error in objective_errors(revived_wave, "Cinderhollow")), "the waves must stay replaced by the raid"
-    cinder_grouped = campaign_packages.level_path(root, "Cinderhollow").read_text(encoding="utf-8")
+    cinder_grouped = campaign_packages.read_level(root, "Cinderhollow")
     assert not grouped_goal_errors(cinder_grouped, "Cinderhollow")
     for needle, replacement in (
             ("Cond\tcrossed\t1\tDawnCauseway\tnorth\tafter\tlavaBridge", "Cond\tregion\t1\tRivalCrater"),
@@ -1671,7 +1671,7 @@ def self_test(root):
             ("Cond\tobjective\t1\tcinderhollow-main-raid\treached", "Cond\ttime\t5")):
         assert needle in cinder_grouped
         assert grouped_goal_errors(cinder_grouped.replace(needle, replacement), "Cinderhollow"), "Cinderhollow requirement weakening must fail: " + needle
-    goldspire = campaign_packages.level_path(root, "Goldspire").read_text(encoding="utf-8")
+    goldspire = campaign_packages.read_level(root, "Goldspire")
     assert not grouped_goal_errors(goldspire, "Goldspire")
     for needle, replacement in (
             ("Cond\tregion\t1\tArmyGround\t>=\t2\t@fighters", "Cond\tregion\t1\tArmyGround\t>=\t2"),
@@ -1693,7 +1693,7 @@ def self_test(root):
     assert any("excluded gate room of a floor footprint differs" in error for error in grouped_goal_errors(moved_gate, "Goldspire"))
     revived_penn = goldspire.replace("[/Creatures]","3\tAlaricPenn\tKnight.mesh\t48\t30\t0\tKnight\t6\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\n[/Creatures]", 1)
     assert any("removed creature still stands on the map: AlaricPenn" in error for error in grouped_goal_errors(revived_penn, "Goldspire"))
-    mire = campaign_packages.level_path(root, "Mirewatch").read_text(encoding="utf-8")
+    mire = campaign_packages.read_level(root, "Mirewatch")
     assert not grouped_goal_errors(mire, "Mirewatch")
     assert not mirewatch_errors(parse_level(mire))
     for needle, replacement in (
@@ -1706,7 +1706,7 @@ def self_test(root):
             ("Cond\tfurniture\t1\tDormitory\t>=\t2", "Cond\troomtiles\t1\tDormitory\t>=\t2")):
         assert needle in mire
         assert grouped_goal_errors(mire.replace(needle, replacement), "Mirewatch"), "Mirewatch requirement weakening must fail: " + needle
-    bell = campaign_packages.level_path(root, "Bellwick").read_text(encoding="utf-8")
+    bell = campaign_packages.read_level(root, "Bellwick")
     assert not grouped_goal_errors(bell, "Bellwick")
     for needle, replacement in (
             ("Cond\tcrossed\t1\tNave\tnorth", "Cond\tregion\t1\tTransept"),
@@ -1718,7 +1718,7 @@ def self_test(root):
             ("Cond\tregion\t1\tScriptorium", "Cond\tregion\t1\tWestCloister")):
         assert needle in bell
         assert grouped_goal_errors(bell.replace(needle, replacement), "Bellwick"), "Bellwick requirement weakening must fail: " + needle
-    ebon = campaign_packages.level_path(root, "Ebonrook").read_text(encoding="utf-8")
+    ebon = campaign_packages.read_level(root, "Ebonrook")
     assert not grouped_goal_errors(ebon, "Ebonrook")
     for needle, replacement in (
             ("Cond\tfurniture\t1\tDormitory\t>=\t14", "Cond\tfurniture\t1\tDormitory\t>=\t1"),
@@ -1730,7 +1730,7 @@ def self_test(root):
             ("Cond\tregion\t1\tSealedGrove", "Cond\tregion\t1\tNorthEast")):
         assert needle in ebon
         assert grouped_goal_errors(ebon.replace(needle, replacement), "Ebonrook"), "Ebonrook requirement weakening must fail: " + needle
-    silver = campaign_packages.level_path(root, "Silverdeep").read_text(encoding="utf-8")
+    silver = campaign_packages.read_level(root, "Silverdeep")
     assert not grouped_goal_errors(silver, "Silverdeep")
     for needle, replacement in (
             ("Cond\tmined\t1\t>=\t400", "Cond\tmined\t1\t>=\t40"),
@@ -1743,7 +1743,7 @@ def self_test(root):
             ("Cond\tregion\t1\tGallery", "Cond\tregion\t1\tWestBank")):
         assert needle in silver
         assert grouped_goal_errors(silver.replace(needle, replacement), "Silverdeep"), "Silverdeep requirement weakening must fail: " + needle
-    wraith = campaign_packages.level_path(root, "Wraithwood").read_text(encoding="utf-8")
+    wraith = campaign_packages.read_level(root, "Wraithwood")
     assert not grouped_goal_errors(wraith, "Wraithwood")
     for needle, replacement in (
             ("Cond\troomtiles\t3\tDungeonTemple\t<=\t0", "Cond\tgoalmet\t1\tKillAllEnemies"),
@@ -1753,7 +1753,7 @@ def self_test(root):
             ("Cond\tregion\t1\tSealedGrove", "Cond\tregion\t1\tWestGlade")):
         assert needle in wraith
         assert grouped_goal_errors(wraith.replace(needle, replacement), "Wraithwood"), "Wraithwood must retain independent heart completion: " + needle
-    kings = campaign_packages.level_path(root, "Kingsfall").read_text(encoding="utf-8")
+    kings = campaign_packages.read_level(root, "Kingsfall")
     assert not grouped_goal_errors(kings, "Kingsfall")
     for needle, replacement in (
             ("Cond\theld\t1\tFalconerEdda", "Cond\towns\t1\tFalconerEdda"),
@@ -1766,7 +1766,7 @@ def self_test(root):
             ("Cond\tmined\t1\t>=\t4000", "Cond\tmined\t1\t>=\t3000")):
         assert needle in kings
         assert grouped_goal_errors(kings.replace(needle, replacement), "Kingsfall"), "Kingsfall must preserve live capture and actual assembly: " + needle
-    hollow = campaign_packages.level_path(root, "HollowmarkCitadel").read_text(encoding="utf-8")
+    hollow = campaign_packages.read_level(root, "HollowmarkCitadel")
     assert not grouped_goal_errors(hollow, "HollowmarkCitadel")
     for needle, replacement in (
             ("Cond\tcrossed\t1\tGateCourt\tnorth", "Cond\tregion\t1\tGateCourt"),
@@ -1779,7 +1779,7 @@ def self_test(root):
             ("Cond\tregion\t1\tWestTower3", "Cond\tregion\t1\tWestTower1")):
         assert needle in hollow
         assert grouped_goal_errors(hollow.replace(needle, replacement), "HollowmarkCitadel"), "Hollowmark exact task must reject weakening: " + needle
-    legacy_first = campaign_packages.level_path(root, "Campaign1").read_text(encoding="utf-8")
+    legacy_first = campaign_packages.read_level(root, "Campaign1")
     assert not grouped_goal_errors(legacy_first, "Campaign1")
     for needle, replacement in (
             ("Cond\tgoalmet\t1\tProtectDungeonTemple", "Cond\ttime\t0"),
@@ -1788,7 +1788,7 @@ def self_test(root):
         assert needle in legacy_first
         assert grouped_goal_errors(legacy_first.replace(needle, replacement), "Campaign1"), "Legacy Campaign1 must retain exact classic goals and mining: " + needle
     for legacy_name in ("Campaign2", "Campaign3"):
-        legacy = campaign_packages.level_path(root, legacy_name).read_text(encoding="utf-8")
+        legacy = campaign_packages.read_level(root, legacy_name)
         assert not grouped_goal_errors(legacy, legacy_name)
         for seat in (1, 2):
             other = 3 - seat
@@ -1808,7 +1808,7 @@ def self_test(root):
             pass
         else:
             raise AssertionError("inactive seat must not become a selectable analysis start")
-    cellar = campaign_packages.level_path(root, "Bonus1").read_text(encoding="utf-8")
+    cellar = campaign_packages.read_level(root, "Bonus1")
     assert not grouped_goal_errors(cellar, "Bonus1")
     for seat in (1, 3, 4):
         for source, replacement in (
@@ -1830,7 +1830,7 @@ def self_test(root):
             ("Highcairn", "TerraceWatch8", "hold-key", "1\t30\t11"),
             ("HollowmarkCitadel", "Gatewarden13", "lower-gate-key", "1\t58\t58"),
             ("HollowmarkCitadel", "Gatewarden8", "upper-gate-key", "1\t58\t30")):
-        source = campaign_packages.level_path(root, map_name).read_text(encoding="utf-8")
+        source = campaign_packages.read_level(root, map_name)
         for old, new in (
                 ("Cond\tevent\t" + owner + "\tkilled", "Cond\tevent\t" + owner + "\tincapacitated"),
                 ("Cond\tdeliveredstone\t" + identity, "Cond\tstone\tWrongRegion\t>=\t1"),
@@ -1846,7 +1846,7 @@ def self_test(root):
             ("Cinderhollow", "ash-stone", "Action\tstonecreate\t44\t73\tash-stone\t1\t16\t61"),
             ("Bellwick", "bell-stone", "Action\tstonecreate\t10\t102\tbell-stone\t1\t32\t108"),
             ("VarnsCrossing", "ember-stone", "Action\tstonecreate\t3\t73\tember-stone\t1\t14\t80")):
-        source = campaign_packages.level_path(root, map_name).read_text(encoding="utf-8")
+        source = campaign_packages.read_level(root, map_name)
         assert create in source
         assert not any(identity in error for error in grouped_goal_errors(source, map_name)), identity
         pickup = GROUP_REVIEW[map_name]["reachability"]["mission_pickups"][identity]
@@ -1863,7 +1863,7 @@ def self_test(root):
     bearerless = json.loads(json.dumps(GROUP_REVIEW["Brackenford"]["reachability"]["mission_pickups"]["cellar-stone"]))
     bearerless.pop("carrier")
     GROUP_REVIEW["Brackenford"]["reachability"]["mission_pickups"]["cellar-stone"] = bearerless
-    brack = campaign_packages.level_path(root, "Brackenford").read_text(encoding="utf-8")
+    brack = campaign_packages.read_level(root, "Brackenford")
     try:
         assert any("neither a friendly bearer nor a worker carrier" in error for error in grouped_goal_errors(brack, "Brackenford"))
     finally:
@@ -1876,13 +1876,13 @@ def self_test(root):
             ("Kingsfall", "[/Triggers]", "[Trigger]\nName\thorn1\nMode\tonce\nCond\ttime\t300\n[/Trigger]\n[/Triggers]", "removed trigger is still present: horn1"),
             ("Bellwick", "[/Triggers]", "[Trigger]\nName\tfaithful1\nMode\tonce\nCond\ttime\t240\n[/Trigger]\n[/Triggers]", "removed trigger is still present: faithful1"),
             ("Goldspire", "[/Triggers]", "[Trigger]\nName\ttreasurerHurt\nMode\tonce\nCond\ttime\t5\n[/Trigger]\n[/Triggers]", "removed trigger is still present: treasurerHurt")):
-        source = campaign_packages.level_path(root, map_name).read_text(encoding="utf-8")
+        source = campaign_packages.read_level(root, map_name)
         assert old in source
         assert any(expected in error for error in grouped_goal_errors(source.replace(old, new), map_name)), expected
     for map_name, identity in (("Saltmere", "saltmere-o01"), ("Kingsfall", "kingsfall-o02"), ("Goldspire", "goldspire-o05"),
                                ("HollinFen", "hollinfen-o04"), ("Highcairn", "highcairn-o05"), ("Cinderhollow", "cinderhollow-o03"),
                                ("HollowmarkCitadel", "hollowmarkcitadel-o01"), ("Ashcombe", "ashcombe-o03")):
-        source = campaign_packages.level_path(root, map_name).read_text(encoding="utf-8")
+        source = campaign_packages.read_level(root, map_name)
         assert "\t" + identity + "\t" not in source
         revived = source.replace("[/Triggers]", "[Trigger]\nName\trevived\nMode\tonce\nCond\ttime\t3\nAction\tobjectiveid\t1\t" + identity + "\tOld goal.\n[/Trigger]\n[/Triggers]")
         assert any("fixed inventory: " + identity in error for error in objective_errors(revived, map_name)), identity
@@ -1946,7 +1946,7 @@ def main():
             continue
         try:
             failures.extend("campaign/" + legacy_path.name + ": " + error
-                            for error in grouped_goal_errors(legacy_path.read_text(encoding="utf-8"), legacy_name))
+                            for error in grouped_goal_errors(campaign_packages.read_level_file(ROOT, legacy_path), legacy_name))
         except (ValueError, OSError) as error:
             failures.append("campaign/" + legacy_path.name + ": " + str(error))
     for entry in checked:
@@ -1958,7 +1958,7 @@ def main():
         try:
             if not path_level.is_file():
                 raise ValueError("missing/invalid campaign level path")
-            level = parse_level(path_level.read_text(encoding="utf-8"))
+            level = parse_level(campaign_packages.read_level_file(ROOT, path_level))
             failures.extend(name + ": " + error for error in check_level(level))
             if path_level.stem == "Ashcombe":
                 failures.extend(name + ": " + error for error in ashcombe_escape_errors(level["text"]))
@@ -1973,7 +1973,7 @@ def main():
     for legacy in content_packages.data_glob(ROOT, "levels/campaign", "*.level"):
         if "campaign/" + legacy.name not in configured:
             failures.extend("campaign/" + legacy.name + ": " + error
-                            for error in objective_errors(legacy.read_text(encoding="utf-8"), legacy.stem))
+                            for error in objective_errors(campaign_packages.read_level_file(ROOT, legacy), legacy.stem))
     for path, document in inventories:
         if not path.is_file() or path.read_text(encoding="utf-8") != document:
             failures.append("goal inventory %s is missing or stale; regenerate with --write-inventory" % path)

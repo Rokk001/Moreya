@@ -32,7 +32,8 @@ namespace social
 
 //! \brief Client side cache of the creature profiles. The social data files are loaded the
 //! first time a profile is needed (the creature card is only opened on the client), any
-//! loading problem is logged once. Nothing here is sent over the network or saved.
+//! loading problem is logged once. Nothing here is sent over the network or saved. The profiles are forgotten when
+//! the language changes, so that their texts are made again in the new language.
 class SocialProfileCache
 {
 public:

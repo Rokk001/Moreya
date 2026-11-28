@@ -291,7 +291,8 @@ private:
     //! \brief The rooms of keepers hostile to the raid that hold gold: treasuries and dungeon hearts.
     std::vector<Room*> plunderableRooms() const;
 
-    //! \brief Sends a chat message to the attacked keeper (to every human keeper when no seat is attacked).
+    //! \brief Sends a chat message to the attacked keeper (to every human keeper when no seat is attacked). The text is a
+    //! text reference (Translation::makeReference) that each client shows in its own language.
     void tellKeepers(const std::string& text) const;
 
     GameMap& mGameMap;

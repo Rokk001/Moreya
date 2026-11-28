@@ -91,6 +91,7 @@ protected:
     virtual void exportHeadersToStream(std::ostream& os) const override;
     virtual void exportHeadersToPacket(ODPacket& os) const override;
 
+    //! \brief The cursor hint to cast a spell: its name and the price, in the chosen language
     static std::string formatCastSpell(SpellType type, uint32_t price);
 
     //! \brief Server side. True if the seat sees the tile now: the tile lists it among the seats with vision.

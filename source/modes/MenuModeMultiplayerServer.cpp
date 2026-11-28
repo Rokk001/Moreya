@@ -18,6 +18,7 @@
 #include "modes/MenuModeMultiplayerServer.h"
 
 #include "utils/Helper.h"
+#include "utils/Translation.h"
 #include "render/Gui.h"
 #include "modes/ModeManager.h"
 #include "sound/MusicPlayer.h"
@@ -37,6 +38,21 @@
 
 const std::string MPM_LIST_LEVEL_TYPES = "LevelWindowFrame/LevelTypeSelect";
 
+//! \brief Writes the texts of the items of the Level type combo box in the chosen language. The items are found by
+//! their id, so that the selection stays when the language changes.
+static void translateLevelTypeItems(CEGUI::Combobox* levelTypeCb)
+{
+    for(size_t i = 0; i < levelTypeCb->getItemCount(); ++i)
+    {
+        CEGUI::ListboxItem* item = levelTypeCb->getListboxItemFromIndex(i);
+        item->setText(Gui::trCegui(item->getID() == 0 ? "mode.menu.type.official_multiplayer" :
+            "mode.menu.type.custom_multiplayer"));
+        if(item->isSelected())
+            levelTypeCb->setText(item->getText());
+    }
+    levelTypeCb->invalidate();
+}
+
 MenuModeMultiplayerServer::MenuModeMultiplayerServer(ModeManager *modeManager, bool useMasterServer):
     AbstractApplicationMode(modeManager, useMasterServer ? ModeManager::MENU_MASTERSERVER_HOST : ModeManager::MENU_MULTIPLAYER_SERVER)
 {
@@ -47,13 +63,15 @@ MenuModeMultiplayerServer::MenuModeMultiplayerServer(ModeManager *modeManager, b
     CEGUI::Combobox* levelTypeCb = static_cast<CEGUI::Combobox*>(window->getChild(MPM_LIST_LEVEL_TYPES));
     levelTypeCb->resetList();
 
-    CEGUI::ListboxTextItem* item = new CEGUI::ListboxTextItem("Official Multiplayer Levels", 0);
+    CEGUI::ListboxTextItem* item = new CEGUI::ListboxTextItem(Gui::trCegui("mode.menu.type.official_multiplayer"), 0);
     item->setSelectionBrushImage(selImg);
     levelTypeCb->addItem(item);
 
-    item = new CEGUI::ListboxTextItem("Custom Multiplayer Levels", 1);
+    item = new CEGUI::ListboxTextItem(Gui::trCegui("mode.menu.type.custom_multiplayer"), 1);
     item->setSelectionBrushImage(selImg);
     levelTypeCb->addItem(item);
+
+    translateLevelTypeItems(levelTypeCb);
 
     addEventConnection(
         window->getChild(Gui::MPM_BUTTON_SERVER)->subscribeEvent(
@@ -105,6 +123,8 @@ void MenuModeMultiplayerServer::activate()
     // Loads the corresponding Gui sheet.
     Gui& gui = getModeManager().getGui();
     gui.loadGuiSheet(Gui::multiplayerServerMenu);
+    translateLevelTypeItems(static_cast<CEGUI::Combobox*>(
+        gui.getGuiSheet(Gui::multiplayerServerMenu)->getChild(MPM_LIST_LEVEL_TYPES)));
 
     giveFocus();
 
@@ -174,8 +194,8 @@ bool MenuModeMultiplayerServer::updateFilesList(const CEGUI::EventArgs&)
             }
             else
             {
-                mapName = "invalid map";
-                mapDescription = "invalid map";
+                mapName = Translation::tr("mode.menu.invalid_map");
+                mapDescription = Translation::tr("mode.menu.invalid_map");
             }
 
             mDescriptionList.push_back(mapDescription);
@@ -198,7 +218,7 @@ bool MenuModeMultiplayerServer::serverButtonPressed(const CEGUI::EventArgs&)
 
     if(levelSelectList->getSelectedCount() == 0)
     {
-        mainWin->getChild(Gui::MPM_TEXT_LOADING)->setText("Please select a level first.");
+        mainWin->getChild(Gui::MPM_TEXT_LOADING)->setText(Gui::trCegui("mode.menu.select_level_first"));
         return true;
     }
 
@@ -207,18 +227,18 @@ bool MenuModeMultiplayerServer::serverButtonPressed(const CEGUI::EventArgs&)
     CEGUI::String nickCeguiStr = reinterpret_cast<const CEGUI::utf8*>(nick.c_str());
     if (nickCeguiStr.empty())
     {
-        mainWin->getChild(Gui::MPM_TEXT_LOADING)->setText("Please enter a nickname.");
+        mainWin->getChild(Gui::MPM_TEXT_LOADING)->setText(Gui::trCegui("mode.menu.enter_nickname"));
         return true;
     }
     else if (nickCeguiStr.length() > 20)
     {
-        mainWin->getChild(Gui::MPM_TEXT_LOADING)->setText("Please enter a shorter nickname. (20 letters max.)");
+        mainWin->getChild(Gui::MPM_TEXT_LOADING)->setText(Gui::trCegui("mode.menu.nickname_too_long"));
         return true;
     }
 
     ODFrameListener::getSingleton().getClientGameMap()->setLocalPlayerNick(nick);
 
-    mainWin->getChild(Gui::MPM_TEXT_LOADING)->setText("Loading...");
+    mainWin->getChild(Gui::MPM_TEXT_LOADING)->setText(Gui::trCegui("mode.menu.loading"));
 
     CEGUI::ListboxItem* selItem = levelSelectList->getFirstSelectedItem();
     uint32_t id = selItem->getID();
@@ -247,7 +267,7 @@ bool MenuModeMultiplayerServer::serverButtonPressed(const CEGUI::EventArgs&)
         relationshipsCheckbox->isSelected()))
     {
         OD_LOG_ERR("Could not start server for multi player game !!!");
-        mainWin->getChild(Gui::MPM_TEXT_LOADING)->setText("ERROR: Could not start server for multi player game !!!");
+        mainWin->getChild(Gui::MPM_TEXT_LOADING)->setText(Gui::trCegui("mode.menu.multiplayer.server_failed"));
         return true;
     }
 
@@ -261,7 +281,7 @@ bool MenuModeMultiplayerServer::serverButtonPressed(const CEGUI::EventArgs&)
     if(!ODClient::getSingleton().connect("localhost", port, timeout, replayFilename))
     {
         OD_LOG_ERR("Could not connect to server for multi player game !!!");
-        mainWin->getChild(Gui::MPM_TEXT_LOADING)->setText("Error: Couldn't connect to local server!");
+        mainWin->getChild(Gui::MPM_TEXT_LOADING)->setText(Gui::trCegui("mode.menu.connect_failed"));
         return true;
     }
     return true;

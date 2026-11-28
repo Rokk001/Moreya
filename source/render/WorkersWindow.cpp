@@ -16,6 +16,7 @@
  */
 
 #include "render/WorkersWindow.h"
+#include "render/Gui.h"
 #include "render/ODFrameListener.h"
 
 #include "game/Player.h"
@@ -24,6 +25,7 @@
 #include "network/ODClient.h"
 #include "utils/ConfigManager.h"
 #include "utils/LogManager.h"
+#include "utils/Translation.h"
 
 #include <CEGUI/CEGUI.h>
 #include <CEGUI/WindowManager.h>
@@ -31,21 +33,25 @@
 #include <CEGUI/widgets/PushButton.h>
 
 #include <algorithm>
+#include <functional>
+#include <map>
 #include <string>
 
 namespace
 {
-//! Names of the jobs in the order of WorkerJob
-const char* const JOB_NAMES[WorkersWindow::JOB_COUNT] = {"Dig", "Claim ground", "Claim wall", "Carry", "Clean", "Reload"};
+//! Language keys of the names of the jobs in the order of WorkerJob
+const char* const JOB_KEYS[WorkersWindow::JOB_COUNT] = {"ui.workers.job.dig", "ui.workers.job.claimground",
+    "ui.workers.job.claimwall", "ui.workers.job.carry", "ui.workers.job.clean", "ui.workers.job.reload"};
 //! Painted pictures of the jobs in the order of WorkerJob
 const char* const JOB_IMAGES[WorkersWindow::JOB_COUNT] = {"OpenDungeonsIcons/WorkerJobDig",
     "OpenDungeonsIcons/WorkerJobClaimGround", "OpenDungeonsIcons/WorkerJobClaimWall", "OpenDungeonsIcons/WorkerJobCarry",
     "OpenDungeonsIcons/WorkerJobClean", "OpenDungeonsIcons/WorkerJobReload"};
 //! Roman numerals of the ranks
 const char* const RANK_NUMERALS[WorkersWindow::JOB_COUNT] = {"I", "II", "III", "IV", "V", "VI"};
-//! Names of the carry entries in the order of WorkerCarryEntry
-const char* const CARRY_NAMES[WorkersWindow::CARRY_COUNT] = {"Own knocked out", "Enemy knocked out", "Corpses", "Gold",
-    "Items", "Gift boxes", "Traps and doors"};
+//! Language keys of the names of the carry entries in the order of WorkerCarryEntry
+const char* const CARRY_KEYS[WorkersWindow::CARRY_COUNT] = {"ui.workers.carry.ownknockedout",
+    "ui.workers.carry.enemyknockedout", "ui.workers.carry.corpses", "ui.workers.carry.gold", "ui.workers.carry.items",
+    "ui.workers.carry.giftboxes", "ui.workers.carry.trapsdoors"};
 //! Painted pictures of the carry entries in the order of WorkerCarryEntry
 const char* const CARRY_IMAGES[WorkersWindow::CARRY_COUNT] = {"OpenDungeonsIcons/WorkerCarryOwn",
     "OpenDungeonsIcons/WorkerCarryEnemy", "OpenDungeonsIcons/WorkerCarryCorpses", "OpenDungeonsIcons/WorkerCarryGold",
@@ -92,6 +98,9 @@ WorkersWindow::WorkersWindow(CEGUI::Window* rootWindow, GameMap& gameMap) :
         CEGUI::Event::Subscriber(&WorkersWindow::onCarryArrowClicked, this)));
     mConnections.push_back(mWindow->getChild("GoldCheck")->subscribeEvent(CEGUI::PushButton::EventClicked,
         CEGUI::Event::Subscriber(&WorkersWindow::onGoldFirstClicked, this)));
+    // A new language redraws the names of the jobs and carry entries at the next refresh
+    const std::function<void()> languageChanged = std::bind(&WorkersWindow::onLanguageChanged, this);
+    mLanguageListener = Translation::addListener(languageChanged);
 
     for(std::size_t i = 0; i < JOB_COUNT; ++i)
     {
@@ -126,8 +135,15 @@ WorkersWindow::WorkersWindow(CEGUI::Window* rootWindow, GameMap& gameMap) :
 //! \brief Disconnects every event.
 WorkersWindow::~WorkersWindow()
 {
+    Translation::removeListener(mLanguageListener);
     for(CEGUI::Event::Connection& connection : mConnections)
         connection->disconnect();
+}
+
+//! \brief Makes the next refresh() draw the window again, so that the names show in the new language.
+void WorkersWindow::onLanguageChanged()
+{
+    mShownState.clear();
 }
 
 //! \brief Names the local keeper's seat, nullptr when the client has no keeper seat.
@@ -618,15 +634,15 @@ const char* WorkersWindow::getRankNumeral(std::size_t rank)
 }
 
 //! \brief Name of a job.
-const char* WorkersWindow::getJobName(uint32_t job)
+std::string WorkersWindow::getJobName(uint32_t job)
 {
-    return job < JOB_COUNT ? JOB_NAMES[job] : "";
+    return job < JOB_COUNT ? Translation::tr(JOB_KEYS[job]) : std::string();
 }
 
 //! \brief Name of a carry entry.
-const char* WorkersWindow::getCarryName(uint32_t entry)
+std::string WorkersWindow::getCarryName(uint32_t entry)
 {
-    return entry < CARRY_COUNT ? CARRY_NAMES[entry] : "";
+    return entry < CARRY_COUNT ? Translation::tr(CARRY_KEYS[entry]) : std::string();
 }
 
 //! \brief Everything the window shows, in one list.
@@ -698,11 +714,14 @@ void WorkersWindow::refresh()
             "OpenDungeonsIcons/WorkerTabletNormal");
         tablet->getChild("Numeral")->setText(RANK_NUMERALS[rank]);
         tablet->getChild("Figure")->setProperty("Image", JOB_IMAGES[job]);
-        tablet->getChild("Name")->setText(JOB_NAMES[job]);
+        tablet->getChild("Name")->setText(Gui::trCegui(JOB_KEYS[job]));
         tablet->getChild("Count")->setText(std::to_string(settings.fixed[job]));
         tablet->getChild("Minus")->setEnabled(settings.fixed[job] > 0);
         tablet->getChild("Plus")->setEnabled(freeWorkers > 0);
-        mWindow->getChild("Working" + std::to_string(rank))->setText("Working: " + std::to_string(counts[job]));
+        std::map<std::string, std::string> workingValues;
+        workingValues["count"] = std::to_string(counts[job]);
+        mWindow->getChild("Working" + std::to_string(rank))->setText(
+            Gui::toCeguiText(Translation::tr("ui.workers.working", workingValues)));
     }
 
     // Priority arrows and hint: only in mode Priority list, and only where the selected tablet can move
@@ -735,7 +754,7 @@ void WorkersWindow::refresh()
             "OpenDungeonsIcons/WorkerCarryFrameSelected" : "OpenDungeonsIcons/WorkerCarryFrameNormal");
         frame->getChild("Number")->setText(std::to_string(place + 1));
         frame->getChild("Picture")->setProperty("Image", CARRY_IMAGES[entry]);
-        frame->getChild("Name")->setText(CARRY_NAMES[entry]);
+        frame->getChild("Name")->setText(Gui::trCegui(CARRY_KEYS[entry]));
         if(mSelectedCarry == static_cast<int32_t>(entry))
             carryPlace = place;
     }

@@ -163,7 +163,7 @@ public:
 
     //! \brief The room of the unlock order that is not available yet and comes next, as a name
     //! for the player. Empty if every room is available. secondsLeft gets the seconds until it is
-    //! available (0 when it is already due).
+    //! available (0 when it is already due). The name is a text reference (Skills::skillTypeToReference).
     std::string getNextRoomName(int32_t& secondsLeft) const;
 
 private:

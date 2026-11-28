@@ -29,12 +29,13 @@
 #include "utils/ConfigManager.h"
 #include "utils/LogManager.h"
 #include "utils/Random.h"
+#include "utils/Translation.h"
 
 #include <algorithm>
 #include <cmath>
 
 const std::string TrapGasName = "Gas";
-const std::string TrapGasNameDisplay = "Gas trap";
+const std::string TrapGasNameKey = "trap.gas.name";
 const TrapType TrapGas::mTrapType = TrapType::gas;
 
 namespace
@@ -47,8 +48,9 @@ class TrapGasFactory : public TrapFactory
     const std::string& getName() const override
     { return TrapGasName; }
 
-    const std::string& getNameReadable() const override
-    { return TrapGasNameDisplay; }
+    //! \brief The name shown to the player, in the chosen language.
+    std::string getNameReadable() const override
+    { return Translation::tr(TrapGasNameKey); }
 
     int getCostPerTile() const override
     { return ConfigManager::getSingleton().getTrapConfigInt32("GasCostPerTile"); }

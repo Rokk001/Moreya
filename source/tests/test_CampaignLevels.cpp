@@ -18,6 +18,7 @@
 #define BOOST_TEST_MODULE CampaignLevels
 #include "BoostTestTargetConfig.h"
 
+#include "EnglishTestTexts.h"
 #include "game/Campaign.h"
 
 #include <sstream>
@@ -125,7 +126,10 @@ BOOST_AUTO_TEST_CASE(test_old_progress_keeps_only_difficulty)
 //! every replay won after the end; a new campaign starts without it.
 BOOST_AUTO_TEST_CASE(test_campaign_end_message)
 {
-    BOOST_CHECK_EQUAL(Campaign::CAMPAIGN_END_MESSAGE, "Moreya stands. The campaign is complete.");
+    // The message is the text of campaign.code.end; without the content packages it is the key
+    const bool english = EnglishTestTexts::load();
+    BOOST_CHECK_EQUAL(Campaign::getEndMessage(),
+        EnglishTestTexts::expected(english, "Moreya stands. The campaign is complete.", "campaign.code.end"));
 
     Campaign& campaign = Campaign::getSingleton();
     std::istringstream def(twoLevels);

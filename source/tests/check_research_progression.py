@@ -77,6 +77,9 @@ probe = r'''
 #include "spells/SpellType.h"
 #include "network/ODPacket.h"
 #include "utils/NameAliases.h"
+#include "utils/Translation.h"
+//! \brief Stand-in of the language texts: the probe does not look at the research names, so a text is its key.
+std::string Translation::tr(const std::string& key) { return key; }
 #include <algorithm>
 #include <cmath>
 #include <fstream>
@@ -489,6 +492,11 @@ for key, value in {"GIFTBOXENUM": gift_enum, "PLEASUREROOMENUMS": room_enums,
                    "DEFINITIONS": definitions, "LOAD": load, "SAVE": save,
                    "DECODE": decode, "REQUEST": request}.items():
     probe = probe.replace(key, value)
+# The messages are text references (utils/Translation.h); the probe has no language system, SkillType.cpp is linked to
+# the stand-in
+probe = probe.replace("enum class ServerNotificationType {skillsDone,skillTree,chatServer};",
+                      (Path(__file__).resolve().parent / "translation_probe_stub.h").read_text()
+                      + "\nenum class ServerNotificationType {skillsDone,skillTree,chatServer};", 1)
 
 with tempfile.TemporaryDirectory(prefix="research-progression-") as directory:
     work = Path(directory)

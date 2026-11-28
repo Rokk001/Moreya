@@ -160,6 +160,8 @@ struct CampaignSave
 //!   Title=Some title
 //!   Briefing=Text shown before the level. "\n" starts a new line.
 //!   Debriefing=Text shown after the level was won.
+//!   (The texts of Title, Briefing, Debriefing, Warden and the guild may be references @<key> to the language files;
+//!   the campaign menu shows them in the chosen language with LevelText::display, the Campaign keeps the reference.)
 //!   Preview=previews/wing1-level1.png (optional) briefing image relative to the package folder, else gui/campaign.
 //!   Wing=1 the wing of Moreya the level belongs to (bonus levels too).
 //!   Bonus=1 (optional) marks a bonus level.
@@ -325,8 +327,9 @@ public:
     //! replays included.
     bool isPlayedLevelCampaignEnd() const;
 
-    //! \brief Message shown in place of the campaign map after a win that leaves every story level defeated
-    static const std::string CAMPAIGN_END_MESSAGE;
+    //! \brief Message shown in place of the campaign map after a win that leaves every story level defeated, in the
+    //! chosen language
+    static std::string getEndMessage();
 
     //! \brief The statistics of the level that was just won, as text lines. Set by the client when the
     //! server sends them at the victory, shown by the campaign menu. Empty if there are none.

@@ -18,7 +18,7 @@ import room_packages  # noqa: E402
 
 def read(path):
     """The text of a file below the repository root; a mixed file of gui/ comes joined with its own rows."""
-    return content_packages.read_text(repo, path)
+    return content_packages.read_layout_text(repo, path)
 
 
 treasury = read('source/rooms/RoomTreasury.cpp')
@@ -48,7 +48,7 @@ if content_packages.data_file(repo, 'materials/scripts/TreasuryGoldPile.material
                                                              'materials/textures/TreasuryGoldPile.png',
                                                              'its CREDITS row'])
 else:
-    assert 'TreasuryGoldPile' in content_packages.read_text(repo, 'materials/scripts/TreasuryGoldPile.material')
+    assert 'TreasuryGoldPile' in content_packages.read_layout_text(repo, 'materials/scripts/TreasuryGoldPile.material')
     assert content_packages.data_file(repo, 'materials/textures/TreasuryGoldPile.png') is not None
     # The row of the moved texture stands in the CREDITS of the content repository
     assert 'TreasuryGoldPile.png' in room_packages.credits_text(repo)

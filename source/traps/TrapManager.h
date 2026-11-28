@@ -43,7 +43,8 @@ public:
 
     virtual TrapType getTrapType() const = 0;
     virtual const std::string& getName() const = 0;
-    virtual const std::string& getNameReadable() const = 0;
+    //! \brief The name shown to the player, in the chosen language
+    virtual std::string getNameReadable() const = 0;
     virtual int getCostPerTile() const = 0;
     virtual const std::string& getMeshName() const = 0;
 
@@ -55,6 +56,7 @@ public:
     virtual bool buildTrapOnTiles(GameMap* gameMap, Player* player, const std::vector<Tile*>& tiles, bool noFee) const = 0;
     virtual bool buildTrapOnTiles(GameMap* gameMap, Seat* seatPtr, const std::vector<Tile*>& tiles, bool noFee) const = 0;
     
+    //! \brief The cursor hint to build a trap: its name and the price, in the chosen language
     std::string formatBuildTrap(TrapType type, uint32_t price) const;
 
     //! \brief Computes the trap cost by checking the buildable tiles according to the given inputManager
@@ -104,8 +106,8 @@ public:
     //! \brief Gets the trap identification name
     static const std::string& getTrapNameFromTrapType(TrapType type);
 
-    //! \brief Gets the trap readable name
-    static const std::string& getTrapReadableName(TrapType type);
+    //! \brief Gets the trap name shown to the player, in the chosen language
+    static std::string getTrapReadableName(TrapType type);
 
     static TrapType getTrapTypeFromTrapName(const std::string& name);
 

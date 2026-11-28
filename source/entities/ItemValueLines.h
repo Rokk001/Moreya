@@ -19,6 +19,7 @@
 #define ITEMVALUELINES_H
 
 #include <cmath>
+#include <functional>
 #include <iomanip>
 #include <locale>
 #include <sstream>
@@ -76,33 +77,38 @@ inline std::string formatDamage(double minimum, double maximum)
     return formatNumber(minimum) + "-" + formatNumber(maximum);
 }
 
+//! \brief Gives the label of a value line for the language key of the value, for example the text of
+//! "ui.item.value.attackrating" in the chosen language.
+typedef std::function<std::string(const std::string&)> LabelFunction;
+
 //! \brief Adds the line "label: value" unless the value is 0.
-inline void addLine(std::vector<std::string>& lines, const char* label, double value)
+inline void addLine(std::vector<std::string>& lines, const std::string& label, double value)
 {
     if(value != 0.0)
-        lines.push_back(std::string(label) + ": " + formatNumber(value));
+        lines.push_back(label + ": " + formatNumber(value));
 }
 
 //! \brief Adds the damage line "label: min-max" unless both ends of the range are 0.
-inline void addDamageLine(std::vector<std::string>& lines, const char* label, double minimum, double maximum)
+inline void addDamageLine(std::vector<std::string>& lines, const std::string& label, double minimum, double maximum)
 {
     if(minimum != 0.0 || maximum != 0.0)
-        lines.push_back(std::string(label) + ": " + formatDamage(minimum, maximum));
+        lines.push_back(label + ": " + formatDamage(minimum, maximum));
 }
 
 //! \brief The named value lines of a held weapon or shield, in the order damage, defence, ratings. A weapon without
-//! any damage or defence gives no damage or defence line.
-inline std::vector<std::string> describeWeapon(const ItemWeaponValues& values)
+//! any damage or defence gives no damage or defence line. The names of the values come from the label function
+//! (the language key "ui.item.value.<value>" of each line).
+inline std::vector<std::string> describeWeapon(const ItemWeaponValues& values, const LabelFunction& label)
 {
     std::vector<std::string> lines;
-    addDamageLine(lines, "Physical damage", values.mPhysicalDamageMin, values.mPhysicalDamage);
-    addDamageLine(lines, "Magical damage", values.mMagicalDamageMin, values.mMagicalDamage);
-    addDamageLine(lines, "Elemental damage", values.mElementDamageMin, values.mElementDamage);
-    addLine(lines, "Physical defence", values.mPhysicalDefense);
-    addLine(lines, "Magical defence", values.mMagicalDefense);
-    addLine(lines, "Elemental defence", values.mElementDefense);
-    addLine(lines, "Attack rating", values.mAttackRating);
-    addLine(lines, "Defence rating", values.mDefenseRating);
+    addDamageLine(lines, label("ui.item.value.physicaldamage"), values.mPhysicalDamageMin, values.mPhysicalDamage);
+    addDamageLine(lines, label("ui.item.value.magicaldamage"), values.mMagicalDamageMin, values.mMagicalDamage);
+    addDamageLine(lines, label("ui.item.value.elementaldamage"), values.mElementDamageMin, values.mElementDamage);
+    addLine(lines, label("ui.item.value.physicaldefence"), values.mPhysicalDefense);
+    addLine(lines, label("ui.item.value.magicaldefence"), values.mMagicalDefense);
+    addLine(lines, label("ui.item.value.elementaldefence"), values.mElementDefense);
+    addLine(lines, label("ui.item.value.attackrating"), values.mAttackRating);
+    addLine(lines, label("ui.item.value.defencerating"), values.mDefenseRating);
     return lines;
 }
 }

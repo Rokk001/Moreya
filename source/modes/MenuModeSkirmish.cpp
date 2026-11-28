@@ -18,6 +18,7 @@
 #include "modes/MenuModeSkirmish.h"
 
 #include "utils/Helper.h"
+#include "utils/Translation.h"
 #include "render/Gui.h"
 #include "modes/ModeManager.h"
 #include "sound/MusicPlayer.h"
@@ -61,6 +62,29 @@ static Ogre::ColourValue seatColourFromConfig(const std::string& colourId)
     return ConfigManager::getSingleton().getColorFromId(colourId);
 }
 
+//! \brief Writes the texts of the items of the Level type combo box in the chosen language. The items are found by
+//! their id, so that the selection stays when the language changes.
+static void translateLevelTypeItems(CEGUI::Combobox* levelTypeCb)
+{
+    for(size_t i = 0; i < levelTypeCb->getItemCount(); ++i)
+    {
+        CEGUI::ListboxItem* item = levelTypeCb->getListboxItemFromIndex(i);
+        std::string key;
+        switch(item->getID())
+        {
+            case 0: key = "mode.menu.type.official_skirmish"; break;
+            case 1: key = "mode.menu.type.official_multiplayer"; break;
+            case 2: key = "mode.menu.type.custom_skirmish"; break;
+            case 3: key = "mode.menu.type.custom_multiplayer"; break;
+            default: key = "mode.menu.type.sandbox"; break;
+        }
+        item->setText(Gui::trCegui(key));
+        if(item->isSelected())
+            levelTypeCb->setText(item->getText());
+    }
+    levelTypeCb->invalidate();
+}
+
 MenuModeSkirmish::MenuModeSkirmish(ModeManager* modeManager):
     AbstractApplicationMode(modeManager, ModeManager::MENU_SKIRMISH)
 {
@@ -71,25 +95,27 @@ MenuModeSkirmish::MenuModeSkirmish(ModeManager* modeManager):
     CEGUI::Combobox* levelTypeCb = static_cast<CEGUI::Combobox*>(window->getChild(Gui::SKM_LIST_LEVEL_TYPES));
     levelTypeCb->resetList();
 
-    CEGUI::ListboxTextItem* item = new CEGUI::ListboxTextItem("Official Skirmish Levels", 0);
+    CEGUI::ListboxTextItem* item = new CEGUI::ListboxTextItem(Gui::trCegui("mode.menu.type.official_skirmish"), 0);
     item->setSelectionBrushImage(selImg);
     levelTypeCb->addItem(item);
 
-    item = new CEGUI::ListboxTextItem("Official Multiplayer Levels", 1);
+    item = new CEGUI::ListboxTextItem(Gui::trCegui("mode.menu.type.official_multiplayer"), 1);
     item->setSelectionBrushImage(selImg);
     levelTypeCb->addItem(item);
 
-    item = new CEGUI::ListboxTextItem("Custom Skirmish Levels", 2);
+    item = new CEGUI::ListboxTextItem(Gui::trCegui("mode.menu.type.custom_skirmish"), 2);
     item->setSelectionBrushImage(selImg);
     levelTypeCb->addItem(item);
 
-    item = new CEGUI::ListboxTextItem("Custom Multiplayer Levels", 3);
+    item = new CEGUI::ListboxTextItem(Gui::trCegui("mode.menu.type.custom_multiplayer"), 3);
     item->setSelectionBrushImage(selImg);
     levelTypeCb->addItem(item);
 
-    item = new CEGUI::ListboxTextItem("Sandbox Levels", static_cast<uint32_t>(LEVEL_TYPE_SANDBOX));
+    item = new CEGUI::ListboxTextItem(Gui::trCegui("mode.menu.type.sandbox"), static_cast<uint32_t>(LEVEL_TYPE_SANDBOX));
     item->setSelectionBrushImage(selImg);
     levelTypeCb->addItem(item);
+
+    translateLevelTypeItems(levelTypeCb);
 
     addEventConnection(
         window->getChild(Gui::SKM_BUTTON_LAUNCH)->subscribeEvent(
@@ -156,6 +182,7 @@ void MenuModeSkirmish::activate()
     // Select skirmish
     CEGUI::Combobox* levelTypeCb = static_cast<CEGUI::Combobox*>(getModeManager().getGui().
                                        getGuiSheet(Gui::skirmishMenu)->getChild(Gui::SKM_LIST_LEVEL_TYPES));
+    translateLevelTypeItems(levelTypeCb);
     if(sStartWithSandboxLevels)
         levelTypeCb->setItemSelectState(LEVEL_TYPE_SANDBOX, true);
     else
@@ -253,8 +280,8 @@ bool MenuModeSkirmish::updateFilesList(const CEGUI::EventArgs&)
                (completedRealms.find(predecessor->second) == completedRealms.end()))
             {
                 isLocked = true;
-                mapName += " (locked)";
-                mapDescription = "Complete the realm before this one to open it.";
+                mapName = Translation::tr("mode.menu.skirmish.locked", {{"name", mapName}});
+                mapDescription = Translation::tr("mode.menu.skirmish.locked_description");
             }
         }
         else
@@ -262,8 +289,8 @@ bool MenuModeSkirmish::updateFilesList(const CEGUI::EventArgs&)
             if(selection == LEVEL_TYPE_SANDBOX)
                 continue;
 
-            mapName = "invalid map";
-            mapDescription = "invalid map";
+            mapName = Translation::tr("mode.menu.invalid_map");
+            mapDescription = Translation::tr("mode.menu.invalid_map");
         }
 
         uint32_t id = static_cast<uint32_t>(mFilesList.size());
@@ -290,11 +317,11 @@ bool MenuModeSkirmish::launchSelectedButtonPressed(const CEGUI::EventArgs&)
 
     if(levelSelectList->getSelectedCount() == 0)
     {
-        mainWin->getChild(Gui::SKM_TEXT_LOADING)->setText("Please select a level first.");
+        mainWin->getChild(Gui::SKM_TEXT_LOADING)->setText(Gui::trCegui("mode.menu.select_level_first"));
         return true;
     }
 
-    mainWin->getChild(Gui::SKM_TEXT_LOADING)->setText("Loading...");
+    mainWin->getChild(Gui::SKM_TEXT_LOADING)->setText(Gui::trCegui("mode.menu.loading"));
 
     CEGUI::ListboxItem* selItem = levelSelectList->getFirstSelectedItem();
     int id = selItem->getID();
@@ -315,7 +342,7 @@ bool MenuModeSkirmish::launchSelectedButtonPressed(const CEGUI::EventArgs&)
         relationshipsCheckbox->isSelected()))
     {
         OD_LOG_ERR("Could not start server for single player game !!!");
-        mainWin->getChild(Gui::SKM_TEXT_LOADING)->setText("ERROR: Could not start server for single player game !!!");
+        mainWin->getChild(Gui::SKM_TEXT_LOADING)->setText(Gui::trCegui("mode.menu.skirmish.server_failed"));
         return true;
     }
 
@@ -326,7 +353,7 @@ bool MenuModeSkirmish::launchSelectedButtonPressed(const CEGUI::EventArgs&)
     if(!ODClient::getSingleton().connect("localhost", port, timeout, replayFilename))
     {
         OD_LOG_ERR("Could not connect to server for single player game !!!");
-        mainWin->getChild(Gui::SKM_TEXT_LOADING)->setText("Error: Couldn't connect to local server!");
+        mainWin->getChild(Gui::SKM_TEXT_LOADING)->setText(Gui::trCegui("mode.menu.connect_failed"));
         return true;
     }
     return true;

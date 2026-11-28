@@ -7,6 +7,7 @@
 
 #include "entities/GameEntity.h"
 #include "entities/Tile.h"
+#include "utils/Translation.h"
 
 #include <OgreColourValue.h>
 
@@ -17,15 +18,15 @@ void InputCommand::displayTileBuildFailure(const Tile* tile, Seat* seat)
 {
     std::string reason;
     if(tile == nullptr)
-        reason = "Point at a tile inside the map.";
+        reason = Translation::tr("mode.input.outside_map");
     else if(tile->isFullTile())
-        reason = "Dig out this tile before building.";
+        reason = Translation::tr("mode.input.dig_first");
     else if(tile->getIsBuilding())
-        reason = "A room or trap already occupies this tile.";
+        reason = Translation::tr("mode.input.occupied");
     else if(!tile->isClaimedForSeat(seat))
-        reason = "Claim this ground before building.";
+        reason = Translation::tr("mode.input.claim_first");
     else
-        reason = "No buildable tiles in this selection.";
+        reason = Translation::tr("mode.input.no_buildable");
 
     displayText(Ogre::ColourValue::Red, reason);
 }

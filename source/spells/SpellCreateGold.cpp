@@ -31,11 +31,12 @@
 #include "spells/SpellManager.h"
 #include "utils/ConfigManager.h"
 #include "utils/LogManager.h"
+#include "utils/Translation.h"
 
 #include <cmath>
 
 const std::string SpellCreateGoldName = "createGold";
-const std::string SpellCreateGoldNameDisplay = "Create gold";
+const std::string SpellCreateGoldNameKey = "spell.creategold.name";
 const std::string SpellCreateGoldCooldownKey = "CreateGoldCooldown";
 const SpellType SpellCreateGold::mSpellType = SpellType::createGold;
 
@@ -52,8 +53,9 @@ class SpellCreateGoldFactory : public SpellFactory
     const std::string& getCooldownKey() const override
     { return SpellCreateGoldCooldownKey; }
 
-    const std::string& getNameReadable() const override
-    { return SpellCreateGoldNameDisplay; }
+    //! \brief The name shown to the player, in the chosen language.
+    std::string getNameReadable() const override
+    { return Translation::tr(SpellCreateGoldNameKey); }
 
     virtual void checkSpellCast(GameMap* gameMap, const InputManager& inputManager, InputCommand& inputCommand) const override
     { SpellCreateGold::checkSpellCast(gameMap, inputManager, inputCommand); }

@@ -81,7 +81,7 @@ text = block(item, 'std::string ItemInstance::describeTooltip(')
 assert "[font='MedievalSharp-13']" in text and "[font='MedievalSharp-10']" in text, 'large name, smaller lines'
 for font in ('MedievalSharp-13', 'MedievalSharp-10') if CONTENT else ():
     assert 'name="%s"' % font in fonts, font
-assert text.index('getDisplayName(map)') < text.index('qualityName(mQuality)') < text.index('GoldCoin') < text.index('itemNumber(getPrice(map))')
+assert text.index('getDisplayName(map)') < text.index('qualityDisplayName(mQuality)') < text.index('GoldCoin') < text.index('itemNumber(getPrice(map))')
 assert "OpenDungeonsIcons/GoldCoin" in text
 assert icons is None or 'name="GoldCoin"' in icons
 assert 'image-size' in text and 'coinSize' in text
@@ -114,7 +114,7 @@ assert 'Gui::copyTooltip(slot, slot->getParent());' in block(social, 'void Socia
 merchant = (repo / 'source/modes/GameModeMerchant.cpp').read_text()
 stock = block(merchant, 'void GameMode::receiveMerchantWindow(')
 hover = block(merchant, 'bool GameMode::hoverMerchantItem(')
-assert 'cell->setTooltipText(Gui::describeItemTooltip(items[index].second, mGameMap, nullptr));' in stock
+assert 'cell->setTooltipText(Gui::toCeguiText(Gui::describeItemTooltip(items[index].second, mGameMap, nullptr)));' in stock
 assert 'list->setTooltipText(item->getTooltipText());' in hover and 'Gui::setPlainTooltip(list, "");' in hover
 assert 'Gui::markItemTooltip(list, static_cast<const MerchantImageItem*>(item)->getQualityColour(), area.str());' in hover
 

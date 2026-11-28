@@ -17,6 +17,7 @@
 
 #include "social/SocialData.h"
 #include "utils/ContentPackages.h"
+#include "utils/Translation.h"
 
 #include <cstdlib>
 #include <fstream>
@@ -87,6 +88,82 @@ bool isKnownTextKey(const std::string& key)
         (key == "Bio") || (key == "Relation") || (key == "ClassName");
 }
 
+//! \brief The text with its ASCII capital letters made lower case.
+std::string toLowerAscii(const std::string& text)
+{
+    std::string result = text;
+    for(std::size_t i = 0; i < result.size(); ++i)
+    {
+        if((result[i] >= 'A') && (result[i] <= 'Z'))
+            result[i] = static_cast<char>(result[i] - 'A' + 'a');
+    }
+    return result;
+}
+
+//! \brief The number as three digits ("007"), more digits when it is larger.
+std::string formatKeyNumber(uint32_t number)
+{
+    std::ostringstream stream;
+    stream.width(3);
+    stream.fill('0');
+    stream << number;
+    return stream.str();
+}
+
+//! \brief The text of the key in the chosen language, or the text of the file when the language files have none.
+std::string resolveText(const std::string& key, const std::string& fileText)
+{
+    if(key.empty() || !Translation::hasText(key))
+        return fileText;
+    return Translation::tr(key);
+}
+
+//! \brief The text of the entry with the given index (counting from 1 in its key) of a pool of a name group.
+std::string resolveNameText(const NameGroup& group, const char* kind, const std::vector<std::string>& pool,
+    std::size_t index)
+{
+    if(index >= pool.size())
+        return std::string();
+    return resolveText("social.name." + group.mName + "." + kind + "." + formatKeyNumber(static_cast<uint32_t>(index + 1)),
+        pool[index]);
+}
+
+}
+
+//! \brief A text of the social code in the chosen language, else the given English text.
+std::string getSocialCodeText(const std::string& key, const std::string& english)
+{
+    return resolveText(key, english);
+}
+
+//! \brief The title with the given index in the chosen language.
+std::string NameGroup::getDisplayTitle(std::size_t index) const
+{
+    return resolveNameText(*this, "title", mTitles, index);
+}
+
+//! \brief The hometown with the given index in the chosen language.
+std::string NameGroup::getDisplayHometown(std::size_t index) const
+{
+    return resolveNameText(*this, "hometown", mHometowns, index);
+}
+
+//! \brief The age joke with the given index in the chosen language.
+std::string NameGroup::getDisplayAgeJoke(std::size_t index) const
+{
+    return resolveNameText(*this, "agejoke", mAgeJokes, index);
+}
+
+//! \brief The key of a text line of social-texts.cfg in the language files.
+std::string SocialData::makeTextKey(const std::string& type, const std::string& state, uint32_t number)
+{
+    if(type == "ClassName")
+        return std::string();
+
+    std::string key = "social." + ((type == "MoodLine") ? std::string("mood") : toLowerAscii(type));
+    if(!state.empty())
+        key += "." + toLowerAscii(state);
+    return key + "." + formatKeyNumber(number);
 }
 
 SocialData::SocialData()
@@ -350,6 +427,8 @@ bool SocialData::loadTexts(std::istream& input, const std::string& source)
     std::string line;
     std::vector<std::string> fields;
     uint32_t count = 0;
+    // Lines read so far per type (and state or category), they number the keys of the language files
+    std::map<std::string, uint32_t> lineNumbers;
     while(std::getline(input, line))
     {
         ++lineNumber;
@@ -362,6 +441,8 @@ bool SocialData::loadTexts(std::istream& input, const std::string& source)
             continue;
 
         std::string key;
+        std::string type = fields[0];
+        std::string state;
         ScopedText text;
         if(isKnownTextKey(fields[0]))
         {
@@ -382,6 +463,7 @@ bool SocialData::loadTexts(std::istream& input, const std::string& source)
                 continue;
             }
             key = fields[0] + ":" + fields[1];
+            state = fields[1];
             text.mScope = fields[2];
             text.mText = fields[3];
         }
@@ -396,6 +478,9 @@ bool SocialData::loadTexts(std::istream& input, const std::string& source)
             addError(source, lineNumber, "empty scope or text");
             continue;
         }
+        uint32_t& number = lineNumbers[key];
+        ++number;
+        text.mKey = makeTextKey(type, state, number);
         mTexts[key].push_back(text);
         ++count;
     }
@@ -442,7 +527,7 @@ void SocialData::getTexts(const std::string& key, const std::vector<std::string>
         {
             if(entries[i].mScope == scopes[j])
             {
-                texts.push_back(entries[i].mText);
+                texts.push_back(resolveText(entries[i].mKey, entries[i].mText));
                 break;
             }
         }

@@ -135,7 +135,8 @@ def briefing_layout_errors(layout, mode, gui):
         errors.append("briefing scaling must retain registered design areas")
     if any(reference not in mode for reference in ("Goals::loadGoalFromStream", "goal->getDescription(player)",
                                                     "script.importFromStream(level)", "LevelScriptActionType::objective",
-                                                     'descriptions += "\\n[image=\'GoalStatus/Open\'] " + action.mText')):
+                                                     'descriptions += "\\n[image=\'GoalStatus/Open\'] " + '
+                                                     'LevelText::display(action.mText)')):
         errors.append("briefing must read actual goal descriptions and parsed script objectives")
     debriefing = mode.split("void MenuModeCampaign::showDebriefing()", 1)[-1].split(
         "void MenuModeCampaign::fitDebriefingPanel()", 1)[0]
@@ -196,8 +197,8 @@ def compact_goal_fit_errors(root):
     from PIL import ImageFont
     import math
     errors = []
-    layout = ET.fromstring(content_packages.read_text(root, "gui/MenuCampaign.layout"))
-    hud = ET.fromstring(content_packages.read_text(root, "gui/WindowObjectives.layout"))
+    layout = ET.fromstring(content_packages.read_layout_text(root, "gui/MenuCampaign.layout"))
+    hud = ET.fromstring(content_packages.read_layout_text(root, "gui/WindowObjectives.layout"))
     properties = {}
     for tree, name in ((layout, "BriefingGoals"), (hud, "ObjectivesText")):
         window = tree.find(".//Window[@name='%s']" % name)
@@ -208,11 +209,15 @@ def compact_goal_fit_errors(root):
     rectangle = re.search(r"CEGUI::URect BRIEFING_PREVIEW_GOALS_AREA\((.*?)\);", mode, re.S)
     area = [float(n) for n in re.findall(r"-?\d+(?:\.\d+)?", rectangle[1])]
     descriptions = {}
-    for kind in ("KillAllEnemies", "ProtectDungeonTemple"):
-        text = (root / ("source/goals/Goal" + kind + ".cpp")).read_text(encoding="utf-8")
-        descriptions[kind] = re.search(r"getDescription\([^)]*\)\s*\{\s*return \"([^\"]+)\";", text)[1]
+    # The goal descriptions are text references (keys goal.<name>.description); the fit is measured with the English text
+    goal_texts = (content_packages.packages(root)["lang-en"] / "texts" / "goals.txt").read_text(encoding="utf-8")
+    for kind, key in (("KillAllEnemies", "goal.killall.description"), ("ProtectDungeonTemple", "goal.protecttemple.description")):
+        source = (root / ("source/goals/Goal" + kind + ".cpp")).read_text(encoding="utf-8")
+        if 'Translation::makeReference("' + key + '")' not in source:
+            errors.append("Goal" + kind + ".cpp does not describe the goal with the key " + key)
+        descriptions[kind] = re.search(r"^" + re.escape(key) + r"=(.*)$", goal_texts, re.M)[1].rstrip("\r")
     for entry in campaign_packages.entries(root):
-        text = entry["_path"].read_text(encoding="utf-8")
+        text = campaign_packages.read_level_file(root, entry["_path"])
         classic = [descriptions[row.split()[0]] for row in text.split("[Goals]", 1)[1].split("[/Goals]", 1)[0].splitlines() if row.strip() and not row.lstrip().startswith("#")]
         objectives = [row.split(None, 4)[4] for row in text.splitlines() if row.startswith("Action\tobjectiveid\t")]
         hints = [row.split(None, 3)[3] for row in text.splitlines() if row.startswith("Action\thint\t")]
@@ -241,7 +246,7 @@ def compact_goal_fit_errors(root):
                  (548 * scale, 370 * scale))):
                 font_name = properties[name]["Font"]
                 # The font as the game reads it (a mixed font with its own rows from the content packages)
-                definition = ET.fromstring(content_packages.read_text(root, "gui/fonts/" + font_name + ".font"))
+                definition = ET.fromstring(content_packages.read_layout_text(root, "gui/fonts/" + font_name + ".font"))
                 font = ImageFont.truetype(str(content_packages.resolve(root, "gui/fonts/" + definition.get("filename"))), math.ceil(float(definition.get("size")) * 96 / 72 * font_scale))
                 used_height = 0
                 for icon_width, line in lines:
@@ -296,7 +301,7 @@ def check_repository(root):
             return failures + ["content files missing although the content is present: " + ", ".join(missing)]
         content_packages.unchecked("campaign previews", missing)
         return failures
-    layout = ET.fromstring(content_packages.read_text(root, "gui/MenuCampaign.layout"))
+    layout = ET.fromstring(content_packages.read_layout_text(root, "gui/MenuCampaign.layout"))
     if not any(window.get("name") == "BriefingImage" and window.get("type") == "OD/StaticImage"
                for window in layout.iter("Window")):
         failures.append("layout is missing the OD/StaticImage BriefingImage window")
@@ -340,7 +345,7 @@ def self_test():
         content_packages.unchecked("campaign preview self-test", ["gui/MenuCampaign.layout"])
         print("campaign preview checker self-tests passed")
         return
-    layout_text = content_packages.read_text(root, "gui/MenuCampaign.layout")
+    layout_text = content_packages.read_layout_text(root, "gui/MenuCampaign.layout")
     mode = (root / "source/modes/MenuModeCampaign.cpp").read_text(encoding="utf-8")
     gui = (root / "source/render/Gui.cpp").read_text(encoding="utf-8")
     assert not briefing_layout_errors(ET.fromstring(layout_text), mode, gui)
