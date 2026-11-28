@@ -15044,8 +15044,8 @@ static void shapeGhostHose(Ogre::ManualObject& hose, const Ogre::Vector3& port, 
     hose.end();
 }
 
-//! \brief Returns the middle of the ectoplasm in the mouth of the client cauldron nearest to a delivery device, or the
-//! device itself when no cauldron is drawn.
+//! \brief Returns the mouth of the suction nozzle of the client cauldron nearest to a delivery device, or the device
+//! itself when no cauldron is drawn.
 static Ogre::Vector3 ghostCauldronMouthNear(const GameMap& map, const Ogre::Vector3& device)
 {
     const RenderedMovableEntity* best=nullptr;Ogre::Real distance=std::numeric_limits<Ogre::Real>::max();
@@ -15605,10 +15605,11 @@ void Creature::updateGhostHuntVisuals(double seconds)
                 // (RoomGhostRoom::getTrapSocketPosition) lies within reach of his hand, where the server keeps the
                 // ghost. Over the first GhostPutInSeconds the hunter reaches out with the shut trap and sets it down onto
                 // the seat by hand (decision 936 point 3: his generated reach pose, the trap leaves his hand only near the
-                // seat and comes down onto it from above, eased, bottom on the seat); then the ghost flows out of the
-                // trap over the rim into the cauldron (GhostEntity::updateLook). The trap stays shut, the glow of the
-                // seat shines. The whole delivery of one ghost is the transfer time, GhostTransferSeconds times the
-                // CatchTime research (20, 16, 13.3 s). Further ghosts of the pack follow without a new put-in.
+                // seat and comes down onto it from above, eased, bottom on the seat); then the trap opens on the shelf,
+                // the ghost is drawn straight up out of it into the suction nozzle (GhostEntity::updateLook) and the trap
+                // shuts again (owner decision of 2026-11-28); the glow of the seat shines. The whole delivery of one
+                // ghost is the transfer time, GhostTransferSeconds times the CatchTime research (20, 16, 13.3 s).
+                // Further ghosts of the pack follow without a new put-in.
                 const Ogre::Vector3 seat=ghost->getPosition();
                 const double putIn=config.getRoomConfigDouble("GhostPutInSeconds");
                 const double transferSeconds=SkillManager::getResearchValue(getSeat(),SkillType::roomGhostRoom,
@@ -15664,8 +15665,11 @@ void Creature::updateGhostHuntVisuals(double seconds)
                     share=(mGhostFlowClock-putIn)/(transferSeconds-putIn);
                 if(inserted<1.0f) share=0.0;
                 mGhostTransferShown=std::max(mGhostTransferShown,std::max(0.0,std::min(1.0,share)));
-                // Once shut the trap stays shut (decision 865); the glow of the seat shines while the ghost flows
-                mGhostLidShown=0.0;
+                // At the cauldron the trap opens for each ghost and shuts after it (owner decision of 2026-11-28, in place
+                // of decision 865's shut trap there; caught traps elsewhere stay shut), with the lid clip of the catch;
+                // the glow of the seat shines while the ghost flows
+                mGhostLidShown=inserted>=1.0f?GhostTransferPath::lid(mGhostTransferShown):0.0;
+                lidTarget=mGhostLidShown;
                 trapLight=inserted>=1.0f?1.0:0.0;
                 mGhostCaptureShown=0.0;
                 ghost->setTransferTarget(mGhostDeliveryMouth);

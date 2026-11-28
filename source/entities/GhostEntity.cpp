@@ -323,26 +323,27 @@ double GhostTransferPath::even(double a, double b, double soft, double t)
 GhostTransferPath::Point GhostTransferPath::at(double share, const Ogre::Vector3& trap, const Ogre::Vector3& mouth)
 {
     const double t = std::max(0.0, std::min(1.0, share));
-    // Polar coordinates around the middle of the mouth, starting at the trap
-    const double dx = trap.x - mouth.x, dy = trap.y - mouth.y;
-    const double start = std::sqrt(dx * dx + dy * dy);
-    const double startAngle = start > 1.0e-6 ? std::atan2(dy, dx) : 0.0;
-    // Onto the circle while it rises (a little after the rise has begun, so it clears the rim), the circle held, then
-    // closing to the middle until it is sucked in
-    const double radius = (start + (RADIUS - start) * ease(0.03, APPROACH, t)) * (1.0 - ease(CLOSE, 1.0, t));
-    // One even angular speed from the start to the end, only eased in from rest over the first EASE_IN
-    const double angle = startAngle + TURNS * 2.0 * Ogre::Math::PI *
+    // Along the line from the trap up to the nozzle's mouth at one even rate (eased only at both ends), then drawn on up
+    // into the nozzle by SINK
+    const double along = even(0.0, ARRIVE, 0.12, t);
+    const Ogre::Vector3 line = trap + (mouth - trap) * static_cast<Ogre::Real>(along);
+    const double height = line.z + SINK * ease(ARRIVE, 1.0, t);
+    // A narrow whirl round that line: it opens out of the trap, turns with one even angular speed (eased in from rest
+    // over the first EASE_IN) and closes to the line from CLOSE on, so the ghost enters the nozzle in its middle
+    const double radius = RADIUS * ease(0.0, 0.1, t) * (1.0 - ease(CLOSE, ARRIVE, t));
+    const double angle = TURNS * 2.0 * Ogre::Math::PI *
         (t < EASE_IN ? t * t / (2.0 * EASE_IN) : t - 0.5 * EASE_IN) / (1.0 - 0.5 * EASE_IN);
-    // Up out of the trap to RISE over the higher of trap and ectoplasm, down to the ectoplasm at an even rate, then
-    // SINK into it
-    const double top = std::max(trap.z, mouth.z) + RISE;
-    const double height = trap.z + (top - trap.z) * ease(0.0, 0.1, t) - (top - mouth.z) * even(0.08, 0.92, 0.12, t) -
-        SINK * ease(0.9, 1.0, t);
     Point point;
-    point.position = Ogre::Vector3(static_cast<Ogre::Real>(mouth.x + radius * std::cos(angle)),
-        static_cast<Ogre::Real>(mouth.y + radius * std::sin(angle)), static_cast<Ogre::Real>(height));
-    point.visible = ease(0.0, 0.05, t) * (1.0 - ease(0.9, 0.99, t));
+    point.position = Ogre::Vector3(static_cast<Ogre::Real>(line.x + radius * std::cos(angle)),
+        static_cast<Ogre::Real>(line.y + radius * std::sin(angle)), static_cast<Ogre::Real>(height));
+    point.visible = ease(LID_OPEN, LID_OPEN + 0.05, t) * (1.0 - ease(ARRIVE, 0.99, t));
     return point;
+}
+
+double GhostTransferPath::lid(double share)
+{
+    const double t = std::max(0.0, std::min(1.0, share));
+    return ease(0.0, LID_OPEN, t) * (1.0 - ease(LID_SHUT, 1.0, t));
 }
 
 void GhostEntity::updateLook()
@@ -382,13 +383,13 @@ void GhostEntity::updateLook()
     const double transfer = std::max(0.0, std::min(1.0, mTransferProgress));
     if(mState == GhostState::boxed && transfer > 0.0)
     {
-        // The transfer into the cauldron (decisions 845, 865 and 936), visible for the whole flow: the boxed ghost waits in
-        // the trap in the seat on the rim (mPosition). It rises out of the trap at half size and moves onto a circle of
-        // GhostTransferPath::RADIUS around the middle of the cauldron's mouth (mTransferTarget), circles it with one even angular
-        // speed (GhostTransferPath::TURNS turns; only the very start eases in from rest), comes down to the ectoplasm at
-        // an even rate, and over the last part the circle closes to the middle and the ghost is sucked into the
-        // ectoplasm and fades out. Every part is a smooth function of the share, so a share that grows every frame gives
-        // a motion without jumps or stops (decision 936 point 4).
+        // The transfer into the cauldron (decisions 845, 865 and 936; for the closed cauldron the owner decision of
+        // 2026-11-28), visible for the whole flow: the boxed ghost waits in the trap on the cauldron's shelf (mPosition).
+        // Once the trap has opened it rises straight up out of it at half size in a narrow whirl of
+        // GhostTransferPath::RADIUS (GhostTransferPath::TURNS turns; only the very start eases in from rest) to the mouth
+        // of the suction nozzle over the shelf (mTransferTarget), the whirl closing on the way, and is drawn on into the
+        // nozzle and fades out. Every part is a smooth function of the share, so a share that grows every frame gives a
+        // motion without jumps or stops (decision 936 point 4).
         const Ogre::Vector3 mouth = mHasTransferTarget ? mTransferTarget : mPosition;
         const GhostTransferPath::Point point = GhostTransferPath::at(transfer, mPosition, mouth);
         const double size = minScale * (1.0 - 0.6 * GhostTransferPath::ease(0.1, 1.0, transfer));

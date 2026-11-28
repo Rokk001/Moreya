@@ -89,9 +89,8 @@ public:
     static Ogre::Vector3 getTrapSocketPosition(const Tile& anchor);
     //! \brief Returns the tile the hunter stands on to use the trap seat of a cauldron: on its +Y side, facing -Y.
     static Tile* getTrapStandingTile(GameMap& map, const Tile& anchor);
-    //! \brief Returns the middle of the ectoplasm surface in the mouth of a cauldron object standing at the given
-    //! position (models/GhostCauldron.mesh): where a delivered ghost sinks into the cauldron (since 2026-11-28 the
-    //! middle of the closed lid at the foot of its suction tower).
+    //! \brief Returns the middle of the mouth of the suction nozzle of a cauldron object standing at the given position
+    //! (models/GhostCauldron.mesh): where a delivered ghost is drawn into the closed cauldron.
     static Ogre::Vector3 getCauldronMouthPosition(const Ogre::Vector3& cauldron);
     //! \brief Returns the outer radius of the cauldron's rolled rim in tiles (models/GhostCauldron.mesh).
     static float getCauldronRimRadius();

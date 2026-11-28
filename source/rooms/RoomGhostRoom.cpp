@@ -1131,11 +1131,11 @@ Tile* RoomGhostRoom::getTrapStandingTile(GameMap& map, const Tile& anchor)
 
 Ogre::Vector3 RoomGhostRoom::getCauldronMouthPosition(const Ogre::Vector3& cauldron)
 {
-    // The glowing ectoplasm surface fills the mouth 1.049 above the floor (models/GhostCauldron.mesh, measured on the export)
-    // The closed cauldron of 2026-11-28 has its lid there instead (1.06 high at the foot of its suction tower): the ghost
-    // still circles down into the middle of the cauldron and fades as it reaches the lid.
-    static const float ECTOPLASM_SURFACE_HEIGHT=1.049f;
-    return Ogre::Vector3(cauldron.x,cauldron.y,ECTOPLASM_SURFACE_HEIGHT);
+    // The closed cauldron (owner decision of 2026-11-28) draws the ghosts in through the mouth of its suction nozzle,
+    // which hangs over the trap seat (models/GhostCauldron.mesh, measured on the export: the middle of the nozzle's lower
+    // rim from the cauldron's middle)
+    static const float NOZZLE_OFFSET_X=-0.4792f,NOZZLE_OFFSET_Y=0.5706f,NOZZLE_HEIGHT=0.7515f;
+    return Ogre::Vector3(cauldron.x+NOZZLE_OFFSET_X,cauldron.y+NOZZLE_OFFSET_Y,NOZZLE_HEIGHT);
 }
 
 float RoomGhostRoom::getCauldronRimRadius()

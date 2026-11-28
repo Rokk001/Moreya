@@ -12,29 +12,34 @@ enum class GhostState : uint32_t
     rising, floating, beamed, boxed, dissolving
 };
 
-//! \brief The path of a ghost flowing from the trap in the cauldron's seat into the ectoplasm (decision 936 point 4): a
-//! smooth function of the transfer share, so a share that grows every frame moves the ghost without jumps or stops. It
-//! rises out of the trap onto a circle around the middle of the mouth, circles it with one even angular speed while it
-//! comes down at an even rate, and the circle closes until it is sucked into the ectoplasm.
+//! \brief The path of a ghost drawn from the trap on the cauldron's shelf into its suction nozzle (decision 936 point 4,
+//! owner decision of 2026-11-28 for the closed cauldron): a smooth function of the transfer share, so a share that grows
+//! every frame moves the ghost without jumps or stops. The trap opens, the ghost rises straight up out of it at one even
+//! rate in a narrow whirl that closes as it nears the nozzle, is drawn on into the nozzle and vanishes there; then the
+//! trap shuts again.
 struct GhostTransferPath
 {
     //! \brief Position and visibility (0 to 1) of the ghost at a share.
     struct Point { Ogre::Vector3 position; double visible; };
-    //! Radius in tiles of the circle around the middle of the mouth (inside the rim of 0.68).
-    static constexpr double RADIUS = 0.42;
-    //! Turns round the circle over the whole transfer.
+    //! Radius in tiles of the whirl round the line from the trap to the nozzle (inside the nozzle's mouth of 0.12).
+    static constexpr double RADIUS = 0.07;
+    //! Turns of the whirl over the whole transfer.
     static constexpr double TURNS = 5.0;
-    //! Share in which the ghost rises out of the trap onto the circle.
-    static constexpr double APPROACH = 0.15;
-    //! Share from which the circle closes to the middle, until it is sucked in at the end.
-    static constexpr double CLOSE = 0.7;
-    //! Share over which the circling starts from rest.
+    //! Share over which the whirl starts from rest.
     static constexpr double EASE_IN = 0.06;
-    //! Tiles the ghost rises over the higher of trap and ectoplasm, and tiles it sinks into the ectoplasm at the end.
-    static constexpr double RISE = 0.45;
-    static constexpr double SINK = 0.2;
-    //! \brief The point at a share (0 to 1) for the trap position and the middle of the ectoplasm surface.
+    //! Share from which the whirl closes to the line, until the ghost is in the nozzle.
+    static constexpr double CLOSE = 0.7;
+    //! Share at which the ghost reaches the mouth of the nozzle.
+    static constexpr double ARRIVE = 0.9;
+    //! Tiles the ghost is drawn on up into the nozzle while it vanishes.
+    static constexpr double SINK = 0.12;
+    //! Shares over which the trap's lid opens at the start and shuts at the end of the transfer.
+    static constexpr double LID_OPEN = 0.04;
+    static constexpr double LID_SHUT = 0.93;
+    //! \brief The point at a share (0 to 1) for the trap position and the middle of the nozzle's mouth.
     static Point at(double share, const Ogre::Vector3& trap, const Ogre::Vector3& mouth);
+    //! \brief How far the trap's lid is open (0 to 1) at a share: open before the ghost leaves it, shut after it vanished.
+    static double lid(double share);
     //! \brief Smooth step from 0 at a to 1 at b, with zero speed at both ends.
     static double ease(double a, double b, double t);
     //! \brief 0 to 1 from a to b at one constant speed, only the first and last `soft` share eased.
