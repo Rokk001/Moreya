@@ -39,7 +39,7 @@ assert 'script.areMainObjectivesReached(seat->getId())' in turn
 assert '!player->getHasLost()' in turn
 for name in ('source/gamemap/GameMap.cpp', 'source/modes/MenuModeCampaign.cpp'):
     text = read(name)
-    assert '"Main goals' in text and 'Optional goals' in text
+    assert '"goal.main"' in text and '"goal.optional"' in text
     assert 'LevelScriptObjectiveGroup::optional' in text
     assert 'GoalStatus/Open' in text
 unit = read('source/tests/test_LevelScript.cpp')

@@ -337,8 +337,8 @@ check("mIsInHand || isKo() || isPossessed()" in body, "rampage: no hits while he
 rampage_body = extract(creature_cpp, "void Creature::startRampage()")
 check("clearActionQueue();" in rampage_body and "fireChatMsgRampaging();" in rampage_body and "getTimePayDay()" in rampage_body,
       "rampage: starts with the message and lasts one pay day")
-check("is rampaging in your dungeon !" in creature_cpp, "the rampage message")
-check("is not under your control anymore !" in creature_cpp and "is leaving your dungeon" in creature_cpp and
+check('"msg.creature.rampaging"' in creature_cpp, "the rampage message")
+check('"msg.creature.uncontrolled"' in creature_cpp and '"msg.creature.leaving"' in creature_cpp and
       "fireChatMsgLeftDungeon" in leave_cpp, "the messages of leaving and of turning rogue stay")
 upkeep = extract(creature_cpp, "void Creature::upkeepMoodDecision()")
 check(upkeep.index("effective >= static_cast<double>(config.getCreatureMoodAngry())") < upkeep.index("if(isRampaging())"),

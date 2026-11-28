@@ -120,7 +120,7 @@ check('catch' in safe and before(safe, 'try', 'writer(') and before(safe, 'write
       'A6 SafeSave catches an exception of the writer')
 check('catch' in ask and before(ask, 'try', 'levelSave =') and before(ask, 'levelSave =', 'catch'),
       'A6 askSaveMap catches an exception while it builds the path to save')
-check(before(ask, 'saveOk', "Couldn't not save") and 'chatServer' in ask,
+check(before(ask, 'saveOk', '"msg.map.failed"') and 'chatServer' in ask,
       'A6 a failed save tells the player in the chat')
 
 if failures:

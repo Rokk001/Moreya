@@ -514,7 +514,8 @@ if content_packages.unchecked("check_hand_limit", [name for name in HAND_FILES
 # ------------------------------------------------------------------------------------------------ build and tests
 check("${SRC}/game/HandLimitRules.cpp" in CMAKE, "C2: HandLimitRules.cpp is in the source list of the game")
 check(re.search(r"add_boost_test\(00-HandLimitRules\s+SOURCES\s+test_HandLimitRules\.cpp\s+\$\{SRC\}/game/"
-                r"HandLimitRules\.h\s+\$\{SRC\}/game/HandLimitRules\.cpp\)", TESTS_CMAKE) is not None,
+                r"HandLimitRules\.h\s+\$\{SRC\}/game/HandLimitRules\.cpp\s+\$\{SRC\}/utils/Translation\.h\s+"
+                r"\$\{SRC\}/utils/Translation\.cpp\s+\$\{SRC\}/utils/LogManager\.cpp\s+LIBRARIES\s", TESTS_CMAKE) is not None,
       "the Boost test 00-HandLimitRules is built")
 cases = re.findall(r"(.*)\n(BOOST_AUTO_TEST_CASE\((\w+)\))", BOOST_TEST)
 check(sorted(name for _, _, name in cases) == sorted(["test_fightingCreature", "test_secondFighterRefused",

@@ -234,7 +234,7 @@ assert "SkillType::keeperManaFlow" in page and 'return "Spells";' in page
 
 # The repeated notice of an empty research queue
 player = read("source/game/Player.cpp")
-assert "Warning: your library has nothing to research. Choose the next research in the research tree." in player
+assert '"msg.research.nothing"' in player
 notice = player[player.index("void Player::notifyNoSkillInQueue()"):]
 assert "EventShortNoticeType::aboutSkills" in notice[:notice.index("\n}\n")]
 
