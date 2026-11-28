@@ -35,6 +35,7 @@
 #include "render/TextRenderer.h"
 #include "render/RenderManager.h"
 #include "utils/ConfigManager.h"
+#include "utils/DisplayText.h"
 #include "utils/LogManager.h"
 #include "utils/LogSinkConsole.h"
 #include "utils/LogSinkFile.h"
@@ -129,6 +130,17 @@ private:
     bool mCloseRequested;
 };
 
+//! \brief Reads the display name of a data table entry (item, equipment, potion, herb, creature skill) from the
+//! language files; installed as the lookup function of DisplayText.
+static bool lookupDisplayText(const std::string& key, std::string& text)
+{
+    if(!Translation::hasText(key))
+        return false;
+
+    text = Translation::tr(key);
+    return true;
+}
+
 //! \brief Starts the game: resources, renderer, GUI, the text boxes (debug messages, pointer text, hand cooldown) and
 //! the main loop, or one of the headless tools selected by the options.
 void ODApplication::startGame(boost::program_options::variables_map& options)
@@ -154,6 +166,8 @@ void ODApplication::startGame(boost::program_options::variables_map& options)
     }
     // The language packages are content packages; every mode may show or send texts
     Translation::discover();
+    // The names of the data tables (items, equipment, potions, herbs, creature skills) come from the language files
+    DisplayText::setLookup(lookupDisplayText);
 
     try
     {
