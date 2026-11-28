@@ -10,6 +10,9 @@ their contracts are named as not checked; the code contracts, the HUD layout and
 """
 from pathlib import Path
 import os
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from language_texts import english  # noqa: E402
 import re
 import shutil
 import struct
@@ -336,7 +339,8 @@ shortcut = body(nav, 'bool GameMode::selectRoomManagerType(')
 assert shortcut.index('!mRoomManagerNavigation.owned(type)') < shortcut.index('closeAllTopWindows()'), 'unowned options target leaves other windows open'
 assert re.search(r'if\(closeOthers\)\s+closeAllTopWindows\(\);', shortcut), 'keyboard targets preserve other windows'
 refresh = body(nav, 'void GameMode::refreshRoomManager(')
-assert '"Rooms (" + Helper::toString(mRoomManagerNavigation.listedCount())' in refresh
+assert 'mode.game.rooms.title' in refresh and 'Helper::toString(mRoomManagerNavigation.listedCount())' in refresh
+assert english('mode.game.rooms.title') == 'Rooms ({count})'
 assert 'setVisible(mRoomManagerNavigation.listedCount() > 0)' in refresh
 assert 'row->setVisible(counts[index] > 0)' in refresh, 'only owned types appear'
 assert 'mRoomManagerNavigation.updateOwned(counts)' in refresh and 'closeRoomManager()' in refresh

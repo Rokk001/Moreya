@@ -12,6 +12,8 @@ from pathlib import Path
 import re
 import subprocess
 import sys
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from language_texts import english  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
 TIMEOUT_SECONDS = 600
@@ -211,9 +213,12 @@ assert send.index('<< seatId;') < send.index('<< mCurrentGoldDensity;')
 # Editor (6.10)
 # ---------------------------------------------------------------------------------------------------------------------
 assert 'case OIS::KC_G:' in editor and 'mCurrentGoldDensity = Tile::nextGoldDensity(mCurrentGoldDensity);' in editor
-assert '"Gold density (G): " << mCurrentGoldDensity << "%"' in editor
-assert '"    G - gold wall density 50/100/150 %"' in editor
-assert editor.index('"    T - switch between full and empty tiles"') < editor.index('"    G - gold wall density 50/100/150 %"')
+assert '"editor.status.gold_density"' in editor and 'textSS << mCurrentGoldDensity;' in editor
+assert english('editor.status.gold_density') == 'Gold density (G): {value}%'
+assert '"editor.help.tiles"' in editor
+assert '    G - gold wall density 50/100/150 %' in english('editor.help.tiles')
+assert (english('editor.help.tiles').index('    T - switch between full and empty tiles')
+        < english('editor.help.tiles').index('    G - gold wall density 50/100/150 %'))
 assert 'mCurrentGoldDensity(Tile::GOLD_DENSITY_DEFAULT)' in editor
 assert 'EDITOR_GOLD_DENSITY = "HorizontalPipe/GoldDensityDisplay"' in read('source/render/Gui.cpp')
 assert 'static const std::string EDITOR_GOLD_DENSITY;' in read('source/render/Gui.h')

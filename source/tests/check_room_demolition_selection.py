@@ -3,6 +3,10 @@ from pathlib import Path
 import re
 import subprocess
 import tempfile
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import language_texts  # noqa: E402
+from language_texts import english  # noqa: E402
 
 repo = Path(__file__).resolve().parents[2]
 import sys
@@ -109,6 +113,6 @@ int main(){
     function(rooms, signature, first) + '\n' + function(rooms, signature, second))
 with tempfile.TemporaryDirectory(prefix='odp-room-demolition-') as directory:
     work = Path(directory)
-    (work / 'check.cpp').write_text(probe)
+    (work / 'check.cpp').write_text(language_texts.translation_stub() + probe)
     subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17', 'check.cpp', '/Fecheck.exe'], cwd=work, check=True)
     subprocess.run([str(work / 'check.exe')], cwd=work, check=True)

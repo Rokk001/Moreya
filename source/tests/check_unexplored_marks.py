@@ -2,6 +2,8 @@
 from pathlib import Path
 import math
 import sys
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from language_texts import english  # noqa: E402
 
 repo = Path(__file__).resolve().parents[2]
 
@@ -12,7 +14,8 @@ def read(path):
 
 
 game_mode = read('source/modes/GameMode.cpp')
-assert 'Unexplored. Click or drag to mark for digging.' in game_mode
+assert 'mode.game.cursor.unexplored' in game_mode
+assert english('mode.game.cursor.unexplored') == 'Unexplored. Click or drag to mark for digging.'
 assert '!tile->getEverVisible() || tile->getHasFogOfWar() || tile->isDiggable' in game_mode
 
 player = read('source/game/Player.cpp')

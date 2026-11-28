@@ -27,6 +27,7 @@
 #include "sound/MusicPlayer.h"
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
+#include "utils/Translation.h"
 #include "utils/LogManager.h"
 #include "utils/ResourceManager.h"
 
@@ -104,7 +105,7 @@ bool MenuModeMultiplayerClient::clientButtonPressed(const CEGUI::EventArgs&)
 
     if (ip.empty())
     {
-        infoText->setText("Please enter a server IP.");
+        infoText->setText(Gui::trCegui("mode.menu.multiplayer.enter_ip"));
         return true;
     }
 
@@ -113,12 +114,12 @@ bool MenuModeMultiplayerClient::clientButtonPressed(const CEGUI::EventArgs&)
     CEGUI::String nickCeguiStr = reinterpret_cast<const CEGUI::utf8*>(nick.c_str());
     if (nickCeguiStr.empty())
     {
-        infoText->setText("Please enter a nickname.");
+        infoText->setText(Gui::trCegui("mode.menu.enter_nickname"));
         return true;
     }
     else if (nickCeguiStr.length() > 20)
     {
-        infoText->setText("Please enter a shorter nickname. (20 letters max.)");
+        infoText->setText(Gui::trCegui("mode.menu.nickname_too_long"));
         return true;
     }
 
@@ -136,11 +137,12 @@ bool MenuModeMultiplayerClient::clientButtonPressed(const CEGUI::EventArgs&)
     uint32_t timeout = ConfigManager::getSingleton().getClientConnectionTimeout();
     std::string replayFilename = ResourceManager::getSingleton().getReplayDataPath()
         + ResourceManager::getSingleton().buildReplayFilename();
-    infoText->setText("Loading...");
+    infoText->setText(Gui::trCegui("mode.menu.loading"));
     if(!ODClient::getSingleton().connect(ip, static_cast<int>(port), timeout, replayFilename))
     {
         // Error while connecting
-        infoText->setText("Could not connect to: " + ip + ":" + Helper::toString(port));
+        infoText->setText(Gui::toCeguiText(Translation::tr("mode.menu.multiplayer.connect_failed",
+        {{"ip", ip}, {"port", Helper::toString(port)}})));
         return true;
     }
 

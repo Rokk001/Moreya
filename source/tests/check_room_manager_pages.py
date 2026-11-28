@@ -18,6 +18,9 @@ the page contracts are named as not checked and only the code contracts run.
 """
 from pathlib import Path
 import math
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from language_texts import english  # noqa: E402
 import re
 import sys
 import xml.etree.ElementTree as ET
@@ -432,7 +435,9 @@ def main():
         contains(rel(alchemy, 'ModePanel'), rel(alchemy, 'ModeButton'), 'mode in its panel')
         assert props(alchemy['ModeButton']).get('Text', '') == ''
     body = function(lab, 'void GameMode::setLabModeShown(')
-    assert '{"Auto", "Healing/mana", "Combat potions"}' in body and 'button->getChild("Label")->setText(labels[mode]);' in body
+    assert ('{"mode.game.alchemy.auto", "mode.game.alchemy.healing", "mode.game.alchemy.combat"}' in body
+            and 'getChild("Label")->setText(' in body)
+    assert [english('mode.game.alchemy.' + key) for key in ('auto', 'healing', 'combat')] == ['Auto', 'Healing/mana', 'Combat potions']
     assert '{{true, true, true}, {true, true, false}, {false, false, true}}' in body
     print('PASS alchemy framed rows, herb panel, Auto mode with potion pictures')
 

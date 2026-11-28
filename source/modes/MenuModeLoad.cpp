@@ -20,6 +20,7 @@
 #include "modes/LoadGameFilter.h"
 
 #include "utils/Helper.h"
+#include "utils/Translation.h"
 #include "render/Gui.h"
 #include "modes/ModeManager.h"
 #include "sound/MusicPlayer.h"
@@ -54,6 +55,15 @@ static CEGUI::RadioButton* getFilterButton(CEGUI::Window* sheet, size_t kind)
 {
     return static_cast<CEGUI::RadioButton*>(
         sheet->getChild(std::string("LevelWindowFrame/KindFilter/Filter") + LOAD_FILTER_NAMES[kind]));
+}
+
+//! \brief Writes the captions of the four filter entries in the chosen language.
+static void translateFilterButtons(CEGUI::Window* sheet)
+{
+    static const char* const FILTER_KEYS[LOAD_FILTER_COUNT] = {"mode.menu.load.filter.campaign",
+        "mode.menu.load.filter.skirmish", "mode.menu.load.filter.sandbox", "mode.menu.load.filter.replays"};
+    for(size_t kind = 0; kind < LOAD_FILTER_COUNT; ++kind)
+        getFilterButton(sheet, kind)->setText(Gui::trCegui(FILTER_KEYS[kind]));
 }
 
 //! \brief Returns the load kind of the chosen filter entry, or -1 while no entry is chosen.
@@ -99,7 +109,7 @@ MenuModeLoad::MenuModeLoad(ModeManager *modeManager, bool inGame, const std::str
     for(size_t kind = 0; kind < LOAD_FILTER_COUNT; ++kind)
     {
         CEGUI::RadioButton* filter = getFilterButton(window, kind);
-        filter->setText(LOAD_FILTER_NAMES[kind]);
+        filter->setText(Gui::toCeguiText(LOAD_FILTER_NAMES[kind]));
         filter->setGroupID(LOAD_FILTER_GROUP);
         addEventConnection(filter->subscribeEvent(CEGUI::ToggleButton::EventSelectStateChanged,
             CEGUI::Event::Subscriber(&MenuModeLoad::filterChanged, this)));
@@ -173,6 +183,7 @@ void MenuModeLoad::activate()
     MapHandler::loadCampaignProgress();
     // Loads the corresponding Gui sheet.
     getModeManager().getGui().loadGuiSheet(Gui::guiSheet::loadSavedGameMenu);
+    translateFilterButtons(getModeManager().getGui().getGuiSheet(Gui::guiSheet::loadSavedGameMenu));
 
     GameMap* gameMap = ODFrameListener::getSingleton().getClientGameMap();
     CEGUI::Window* sheet = getModeManager().getGui().getGuiSheet(Gui::loadSavedGameMenu);
@@ -214,7 +225,7 @@ void MenuModeLoad::activate()
         {
             if(!ODClient::getSingleton().replay(filename))
             {
-                sheet->getChild("LoadingText")->setText("Error: Couldn't launch replay!");
+                sheet->getChild("LoadingText")->setText(Gui::trCegui("mode.menu.replay.launch_failed"));
                 sheet->getChild("LoadingText")->show();
             }
         }
@@ -267,7 +278,7 @@ bool MenuModeLoad::launchSelectedButtonPressed(const CEGUI::EventArgs&)
     if(levelSelectList->getSelectedCount() == 0)
     {
         tmpWin = getModeManager().getGui().getGuiSheet(Gui::loadSavedGameMenu)->getChild("LoadingText");
-        tmpWin->setText("Please select a saved game first.");
+        tmpWin->setText(Gui::trCegui("mode.menu.load.select_first"));
         tmpWin->show();
         return true;
     }
@@ -283,7 +294,7 @@ bool MenuModeLoad::launchSelectedButtonPressed(const CEGUI::EventArgs&)
         CEGUI::Window* loading = getModeManager().getGui().getGuiSheet(Gui::loadSavedGameMenu)->getChild("LoadingText");
         if(!MenuModeReplay::checkReplayValid(level, description, error))
         {
-            loading->setText("Error: Couldn't launch replay!");
+            loading->setText(Gui::trCegui("mode.menu.replay.launch_failed"));
             loading->show();
             return true;
         }
@@ -294,7 +305,7 @@ bool MenuModeLoad::launchSelectedButtonPressed(const CEGUI::EventArgs&)
         }
         if(!ODClient::getSingleton().replay(level))
         {
-            loading->setText("Error: Couldn't launch replay!");
+            loading->setText(Gui::trCegui("mode.menu.replay.launch_failed"));
             loading->show();
         }
         return true;
@@ -314,7 +325,7 @@ bool MenuModeLoad::launchSavedGame(const std::string& level)
     if(!nickname.empty())
         ODFrameListener::getSingleton().getClientGameMap()->setLocalPlayerNick(nickname);
     CEGUI::Window* tmpWin = getModeManager().getGui().getGuiSheet(Gui::loadSavedGameMenu)->getChild("LoadingText");
-    tmpWin->setText("Loading...");
+    tmpWin->setText(Gui::trCegui("mode.menu.loading"));
     tmpWin->show();
 
     // In single player mode, we act as a server
@@ -323,8 +334,8 @@ bool MenuModeLoad::launchSavedGame(const std::string& level)
         OD_LOG_ERR("Could not start server for single player game !!!");
         tmpWin = getModeManager().getGui().getGuiSheet(Gui::loadSavedGameMenu)->getChild("LoadingText");
         const std::string& cause = MapHandler::getLastLoadError();
-        tmpWin->setText(cause.empty() ? std::string("ERROR: Could not start the saved game. See the log for details.")
-                                      : "ERROR: This saved game can't be loaded. " + cause);
+        tmpWin->setText(Gui::toCeguiText(cause.empty() ? Translation::tr("mode.menu.load.start_failed")
+            : Translation::tr("mode.menu.load.cannot_load", {{"cause", cause}})));
         tmpWin->show();
         return true;
     }
@@ -338,7 +349,7 @@ bool MenuModeLoad::launchSavedGame(const std::string& level)
         ODServer::getSingleton().stopServer();
         OD_LOG_ERR("Could not connect to server for single player game !!!");
         tmpWin = getModeManager().getGui().getGuiSheet(Gui::loadSavedGameMenu)->getChild("LoadingText");
-        tmpWin->setText("Error: Couldn't connect to local server!");
+        tmpWin->setText(Gui::trCegui("mode.menu.connect_failed"));
         tmpWin->show();
         return true;
     }
@@ -354,7 +365,7 @@ bool MenuModeLoad::deleteSelectedButtonPressed(const CEGUI::EventArgs&)
     if(selectList->getSelectedCount() == 0)
     {
         tmpWin = getModeManager().getGui().getGuiSheet(Gui::loadSavedGameMenu)->getChild("LoadingText");
-        tmpWin->setText("Please select a saved game first.");
+        tmpWin->setText(Gui::trCegui("mode.menu.load.select_first"));
         tmpWin->show();
         return true;
     }
@@ -367,7 +378,7 @@ bool MenuModeLoad::deleteSelectedButtonPressed(const CEGUI::EventArgs&)
     {
         OD_LOG_ERR("Could not delete saved game !!!");
         tmpWin = getModeManager().getGui().getGuiSheet(Gui::loadSavedGameMenu)->getChild("LoadingText");
-        tmpWin->setText("Error: Couldn't delete saved game!");
+        tmpWin->setText(Gui::trCegui("mode.menu.load.delete_failed"));
         tmpWin->show();
         return true;
     }
@@ -411,7 +422,7 @@ bool MenuModeLoad::updateDescription(const CEGUI::EventArgs&)
     if(MapHandler::getMapInfo(filename, levelInfo))
         mapDescription = levelInfo.mLevelDescription;
     else
-        mapDescription = "invalid map";
+        mapDescription = Translation::tr("mode.menu.invalid_map");
 
     descTxt->setText(mapDescription);
     static_cast<CEGUI::Scrollbar*>(descTxt->getChild("__auto_vscrollbar__"))->setScrollPosition(0);

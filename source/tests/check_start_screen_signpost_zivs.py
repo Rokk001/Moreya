@@ -29,6 +29,9 @@ import os
 import math
 import re
 import sys
+from pathlib import Path as _LangPath
+sys.path.insert(0, str(_LangPath(__file__).resolve().parent))
+from language_texts import english  # noqa: E402
 import time
 
 import numpy as np
@@ -472,6 +475,8 @@ SOURCE_IDENTIFIERS = {
     ("source/render/WorkersWindow.cpp", '"ui.workers.job.dig"'): 1,
     ("source/render/WorkersWindow.cpp", '"ui.workers.job.reload"'): 1,
     ("source/render/WorkersWindow.cpp", '"ui.workers.working"'): 1,
+    # The key of the Ziv group tooltip text (the shown text is checked below through the language file)
+    ("source/modes/GameMode.cpp", '"mode.game.group.workers"'): 1,
 }
 #: Player-facing config text that keeps the word by the owner's decision: the display name "Dwarf Worker" of the hero
 #: class DwarfWorker stays (it names a hero class, not the keeper's Ziv). Only this exact line is excepted, and it must
@@ -569,7 +574,7 @@ def check_ziv_names(failures):
         "gui/WindowSkillTree.layout": ('value="Spell: Summon Ziv"',),
         "source/render/SocialWindow.cpp": ('"ui.dungeonbook.filter.zivs"',),
         "source/render/CreaturePanel.cpp": ('"ui.panel.zivs"',),
-        "source/modes/GameMode.cpp": ('std::make_pair(Gui::BUTTON_CREATURE_WORKER, "Zivs")',),
+        "source/modes/GameMode.cpp": ('std::make_pair(Gui::BUTTON_CREATURE_WORKER, workerKey)', '"mode.game.group.workers"'),
         "source/game/Player.cpp": ('"You redeemed your Ziv into "', '"You have no Ziv to fulfill your dark wishes."'),
         "source/gamemap/GameMap.cpp": ('"Your Zivs vanished because the mana ran out"',),
     }
@@ -583,17 +588,19 @@ def check_ziv_names(failures):
         "spell.hint.no_plague_on_ziv": "Zivs and champions never get sick.",
     }
     if content_packages.has_content(ROOT):
-        english = language_package_texts.english(ROOT)
+        package_texts = language_package_texts.english(ROOT)
         for key, expected in shown_in_language.items():
-            if english.get(key) != expected:
+            if package_texts.get(key) != expected:
                 failures.append("the English entry %s is not %r" % (key, expected))
     else:
         content_packages.unchecked(CHECK, sorted(shown_in_language))
     # The texts of these language keys say Zivs (the language file lang-en holds the English texts of the code)
-    english = english_texts(ROOT)
+    lang_en = english_texts(ROOT)
     for key, expected in (("ui.dungeonbook.filter.zivs", "Zivs"), ("ui.panel.zivs", "Zivs")):
-        if english is not None and english.get(key) != expected:
-            failures.append("lang-en says %r for %s, expected %r" % (english.get(key), key, expected))
+        if lang_en is not None and lang_en.get(key) != expected:
+            failures.append("lang-en says %r for %s, expected %r" % (lang_en.get(key), key, expected))
+    if english('mode.game.group.workers') != 'Zivs':
+        failures.append('the language file does not show Zivs for the worker group tooltip')
     for path, texts in shown.items():
         if missing_data(path) or missing_own_rows(path):
             content_packages.unchecked(CHECK, [path])

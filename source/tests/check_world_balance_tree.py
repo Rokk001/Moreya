@@ -13,6 +13,8 @@ repo = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(repo / "scripts"))
 import content_packages  # noqa: E402
 import language_package_texts  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from language_texts import english  # noqa: E402
 
 #: The mixed files of config/ and gui/ come with their own rows only with the content (scripts/content_packages.py)
 WITH_CONTENT = content_packages.has_content(repo)
@@ -310,7 +312,8 @@ assert "pageWidth / static_cast<float>(widestRow) - freeSpace" in connections, "
 assert "(available - static_cast<float>(rowCount - 1) * freeSpace) / static_cast<float>(rowCount) - badgeHeight" in connections, "node size from the page: all rows with their counters fit the height"
 assert "getSkillTab(dependency->getType()) != SkillManager::getSkillTab(entry.first)" in connections, "paths only inside a tab"
 assert "ResearchJunction" not in game
-assert "Needs: " in game and "SkillManager::getTabTitle(parentTab)" in game
+assert "mode.game.research.needs" in game and "SkillManager::getTabTitle(parentTab)" in game
+assert english("mode.game.research.needs") == "  Needs: {name} ({tab})"
 seat = read("source/game/Seat.cpp")
 assert "bool Seat::canResearchLevel(SkillType type, int level, const std::vector<std::pair<SkillType, int> >& queuedBefore) const" in seat
 gate = seat[seat.index("const char* Seat::getResearchGateFailure("):seat.index("bool Seat::canResearchLevel(")]

@@ -63,7 +63,7 @@ server = read('source/network/ODServer.cpp')
 launch = function(editor, editor.index('bool EditorMode::launchNewLevelPressed('))
 check('levelTitle.empty()' in launch and before(launch, 'levelTitle.empty()', 'stopTileCulling'),
       'A1 launchNewLevelPressed checks the title before stopTileCulling')
-check(before(launch, 'Invalid map size', 'stopTileCulling') and before(launch, 'exists(level)', 'stopTileCulling'),
+check(before(launch, 'editor.new.size_invalid_dialog', 'stopTileCulling') and before(launch, 'exists(level)', 'stopTileCulling'),
       'A1 launchNewLevelPressed checks the filename, existence and size before stopTileCulling')
 check(re.search(r'mMainCullingManager\s*!=\s*nullptr\s*\)\s*mMainCullingManager->stopTileCulling', launch) is not None,
       'A1 launchNewLevelPressed tests mMainCullingManager for nullptr before stopTileCulling')

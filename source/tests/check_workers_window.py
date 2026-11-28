@@ -13,6 +13,8 @@ checked.
 from pathlib import Path
 import re
 import sys
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from language_texts import english  # noqa: E402
 import xml.etree.ElementTree as ET
 
 repo = Path(__file__).resolve().parents[2]
@@ -215,7 +217,9 @@ for path in sorted((repo / 'source').rglob('*.cpp')):
         continue
     assert 'KC_J' not in path.read_text(encoding='utf-8', errors='replace'), 'key J is used elsewhere: ' + str(path)
 assert game.count('OIS::KC_J') == 1
-assert ('"  - J or the Zivs icon above the minimap opens the Zivs window: fixed Zivs per job, free Zivs, priority and carry order."' in game)
+assert 'mode.game.help.camera.body' in game
+assert ('  - J or the Zivs icon above the minimap opens the Zivs window: fixed Zivs per job, free Zivs, priority and carry order.'
+        in english('mode.game.help.camera.body'))
 assert 'guiSheet->getChild("WorkersButton")->hide();' in game and 'mWorkersWindow->hide();' in game
 assert 'mWorkersWindow->update();' in game
 assert 'mWorkersWindow.reset(new WorkersWindow(mRootWindow, *mGameMap));' in game

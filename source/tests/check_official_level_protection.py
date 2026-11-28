@@ -37,6 +37,9 @@ import re
 import shutil
 import subprocess
 import sys
+from pathlib import Path as _LangPath
+sys.path.insert(0, str(_LangPath(__file__).resolve().parent))
+from language_texts import english  # noqa: E402
 import tempfile
 import time
 
@@ -487,8 +490,10 @@ check('OfficialLevels::mayEditorOpen(isOfficialLevelPath(fileName), isEditOffici
       'P4 checkEditorMayOpen applies the hidden option and the checksum')
 constructor = function(editor_load, 'MenuModeEditorLoad::MenuModeEditorLoad(')
 guarded = function(constructor, 'if(MapHandler::isEditOfficialLevelsEnabled())')
-check('"Official Skirmish Levels"' in guarded and '"Official Multiplayer Levels"' in guarded
-      and constructor.count('"Official') == 2,
+check('editor.load.type.official_skirmish' in guarded and 'editor.load.type.official_multiplayer' in guarded
+      and constructor.count('editor.load.type.official') == 2
+      and english('editor.load.type.official_skirmish') == 'Official Skirmish Levels'
+      and english('editor.load.type.official_multiplayer') == 'Official Multiplayer Levels',
       'P4 the editor load dialog lists the shipped level types only with the hidden option')
 files = function(editor_load, 'bool MenuModeEditorLoad::updateFilesList(')
 check('selectedType->getID()' in files and 'getItemIndex(' not in files
