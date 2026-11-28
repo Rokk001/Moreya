@@ -71,6 +71,19 @@ add_boost_test(00-WheelAccumulator
         test_WheelAccumulator.cpp
         ${SRC}/modes/WheelAccumulator.h)
 
+# Language choice, text files and the English fallback of the texts (localization plan R1, R2)
+add_boost_test(00-Translation
+        SOURCES
+        test_Translation.cpp
+        ${SRC}/utils/Translation.h
+        ${SRC}/utils/Translation.cpp
+        ${SRC}/utils/LogManager.cpp
+        LIBRARIES
+        ${OGRE_LIBRARIES}
+        ${Boost_FILESYSTEM_LIBRARY_RELEASE}
+        ${Boost_SYSTEM_LIBRARY_RELEASE}
+        Threads::Threads)
+
 add_boost_test(00-ItemTooltipPlacement
         SOURCES
         test_ItemTooltipPlacement.cpp
