@@ -1106,6 +1106,10 @@ public:
     void clearGhostHuntVisuals();
     //! \brief Shows or hides the trap's foot pedal at the hunter's feet and shapes the cable from the trap's plug to it.
     void updateGhostTrapCable(Ogre::SceneManager& scene, bool shown);
+    //! \brief Shows the green suction stream at a share of the transfer (owner decision of 2026-11-28, see
+    //! GhostTransferPath::stream) from the trap's opening up into the nozzle's mouth, or hides it for a share below 0.
+    void updateGhostSuctionStream(Ogre::SceneManager& scene, double share, const Ogre::Vector3& opening,
+        const Ogre::Vector3& mouth, double seconds);
     //! \brief Ends the generated pose layer of decision 936 (pick-up or put-in) and restores the skeleton blend mode.
     void stopGhostPose();
     //! \brief Pins all saved occupied cauldrons before the global equipment rebind pass.
@@ -2518,6 +2522,13 @@ private:
     Ogre::SceneNode* mGhostTrapNode = nullptr;
     Ogre::BillboardSet* mGhostTrapGlow = nullptr;
     Ogre::BillboardChain* mGhostTrapCone = nullptr;
+    //! \brief The green suction stream from the trap on the cauldron's shelf up into the nozzle (owner decision of
+    //! 2026-11-28): glowing bands and wavering strands on mGhostStreamChain, rising motes on mGhostStreamMotes, and the
+    //! client seconds that move the light and the motes up the stream.
+    Ogre::SceneNode* mGhostStreamNode = nullptr;
+    Ogre::BillboardChain* mGhostStreamChain = nullptr;
+    Ogre::BillboardSet* mGhostStreamMotes = nullptr;
+    double mGhostStreamClock = 0.0;
     //! \brief Open share of the lying box's lid shown on the client, 0 closed, 1 open (decision 801).
     double mGhostLidShown = 0.0;
     //! \brief Client-smoothed share of the transfer of the ghost from the delivery device into the cauldron (decisions 845, 865).

@@ -24,9 +24,13 @@ block plus the offset (0.5, 0.82, 1.1); the hunter stands on RoomGhostRoom::getT
 0.68 from the seat, and faces -Y; reserveCauldron sends him to that one tile. No device, hinge or arm is built any more.
 The owner decision of 2026-11-28 (the approved closed cauldron): the seat is the cauldron's stone shelf, offset
 (-0.4935, 0.5779, 0.4433), the hunter stands on the +Y tile in front of the block's left tile, 0.922 from it. There the
-trap opens with the lid clip of the catch (in place of decision 865's shut trap at the cauldron), the ghost is drawn
-straight up out of it in a narrow whirl into the suction nozzle over the shelf (RoomGhostRoom::getCauldronMouthPosition,
-offset (-0.4792, 0.5706, 0.7515)) and vanishes there, and the trap shuts again.
+trap opens with the lid clip of the catch (in place of decision 865's shut trap at the cauldron), its content is drawn
+into the suction nozzle over the shelf (RoomGhostRoom::getCauldronMouthPosition, offset (-0.4792, 0.5706, 0.7515)), and
+the trap shuts again. A later owner decision of the same day replaces the rising ghost: the ghost stays hidden in the
+trap and is never shown again; the content goes up out of the open trap as a glowing green stream, like a waterfall
+running upwards (GhostTransferPath::stream drawn by Creature::updateGhostSuctionStream): its head rises into the nozzle,
+it grows denser, thins out, its tail leaves the trap and rises into the nozzle (the trap is sucked empty), and only then
+the flaps shut. The stream ends inside the nozzle, which hides it.
 """
 from pathlib import Path
 import math
@@ -199,7 +203,8 @@ has(refresh, 'transferred share sent', 'else if(boxMode==5)', 'const double tran
 visuals = body(creature, 'void Creature::updateGhostHuntVisuals(double seconds)')
 has(visuals, 'the shut trap put into the device beside the hunter',
     'const bool lyingBox=mGhostBoxMode==1 || mGhostBoxMode==3 || mGhostBoxMode==4 || mGhostBoxMode==5 || mGhostBoxMode==6 || mGhostBoxMode==7;',
-    'ghost->setTransferProgress(mGhostBoxMode==5?mGhostTransferShown:0.0);', 'mGhostHeldBox->setVisible(mGhostBoxMode==2);')
+    'updateGhostSuctionStream(*scene,suction,position+Ogre::Vector3(0.0f,0.0f,GHOST_STREAM_INSET*trapTop),',
+    'mGhostDeliveryMouth,seconds);', 'mGhostHeldBox->setVisible(mGhostBoxMode==2);')
 delivery = visuals[visuals.index('else if(mGhostBoxMode==5)'):visuals.index('else if(mGhostBoxMode==6)')]
 ordered_parts = ('const Ogre::Vector3 seat=ghost->getPosition();',
     'const double putIn=config.getRoomConfigDouble("GhostPutInSeconds");',
@@ -224,7 +229,7 @@ ordered_parts = ('const Ogre::Vector3 seat=ghost->getPosition();',
     'mGhostTransferShown=std::max(mGhostTransferShown,std::max(0.0,std::min(1.0,share)));',
     # the trap opens on the shelf for each ghost and shuts after it (owner decision of 2026-11-28)
     'mGhostLidShown=inserted>=1.0f?GhostTransferPath::lid(mGhostTransferShown):0.0;', 'lidTarget=mGhostLidShown;',
-    'trapLight=inserted>=1.0f?1.0:0.0;', 'ghost->setTransferTarget(mGhostDeliveryMouth);')
+    'trapLight=inserted>=1.0f?1.0:0.0;', 'if(inserted>=1.0f) suction=mGhostTransferShown;')
 position = -1
 for part in ordered_parts:
     found = delivery.find(part, position + 1)
@@ -240,39 +245,50 @@ for removed in ('destroyGhostDelivery', 'buildGhostDeliveryDevice', 'addGhostDev
 mouth_body = body(creature, 'static Ogre::Vector3 ghostCauldronMouthNear(')
 has(mouth_body, 'the ghost flows into the nearest cauldron', 'entity->getMeshName()!="GhostCauldron"',
     'RoomGhostRoom::getCauldronMouthPosition(best->getPosition())')
-has(body(creature, 'void Creature::clearGhostHuntVisuals()'), 'reset', 'ghost->setTransferProgress(0.0);', 'mGhostTransferShown=0.0;',
+has(body(creature, 'void Creature::clearGhostHuntVisuals()'), 'reset', 'mGhostStreamClock=0.0;', 'mGhostTransferShown=0.0;',
+    'if(mGhostStreamChain!=nullptr) { scene->destroyBillboardChain(mGhostStreamChain);mGhostStreamChain=nullptr; }',
+    'if(mGhostStreamMotes!=nullptr) { scene->destroyBillboardSet(mGhostStreamMotes);mGhostStreamMotes=nullptr; }',
     'mGhostDeliveryGhost.clear();mGhostDeliveryClock=0.0;')
 ghost = read('source/entities/GhostEntity.cpp')
 look = body(ghost, 'void GhostEntity::updateLook()')
-has(look, 'transfer look', 'if(mState == GhostState::boxed && transfer > 0.0)',
-    'const Ogre::Vector3 mouth = mHasTransferTarget ? mTransferTarget : mPosition;',
-    'const GhostTransferPath::Point point = GhostTransferPath::at(transfer, mPosition, mouth);',
-    'node->setPosition(point.position);', 'alpha = 0.45f * static_cast<float>(point.visible);', 'node->setVisible(true);')
-# Decision 936 point 4: one smooth path of the share (the model below mirrors it with the constants of the header); for
-# the closed cauldron straight up out of the open trap into the nozzle (owner decision of 2026-11-28)
-path_code = body(ghost, 'GhostTransferPath::Point GhostTransferPath::at(')
-has(path_code, 'the smooth path',
-    'const double along = even(0.0, ARRIVE, 0.12, t);',
-    'const Ogre::Vector3 line = trap + (mouth - trap) * static_cast<Ogre::Real>(along);',
-    'const double height = line.z + SINK * ease(ARRIVE, 1.0, t);',
-    'const double radius = RADIUS * ease(0.0, 0.1, t) * (1.0 - ease(CLOSE, ARRIVE, t));',
-    'const double angle = TURNS * 2.0 * Ogre::Math::PI *',
-    '(t < EASE_IN ? t * t / (2.0 * EASE_IN) : t - 0.5 * EASE_IN) / (1.0 - 0.5 * EASE_IN);',
-    'point.visible = ease(LID_OPEN, LID_OPEN + 0.05, t) * (1.0 - ease(ARRIVE, 0.99, t));')
+ghost_header = read('source/entities/GhostEntity.h')
+# The ghost stays hidden in the trap at the cauldron: nothing of the transfer shows the ghost itself any more
+has(look, 'the boxed ghost stays hidden', 'node->setVisible(mState != GhostState::boxed);', 'alpha = 0.0f;')
+for removed in ('mTransferProgress', 'mTransferTarget', 'GhostTransferPath::at', 'node->setVisible(true);'):
+    assert removed not in look and removed not in ghost_header, ('no ghost rises out of the trap any more', removed)
+for removed in ('setTransferProgress', 'setTransferTarget'):
+    assert removed not in ghost_header and removed not in creature, ('the ghost gets no transfer share any more', removed)
+# The stream: one smooth function of the share (the model below mirrors it with the constants of the header)
+stream_code = body(ghost, 'GhostTransferPath::Stream GhostTransferPath::stream(')
+has(stream_code, 'the stream of the share',
+    'const double head = std::max(0.0, std::min(1.0, (t - LID_OPEN) / (STREAM_REACH - LID_OPEN)));',
+    'const double tail = std::max(0.0, std::min(1.0, (t - STREAM_EMPTY) / (STREAM_GONE - STREAM_EMPTY)));',
+    'stream.head = head * head;', 'stream.tail = tail * tail;',
+    'stream.density = ease(LID_OPEN, STREAM_DENSE, t) * (1.0 - ease(STREAM_THIN, STREAM_GONE, t));')
 has(body(ghost, 'double GhostTransferPath::lid('), 'the lid of the trap', 'return ease(0.0, LID_OPEN, t) * (1.0 - ease(LID_SHUT, 1.0, t));')
 has(body(ghost, 'double GhostTransferPath::ease('), 'smooth step', 'return x * x * (3.0 - 2.0 * x);')
-has(body(ghost, 'double GhostTransferPath::even('), 'even rate with eased ends', 'return x * x / (2.0 * e) / total;',
-    'return (total - (1.0 - x) * (1.0 - x) / (2.0 * e)) / total;', 'return (x - 0.5 * e) / total;')
-ghost_header = read('source/entities/GhostEntity.h')
 path_constants = {name: float(value) for name, value in
                   re.findall(r'static constexpr double (\w+) = ([\d.]+);', ghost_header)}
-# Fixed for the suction into the nozzle: a whirl of 0.07 inside the nozzle's mouth of 0.12, five turns
-assert {name: path_constants[name] for name in ('RADIUS', 'TURNS', 'EASE_IN', 'CLOSE', 'ARRIVE', 'SINK', 'LID_OPEN',
-        'LID_SHUT')} == {'RADIUS': 0.07, 'TURNS': 5.0, 'EASE_IN': 0.06, 'CLOSE': 0.7, 'ARRIVE': 0.9, 'SINK': 0.12,
-                         'LID_OPEN': 0.04, 'LID_SHUT': 0.93}, path_constants
-has(read('source/entities/GhostEntity.h'), 'the mouth the ghost flows into',
-    'void setTransferTarget(const Ogre::Vector3& mouth) { mTransferTarget = mouth; mHasTransferTarget = true; }')
-assert look.index('if(mState == GhostState::boxed && transfer > 0.0)') < look.index('setMeshOpacity(alpha);')
+# Fixed for the suction stream: the head is in the nozzle after 0.06 of the transfer, densest from 0.35 to 0.7, the trap
+# empty from 0.78, the stream gone at 0.9, before the lid shuts from 0.93
+assert path_constants == {'LID_OPEN': 0.04, 'LID_SHUT': 0.93, 'STREAM_REACH': 0.1, 'STREAM_DENSE': 0.35,
+                          'STREAM_THIN': 0.7, 'STREAM_EMPTY': 0.78, 'STREAM_GONE': 0.9}, path_constants
+# The hunter draws the stream: glowing bands and rising motes in the beam's green, from the trap's opening up to
+# GHOST_STREAM_DEPTH inside the nozzle, hidden without a suction
+stream_draw = body(creature, 'void Creature::updateGhostSuctionStream(')
+has(stream_draw, 'the drawn stream',
+    'const GhostTransferPath::Stream stream=GhostTransferPath::stream(std::max(0.0,share));',
+    'if(share<0.0 || stream.head<=stream.tail || stream.density<=0.0)',
+    'if(mGhostStreamNode!=nullptr) mGhostStreamNode->setVisible(false);',
+    'mGhostStreamChain->setMaterialName("GhostBeam");', 'mGhostStreamMotes->setMaterialName("GhostBeam");',
+    'const Ogre::Vector3 end=mouth+Ogre::Vector3(0.0f,0.0f,GHOST_STREAM_DEPTH);',
+    'const double way=stream.tail+(stream.head-stream.tail)*static_cast<double>(i)/static_cast<double>(GHOST_STREAM_SEGMENTS);',
+    'if(way<stream.tail || way>stream.head)')
+assert 'Random::' not in stream_draw, 'the stream is the same every frame for the same clock'
+has(creature, 'the stream constants', 'static const Ogre::Real GHOST_STREAM_INSET=0.8f;',
+    'static const Ogre::Real GHOST_STREAM_DEPTH=0.1f;', 'static const Ogre::Real GHOST_STREAM_BASE_WIDTH=0.11f;',
+    'static const Ogre::Real GHOST_STREAM_TOP_WIDTH=0.06f;')
+has(visuals, 'no stream outside the suction', 'if(suction<0.0 && mGhostStreamNode!=nullptr) mGhostStreamNode->setVisible(false);')
 
 
 # 5. Model of the timeline: 20 s at 1.4 turns per second; the put-in first, then the trap opens, the ghost is drawn
@@ -283,28 +299,13 @@ def ease(a, b, t):
     return x * x * (3.0 - 2.0 * x)
 
 
-def even(a, b, soft, t):
-    x = max(0.0, min(1.0, (t - a) / (b - a)))
-    total = 1.0 - soft
-    if x < soft:
-        return x * x / (2.0 * soft) / total
-    if x > 1.0 - soft:
-        return (total - (1.0 - x) ** 2 / (2.0 * soft)) / total
-    return (x - 0.5 * soft) / total
-
-
-def ghost_at(share, device, mouth):
-    """(alpha, x, y, height, share, x and y of the line) of the ghost at a share."""
+def stream_at(share):
+    """(head, tail, density) of the suction stream at a share."""
     c = path_constants
     t = max(0.0, min(1.0, share))
-    along = even(0.0, c['ARRIVE'], 0.12, t)
-    line = [device[k] + (mouth[k] - device[k]) * along for k in range(3)]
-    height = line[2] + c['SINK'] * ease(c['ARRIVE'], 1.0, t)
-    radius = c['RADIUS'] * ease(0.0, 0.1, t) * (1.0 - ease(c['CLOSE'], c['ARRIVE'], t))
-    ramp = t * t / (2.0 * c['EASE_IN']) if t < c['EASE_IN'] else t - 0.5 * c['EASE_IN']
-    angle = c['TURNS'] * 2.0 * math.pi * ramp / (1.0 - 0.5 * c['EASE_IN'])
-    visible = ease(c['LID_OPEN'], c['LID_OPEN'] + 0.05, t) * (1.0 - ease(c['ARRIVE'], 0.99, t))
-    return 0.45 * visible, line[0] + radius * math.cos(angle), line[1] + radius * math.sin(angle), height, t, line[0], line[1]
+    head = max(0.0, min(1.0, (t - c['LID_OPEN']) / (c['STREAM_REACH'] - c['LID_OPEN'])))
+    tail = max(0.0, min(1.0, (t - c['STREAM_EMPTY']) / (c['STREAM_GONE'] - c['STREAM_EMPTY'])))
+    return head * head, tail * tail, ease(c['LID_OPEN'], c['STREAM_DENSE'], t) * (1.0 - ease(c['STREAM_THIN'], c['STREAM_GONE'], t))
 
 
 def lid_at(share):
@@ -319,38 +320,33 @@ if CONTENT:
 for x, y in [(0, 0)]:
     device = device_for(x, y)
     mouth = (x + 0.5 + nozzle_offset[0], y + 0.5 + nozzle_offset[1], nozzle_offset[2])
-    previous = device[2]
+    # The stream goes straight up from the trap on the shelf into the nozzle over it
+    assert math.hypot(mouth[0] - device[0], mouth[1] - device[1]) < 0.02 and mouth[2] > device[2] + 0.25, (device, mouth)
+    previous = (0.0, 0.0)
     for step in range(0, 1001):
-        alpha, gx, gy, lift, share, lx, ly = ghost_at(step / 1000.0, device, mouth)
-        if path_constants['LID_OPEN'] + 0.05 <= share < 0.99:
-            assert alpha > 0.0, ('ghost visible from the open trap until it is in the nozzle', step)
-        if alpha > 0.0 and lift < device[2] + 0.12:
-            assert lid_at(share) > 0.999, ('the ghost leaves the trap only while its lid is open', step)
-        if share >= path_constants['LID_SHUT']:
-            assert lift >= mouth[2] - 1e-9, ('the lid shuts once the ghost is in the nozzle', step)
-        assert math.hypot(gx - lx, gy - ly) <= path_constants['RADIUS'] + 1e-9 < 0.12, ('inside the nozzle line', step)
-        assert lift >= previous - 1e-9, ('it only rises', step)
-        previous = lift
-    assert lid_at(0.0) == 0.0 and lid_at(1.0) == 0.0 and lid_at(0.5) == 1.0, 'shut, open for the flow, shut again'
-    start = ghost_at(0.0, device, mouth)
-    assert start[0] == 0.0 and math.dist(start[1:4], device) < 1e-9, ('it starts in the trap', start)
-    end = ghost_at(1.0, device, mouth)
-    assert end[0] < 1e-9 and abs(end[3] - mouth[2] - path_constants['SINK']) < 1e-9 and \
-        math.hypot(end[1] - mouth[0], end[2] - mouth[1]) < 1e-9, ('ends faded in the nozzle', end)
+        share = step / 1000.0
+        head, tail, density = stream_at(share)
+        if head > tail or density > 0.0:
+            assert lid_at(share) > 0.999, ('the stream flows only while the lid is fully open', step)
+        assert 0.0 <= tail <= head <= 1.0, ('the tail follows the head', step)
+        assert head >= previous[0] and tail >= previous[1], ('the stream only rises', step)
+        previous = (head, tail)
+        if share <= path_constants['LID_OPEN'] or share >= path_constants['STREAM_GONE']:
+            assert head == tail or density == 0.0, ('no stream before the lid is open or after the trap is empty', step)
+        if path_constants['STREAM_DENSE'] <= share <= path_constants['STREAM_THIN']:
+            assert head == 1.0 and tail == 0.0 and density == 1.0, ('the full stream from the trap into the nozzle', step)
+    assert lid_at(0.0) == 0.0 and lid_at(1.0) == 0.0 and lid_at(0.5) == 1.0, 'shut, open for the stream, shut again'
+    assert stream_at(0.0) == (0.0, 0.0, 0.0), 'nothing flows before the trap is open'
+    assert stream_at(path_constants['STREAM_GONE'])[1] == 1.0, 'the trap is empty, the tail is in the nozzle'
+    assert path_constants['STREAM_GONE'] < path_constants['LID_SHUT'], 'the flaps shut only after the trap is empty'
     if CONTENT:
-        # Decision 936 point 4, smooth: the flow of 18 s drawn at 60 frames a second has no jump and no sudden change of
-        # speed; it rises at one even rate and whirls with one even angular speed while the whirl is open
+        # Decision 936 point 4, smooth: the flow of 18 s drawn at 60 frames a second has no jump of the head, the tail or
+        # the density
         frames = int((transfer_seconds - put_in) * 60)
-        points = [ghost_at(i / frames, device, mouth) for i in range(frames + 1)]
-        speeds = [math.dist(points[i][1:4], points[i + 1][1:4]) * 60 for i in range(frames)]
-        assert max(speeds) < 2.0, ('no jump', max(speeds))
-        assert max(abs(speeds[i + 1] - speeds[i]) * 60 for i in range(frames - 1)) < 3.0, 'no sudden change of speed'
-        middle = speeds[frames // 5:frames * 7 // 10]
-        assert max(middle) < 1.6 * min(middle), ('an even speed on the way up', min(middle), max(middle))
-        angles = [math.atan2(p[2] - p[6], p[1] - p[5]) for p in points]
-        steps = [(angles[i + 1] - angles[i] + math.pi) % (2 * math.pi) - math.pi for i in range(frames)]
-        even_steps = steps[int(frames * 0.1) + 2:int(frames * path_constants['CLOSE'])]
-        assert max(even_steps) - min(even_steps) < 1e-6, 'one even angular speed'
+        points = [stream_at(i / frames) for i in range(frames + 1)]
+        for k, limit in ((0, 0.05), (1, 0.05), (2, 0.01)):
+            jump = max(abs(points[i + 1][k] - points[i][k]) for i in range(frames))
+            assert jump < limit, ('no jump', k, jump)
 if CONTENT:
     # The put-in comes first and the whole delivery keeps the transfer time: 20, 16 and 13.3 s by the research
     for seconds in (20.0, 16.0, 20.0 * 0.667):
@@ -433,4 +429,4 @@ if CONTENT:
     assert [round(s, 1) for s in seconds_by_level] == [20.0, 16.0, 13.3], seconds_by_level
 else:
     content_packages.unchecked('check_ghost_transfer', ['CatchTime research line of config/skills.cfg'])
-print('ghost transfer: trap seat of the cauldron, hunter walks to its side, put-in, trap opens for the suction into the nozzle and shuts, 20 s, visible, resumed, CatchTime only: ok')
+print('ghost transfer: trap seat of the cauldron, hunter walks to its side, put-in, trap opens, green stream into the nozzle until the trap is empty, trap shuts, 20 s, resumed, CatchTime only: ok')

@@ -303,41 +303,18 @@ double GhostTransferPath::ease(double a, double b, double t)
     return x * x * (3.0 - 2.0 * x);
 }
 
-double GhostTransferPath::even(double a, double b, double soft, double t)
-{
-    // 0 to 1 from a to b at one constant speed, only the first and the last `soft` share of the way eased (zero speed at
-    // a and at b, no change of speed in between): the integral of a trapezoid speed
-    const double length = b - a;
-    if(length <= 0.0)
-        return t >= b ? 1.0 : 0.0;
-    const double x = std::max(0.0, std::min(1.0, (t - a) / length));
-    const double e = std::max(1.0e-6, std::min(0.5, soft));
-    const double total = 1.0 - e;
-    if(x < e)
-        return x * x / (2.0 * e) / total;
-    if(x > 1.0 - e)
-        return (total - (1.0 - x) * (1.0 - x) / (2.0 * e)) / total;
-    return (x - 0.5 * e) / total;
-}
-
-GhostTransferPath::Point GhostTransferPath::at(double share, const Ogre::Vector3& trap, const Ogre::Vector3& mouth)
+GhostTransferPath::Stream GhostTransferPath::stream(double share)
 {
     const double t = std::max(0.0, std::min(1.0, share));
-    // Along the line from the trap up to the nozzle's mouth at one even rate (eased only at both ends), then drawn on up
-    // into the nozzle by SINK
-    const double along = even(0.0, ARRIVE, 0.12, t);
-    const Ogre::Vector3 line = trap + (mouth - trap) * static_cast<Ogre::Real>(along);
-    const double height = line.z + SINK * ease(ARRIVE, 1.0, t);
-    // A narrow whirl round that line: it opens out of the trap, turns with one even angular speed (eased in from rest
-    // over the first EASE_IN) and closes to the line from CLOSE on, so the ghost enters the nozzle in its middle
-    const double radius = RADIUS * ease(0.0, 0.1, t) * (1.0 - ease(CLOSE, ARRIVE, t));
-    const double angle = TURNS * 2.0 * Ogre::Math::PI *
-        (t < EASE_IN ? t * t / (2.0 * EASE_IN) : t - 0.5 * EASE_IN) / (1.0 - 0.5 * EASE_IN);
-    Point point;
-    point.position = Ogre::Vector3(static_cast<Ogre::Real>(line.x + radius * std::cos(angle)),
-        static_cast<Ogre::Real>(line.y + radius * std::sin(angle)), static_cast<Ogre::Real>(height));
-    point.visible = ease(LID_OPEN, LID_OPEN + 0.05, t) * (1.0 - ease(ARRIVE, 0.99, t));
-    return point;
+    // Like a waterfall running upwards: the head leaves the fully open trap at rest and rushes on into the nozzle, the
+    // tail follows the same way once the trap is empty; in between the stream grows denser and thins out again
+    const double head = std::max(0.0, std::min(1.0, (t - LID_OPEN) / (STREAM_REACH - LID_OPEN)));
+    const double tail = std::max(0.0, std::min(1.0, (t - STREAM_EMPTY) / (STREAM_GONE - STREAM_EMPTY)));
+    Stream stream;
+    stream.head = head * head;
+    stream.tail = tail * tail;
+    stream.density = ease(LID_OPEN, STREAM_DENSE, t) * (1.0 - ease(STREAM_THIN, STREAM_GONE, t));
+    return stream;
 }
 
 double GhostTransferPath::lid(double share)
@@ -380,24 +357,9 @@ void GhostEntity::updateLook()
     node->setVisible(mState != GhostState::boxed);
     const double sink = height * (1.0 - pull) - pull * config.getRoomConfigDouble("GhostPullDepth");
     node->setPosition(mPosition + Ogre::Vector3(0, 0, static_cast<Ogre::Real>(sink)));
-    const double transfer = std::max(0.0, std::min(1.0, mTransferProgress));
-    if(mState == GhostState::boxed && transfer > 0.0)
-    {
-        // The transfer into the cauldron (decisions 845, 865 and 936; for the closed cauldron the owner decision of
-        // 2026-11-28), visible for the whole flow: the boxed ghost waits in the trap on the cauldron's shelf (mPosition).
-        // Once the trap has opened it rises straight up out of it at half size in a narrow whirl of
-        // GhostTransferPath::RADIUS (GhostTransferPath::TURNS turns; only the very start eases in from rest) to the mouth
-        // of the suction nozzle over the shelf (mTransferTarget), the whirl closing on the way, and is drawn on into the
-        // nozzle and fades out. Every part is a smooth function of the share, so a share that grows every frame gives a
-        // motion without jumps or stops (decision 936 point 4).
-        const Ogre::Vector3 mouth = mHasTransferTarget ? mTransferTarget : mPosition;
-        const GhostTransferPath::Point point = GhostTransferPath::at(transfer, mPosition, mouth);
-        const double size = minScale * (1.0 - 0.6 * GhostTransferPath::ease(0.1, 1.0, transfer));
-        node->setScale(Ogre::Vector3::UNIT_SCALE*static_cast<Ogre::Real>(size));
-        node->setVisible(true);
-        node->setPosition(point.position);
-        alpha = 0.45f * static_cast<float>(point.visible);
-    }
+    // The transfer into the cauldron (decisions 845, 865 and 936; for the closed cauldron the owner decisions of
+    // 2026-11-28): the boxed ghost stays hidden in the trap on the cauldron's shelf and is never shown again; the content
+    // of the trap is drawn into the suction nozzle as the hunter's green stream (GhostTransferPath::stream).
     setMeshOpacity(alpha);
 }
 

@@ -12,38 +12,37 @@ enum class GhostState : uint32_t
     rising, floating, beamed, boxed, dissolving
 };
 
-//! \brief The path of a ghost drawn from the trap on the cauldron's shelf into its suction nozzle (decision 936 point 4,
-//! owner decision of 2026-11-28 for the closed cauldron): a smooth function of the transfer share, so a share that grows
-//! every frame moves the ghost without jumps or stops. The trap opens, the ghost rises straight up out of it at one even
-//! rate in a narrow whirl that closes as it nears the nozzle, is drawn on into the nozzle and vanishes there; then the
-//! trap shuts again.
+//! \brief The suction of a caught ghost out of the trap on the cauldron's shelf into its suction nozzle (decision 936
+//! point 4; for the closed cauldron the owner decisions of 2026-11-28): a smooth function of the transfer share, so a
+//! share that grows every frame changes the look without jumps or stops. The ghost stays in the trap and is never shown
+//! again. The trap's flaps open; then the content of the trap is drawn out of its opening straight up into the nozzle as
+//! a glowing green stream, like a waterfall running upwards: its head shoots up into the nozzle, the stream grows
+//! denser, thins out again and its tail leaves the trap and rises into the nozzle, so the trap is sucked empty; then the
+//! flaps shut. The stream vanishes in the nozzle.
 struct GhostTransferPath
 {
-    //! \brief Position and visibility (0 to 1) of the ghost at a share.
-    struct Point { Ogre::Vector3 position; double visible; };
-    //! Radius in tiles of the whirl round the line from the trap to the nozzle (inside the nozzle's mouth of 0.12).
-    static constexpr double RADIUS = 0.07;
-    //! Turns of the whirl over the whole transfer.
-    static constexpr double TURNS = 5.0;
-    //! Share over which the whirl starts from rest.
-    static constexpr double EASE_IN = 0.06;
-    //! Share from which the whirl closes to the line, until the ghost is in the nozzle.
-    static constexpr double CLOSE = 0.7;
-    //! Share at which the ghost reaches the mouth of the nozzle.
-    static constexpr double ARRIVE = 0.9;
-    //! Tiles the ghost is drawn on up into the nozzle while it vanishes.
-    static constexpr double SINK = 0.12;
+    //! \brief The stream at a share: head and tail as shares (0 to 1) of the way from the trap's opening up into the
+    //! nozzle, and how dense it is (0 to 1).
+    struct Stream { double head; double tail; double density; };
     //! Shares over which the trap's lid opens at the start and shuts at the end of the transfer.
     static constexpr double LID_OPEN = 0.04;
     static constexpr double LID_SHUT = 0.93;
-    //! \brief The point at a share (0 to 1) for the trap position and the middle of the nozzle's mouth.
-    static Point at(double share, const Ogre::Vector3& trap, const Ogre::Vector3& mouth);
-    //! \brief How far the trap's lid is open (0 to 1) at a share: open before the ghost leaves it, shut after it vanished.
+    //! Share at which the head of the stream, rising from the open trap from LID_OPEN on, is in the nozzle.
+    static constexpr double STREAM_REACH = 0.1;
+    //! Share from which the stream is at its densest.
+    static constexpr double STREAM_DENSE = 0.35;
+    //! Share from which the stream thins out again.
+    static constexpr double STREAM_THIN = 0.7;
+    //! Share from which the tail of the stream leaves the trap (the trap is empty).
+    static constexpr double STREAM_EMPTY = 0.78;
+    //! Share at which the tail is in the nozzle and the stream is gone, before the lid shuts.
+    static constexpr double STREAM_GONE = 0.9;
+    //! \brief The stream at a share (0 to 1): only while the lid is fully open, gone before it shuts.
+    static Stream stream(double share);
+    //! \brief How far the trap's lid is open (0 to 1) at a share: open before the stream starts, shut after it is gone.
     static double lid(double share);
     //! \brief Smooth step from 0 at a to 1 at b, with zero speed at both ends.
     static double ease(double a, double b, double t);
-    //! \brief 0 to 1 from a to b at one constant speed, only the first and last `soft` share eased.
-    static double even(double a, double b, double soft, double t);
 };
 
 //! \brief An untouchable spirit that floats over open terrain and frightens timid creatures.
@@ -85,14 +84,6 @@ public:
     //! \brief Applies the hunter's client-only capture share (0 to 1 over the beam): the shrink to half size, then the
     //! pull down into the open thrown capture box.
     void setCaptureProgress(double progress) { mCaptureProgress = progress; }
-    //! \brief Applies the hunter's client-only transfer share (0 to 1 over GhostTransferSeconds, decisions 845 and 865):
-    //! the boxed ghost rises out of the delivery device beside the hunter (its position), glides over the rim to the
-    //! middle of the cauldron's mouth (setTransferTarget), spirals down there and sinks into the ectoplasm; 0 keeps a
-    //! boxed ghost hidden.
-    void setTransferProgress(double progress) { mTransferProgress = progress; }
-    //! \brief Sets the client-only middle of the ectoplasm in the cauldron's mouth the transferred ghost flows into
-    //! (decision 865); without it the ghost spirals down at its own position.
-    void setTransferTarget(const Ogre::Vector3& mouth) { mTransferTarget = mouth; mHasTransferTarget = true; }
     //! \brief Returns the name of the hunter that reserved this ghost.
     const std::string& getAssignedHunter() const { return mAssignedHunter; }
     //! \brief Stores or releases the hunter reservation.
@@ -135,8 +126,5 @@ private:
     double mStateTurns;
     double mHowlTurns;
     double mCaptureProgress = 0.0;
-    double mTransferProgress = 0.0;
-    Ogre::Vector3 mTransferTarget = Ogre::Vector3::ZERO;
-    bool mHasTransferTarget = false;
 };
 #endif

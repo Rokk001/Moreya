@@ -15347,6 +15347,116 @@ void Creature::updateGhostTrapCable(Ogre::SceneManager& scene, bool shown)
     shapeGhostCableFerrules(*mGhostTrapCable,plug,plugOut,socket,socketOut,radius,ferrules);
 }
 
+//! The suction stream from the trap into the nozzle (owner decision of 2026-11-28): it leaves the trap at this share of
+//! the trap's height (inside its opening) and goes this far in tiles on up into the nozzle beyond its mouth, where the
+//! nozzle hides it; its width in tiles at the trap and in the nozzle; the elements of each band, the wavering strands,
+//! the rising motes, how fast the light runs up the stream and how fast the motes rise (shares of the way a second).
+static const Ogre::Real GHOST_STREAM_INSET=0.8f;
+static const Ogre::Real GHOST_STREAM_DEPTH=0.1f;
+static const Ogre::Real GHOST_STREAM_BASE_WIDTH=0.11f;
+static const Ogre::Real GHOST_STREAM_TOP_WIDTH=0.06f;
+static const size_t GHOST_STREAM_SEGMENTS=16;
+static const size_t GHOST_STREAM_STRANDS=4;
+static const size_t GHOST_STREAM_MOTES=24;
+static const double GHOST_STREAM_FLOW=1.6;
+static const double GHOST_STREAM_MOTE_SPEED=0.9;
+
+void Creature::updateGhostSuctionStream(Ogre::SceneManager& scene, double share, const Ogre::Vector3& opening,
+    const Ogre::Vector3& mouth, double seconds)
+{
+    const GhostTransferPath::Stream stream=GhostTransferPath::stream(std::max(0.0,share));
+    if(share<0.0 || stream.head<=stream.tail || stream.density<=0.0)
+    {
+        if(mGhostStreamNode!=nullptr) mGhostStreamNode->setVisible(false);
+        return;
+    }
+    if(mGhostStreamNode==nullptr)
+    {
+        mGhostStreamNode=scene.getRootSceneNode()->createChildSceneNode(getName()+"_GhostStreamNode");
+        // Chain 0 the soft glow of the stream, chain 1 its bright core, then the wavering strands
+        mGhostStreamChain=scene.createBillboardChain(getName()+"_GhostStream");
+        mGhostStreamChain->setNumberOfChains(2+GHOST_STREAM_STRANDS);mGhostStreamChain->setMaxChainElements(GHOST_STREAM_SEGMENTS+1);
+        mGhostStreamChain->setMaterialName("GhostBeam");mGhostStreamChain->setCastShadows(false);mGhostStreamChain->setQueryFlags(0);
+        mGhostStreamNode->attachObject(mGhostStreamChain);
+        mGhostStreamMotes=scene.createBillboardSet(getName()+"_GhostStreamMotes",GHOST_STREAM_MOTES);
+        mGhostStreamMotes->setMaterialName("GhostBeam");mGhostStreamMotes->setCastShadows(false);mGhostStreamMotes->setQueryFlags(0);
+        for(size_t mote=0;mote<GHOST_STREAM_MOTES;++mote) mGhostStreamMotes->createBillboard(Ogre::Vector3::ZERO);
+        mGhostStreamNode->attachObject(mGhostStreamMotes);
+    }
+    mGhostStreamNode->setVisible(true);
+    mGhostStreamClock+=seconds*getGameMap()->getGameSpeedFactor();
+    const Ogre::Vector3 end=mouth+Ogre::Vector3(0.0f,0.0f,GHOST_STREAM_DEPTH);
+    const Ogre::Real density=static_cast<Ogre::Real>(stream.density);
+    const double tau=2.0*Ogre::Math::PI;
+    // Two directions across the stream for the wavering of the strands and the swirl of the motes
+    Ogre::Vector3 up=end-opening;
+    if(up.squaredLength()<1.0e-8f) up=Ogre::Vector3::UNIT_Z;
+    up.normalise();
+    const Ogre::Vector3 side=up.perpendicular();
+    const Ogre::Vector3 across=up.crossProduct(side);
+    for(size_t chain=0;chain<2+GHOST_STREAM_STRANDS;++chain)
+    {
+        mGhostStreamChain->clearChain(chain);
+        const double phase=static_cast<double>(chain)*0.37;
+        for(size_t i=0;i<=GHOST_STREAM_SEGMENTS;++i)
+        {
+            // Only the part between the tail and the head is there; it narrows from the trap up into the nozzle
+            const double way=stream.tail+(stream.head-stream.tail)*static_cast<double>(i)/static_cast<double>(GHOST_STREAM_SEGMENTS);
+            const Ogre::Real along=static_cast<Ogre::Real>(way);
+            const Ogre::Real width=GHOST_STREAM_BASE_WIDTH+(GHOST_STREAM_TOP_WIDTH-GHOST_STREAM_BASE_WIDTH)*along;
+            // Light runs up the stream in bands, the ends of the stream fade out softly
+            const double pulse=0.5+0.5*std::sin(tau*(4.0*way-GHOST_STREAM_FLOW*mGhostStreamClock+phase));
+            const double ends=std::min(1.0,std::min(static_cast<double>(i),static_cast<double>(GHOST_STREAM_SEGMENTS-i))/3.0);
+            Ogre::Vector3 point=opening+(end-opening)*along;
+            Ogre::ColourValue colour;
+            Ogre::Real thickness;
+            if(chain==0)
+            {
+                colour=Ogre::ColourValue(0.35f,0.95f,0.45f,static_cast<float>(0.45*(0.75+0.25*pulse)*ends)*density);
+                thickness=width;
+            }
+            else if(chain==1)
+            {
+                colour=Ogre::ColourValue(0.82f,1.0f,0.86f,static_cast<float>(0.8*(0.6+0.4*pulse)*ends)*density);
+                thickness=0.4f*width;
+            }
+            else
+            {
+                // Each strand wavers round the middle and carries its own streaks of light upwards
+                const double sway=std::sin(tau*(1.5*way-0.8*mGhostStreamClock+phase));
+                const double turn=tau*static_cast<double>(chain-2)/static_cast<double>(GHOST_STREAM_STRANDS);
+                const Ogre::Real offset=static_cast<Ogre::Real>(0.3*sway)*width;
+                point+=(side*static_cast<Ogre::Real>(std::cos(turn))+across*static_cast<Ogre::Real>(std::sin(turn)))*offset;
+                colour=Ogre::ColourValue(0.55f,1.0f,0.65f,static_cast<float>(0.9*pulse*pulse*ends)*density);
+                thickness=0.22f*width;
+            }
+            mGhostStreamChain->addChainElement(chain,Ogre::BillboardChain::Element(point,thickness,0.5f,colour,Ogre::Quaternion::IDENTITY));
+        }
+    }
+    // Motes rise along the stream in a slow swirl, each on its own place of the way; only those inside the stream shine
+    for(size_t mote=0;mote<GHOST_STREAM_MOTES;++mote)
+    {
+        Ogre::Billboard* billboard=mGhostStreamMotes->getBillboard(static_cast<unsigned int>(mote));
+        const double start=std::fmod(static_cast<double>(mote)*0.618034,1.0);
+        const double way=std::fmod(start+GHOST_STREAM_MOTE_SPEED*mGhostStreamClock,1.0);
+        if(way<stream.tail || way>stream.head)
+        {
+            billboard->setColour(Ogre::ColourValue(0.0f,0.0f,0.0f,0.0f));
+            continue;
+        }
+        const Ogre::Real along=static_cast<Ogre::Real>(way);
+        const Ogre::Real width=GHOST_STREAM_BASE_WIDTH+(GHOST_STREAM_TOP_WIDTH-GHOST_STREAM_BASE_WIDTH)*along;
+        const double angle=tau*(static_cast<double>(mote)*0.381966+2.0*way);
+        const Ogre::Real radius=0.3f*width;
+        billboard->setPosition(opening+(end-opening)*along+(side*static_cast<Ogre::Real>(std::cos(angle))+
+            across*static_cast<Ogre::Real>(std::sin(angle)))*radius);
+        const Ogre::Real size=0.02f*(1.0f-0.4f*along);
+        billboard->setDimensions(size,size);
+        const double fade=std::min(1.0,std::min(way-stream.tail,stream.head-way)*12.0);
+        billboard->setColour(Ogre::ColourValue(0.75f,1.0f,0.8f,static_cast<float>(fade)*density));
+    }
+}
+
 void Creature::clearGhostHuntVisuals()
 {
     if(getIsOnServerMap()) return;
@@ -15356,7 +15466,7 @@ void Creature::clearGhostHuntVisuals()
     if(!mGhostShrinkTarget.empty())
     {
         GhostEntity* ghost=static_cast<GhostEntity*>(getGameMap()->getEntityFromTypeAndName(GameEntityType::ghostEntity,mGhostShrinkTarget));
-        if(ghost!=nullptr) { ghost->setCaptureProgress(0.0);ghost->setTransferProgress(0.0); }
+        if(ghost!=nullptr) ghost->setCaptureProgress(0.0);
         mGhostShrinkTarget.clear();
     }
     if(mGhostBoxNode!=nullptr)
@@ -15428,6 +15538,11 @@ void Creature::clearGhostHuntVisuals()
     if(mGhostTrapGlow!=nullptr) { scene->destroyBillboardSet(mGhostTrapGlow);mGhostTrapGlow=nullptr; }
     if(mGhostTrapCone!=nullptr) { scene->destroyBillboardChain(mGhostTrapCone);mGhostTrapCone=nullptr; }
     if(mGhostTrapNode!=nullptr) { scene->destroySceneNode(mGhostTrapNode);mGhostTrapNode=nullptr; }
+    // The suction stream goes with the box
+    if(mGhostStreamChain!=nullptr) { scene->destroyBillboardChain(mGhostStreamChain);mGhostStreamChain=nullptr; }
+    if(mGhostStreamMotes!=nullptr) { scene->destroyBillboardSet(mGhostStreamMotes);mGhostStreamMotes=nullptr; }
+    if(mGhostStreamNode!=nullptr) { scene->destroySceneNode(mGhostStreamNode);mGhostStreamNode=nullptr; }
+    mGhostStreamClock=0.0;
     if(mGhostBeamSound!=0) { SoundEffectsManager::getSingleton().stopSpatialLoop(mGhostBeamSound);mGhostBeamSound=0; }
     if(mGhostBeamSparks!=nullptr) { scene->destroyParticleSystem(mGhostBeamSparks);mGhostBeamSparks=nullptr; }
     if(mGhostSparkNode!=nullptr) { scene->destroySceneNode(mGhostSparkNode);mGhostSparkNode=nullptr; }
@@ -15496,7 +15611,7 @@ void Creature::updateGhostHuntVisuals(double seconds)
     if(!mGhostShrinkTarget.empty() && mGhostShrinkTarget!=mGhostThrowTarget)
     {
         GhostEntity* previous=static_cast<GhostEntity*>(getGameMap()->getEntityFromTypeAndName(GameEntityType::ghostEntity,mGhostShrinkTarget));
-        if(previous!=nullptr) { previous->setCaptureProgress(0.0);previous->setTransferProgress(0.0); }
+        if(previous!=nullptr) previous->setCaptureProgress(0.0);
         mGhostShrinkTarget.clear();
     }
     // The carried box sits in the hunter's hand: it hangs on the free hand bone and follows every arm movement.
@@ -15660,6 +15775,8 @@ void Creature::updateGhostHuntVisuals(double seconds)
     if(mGhostBoxNode!=nullptr) mGhostBoxNode->setScale(getEntityNode()->getScale());
     // How far the trap is open and how bright its light shines this frame (decisions 801 and 806)
     double lidTarget=0.0,trapLight=0.0;
+    // The share of the suction into the cauldron shown this frame, below 0 while there is none
+    double suction=-1.0;
     const ConfigManager& config=ConfigManager::getSingleton();
     if(mGhostBoxNode!=nullptr)
     {
@@ -15728,8 +15845,9 @@ void Creature::updateGhostHuntVisuals(double seconds)
                 // ghost. Over the first GhostPutInSeconds the hunter reaches out with the shut trap and sets it down onto
                 // the seat by hand (decision 936 point 3: his generated reach pose, the trap leaves his hand only near the
                 // seat and comes down onto it from above, eased, bottom on the seat); then the trap opens on the shelf,
-                // the ghost is drawn straight up out of it into the suction nozzle (GhostEntity::updateLook) and the trap
-                // shuts again (owner decision of 2026-11-28); the glow of the seat shines. The whole delivery of one
+                // the ghost stays inside and the content of the trap is drawn straight up out of it into the suction
+                // nozzle as a green stream (updateGhostSuctionStream) until the trap is empty, and the trap shuts again
+                // (owner decisions of 2026-11-28); the glow of the seat shines. The whole delivery of one
                 // ghost is the transfer time, GhostTransferSeconds times the CatchTime research (20, 16, 13.3 s).
                 // Further ghosts of the pack follow without a new put-in.
                 const Ogre::Vector3 seat=ghost->getPosition();
@@ -15794,7 +15912,9 @@ void Creature::updateGhostHuntVisuals(double seconds)
                 lidTarget=mGhostLidShown;
                 trapLight=inserted>=1.0f?1.0:0.0;
                 mGhostCaptureShown=0.0;
-                ghost->setTransferTarget(mGhostDeliveryMouth);
+                // The ghost stays in the trap: while the flaps are open its content is drawn up into the nozzle as the
+                // green stream (owner decision of 2026-11-28), from the trap's opening to the nozzle's mouth
+                if(inserted>=1.0f) suction=mGhostTransferShown;
             }
             else if(mGhostBoxMode==7)
             {
@@ -15844,7 +15964,6 @@ void Creature::updateGhostHuntVisuals(double seconds)
             if(ghost!=nullptr)
             {
                 ghost->setCaptureProgress(mGhostCaptureShown);mGhostShrinkTarget=mGhostThrowTarget;
-                ghost->setTransferProgress(mGhostBoxMode==5?mGhostTransferShown:0.0);
             }
             // The trap's cable (owner decision of 2026-11-28): while the trap lies on the floor for the catch - the beam,
             // the snap, lying shut and the pick-up - its foot pedal lies at the hunter's feet and the cable runs from the
@@ -15858,6 +15977,10 @@ void Creature::updateGhostHuntVisuals(double seconds)
                 open->setEnabled(true);open->setLoop(false);
                 open->setTimePosition(static_cast<Ogre::Real>(mGhostLidShown)*open->getLength());
             }
+            // The suction stream rises out of the trap's opening, just below its top, into the nozzle's mouth
+            const Ogre::Real trapTop=trap->getMesh()->getBounds().getMaximum().z*mGhostBoxNode->getScale().z;
+            updateGhostSuctionStream(*scene,suction,position+Ogre::Vector3(0.0f,0.0f,GHOST_STREAM_INSET*trapTop),
+                mGhostDeliveryMouth,seconds);
             // The open trap lights up in the green-white of the beam (decision 806): a bright glow in its opening and a
             // light cone shining up out of it, for the whole time it is open, fading when the lid snaps shut.
             if(trapLight>0.0)
@@ -15900,6 +16023,7 @@ void Creature::updateGhostHuntVisuals(double seconds)
         }
     }
     if(trapLight<=0.0 && mGhostTrapNode!=nullptr) mGhostTrapNode->setVisible(false);
+    if(suction<0.0 && mGhostStreamNode!=nullptr) mGhostStreamNode->setVisible(false);
     // Decision 936 points 2 and 3: the generated pose layer over the Idle clip, built when its phase begins (again if the
     // hunter has turned since), eased in and out by its weight every frame, removed when its phase ends
     // (the state is looked up by its name every frame: a hunter entity built anew has lost it and gets it again)
