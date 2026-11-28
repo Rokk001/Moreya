@@ -28,8 +28,29 @@
 #include "rooms/RoomType.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
+#include "utils/Translation.h"
+
+#include <cctype>
 
 static CreatureRoomAffinity EMPTY_AFFINITY(RoomType::nullRoomType, 0, 0);
+
+//! \brief The key of the language files with the name of a creature class: "creature." and the lower case class id.
+std::string CreatureDefinition::getDisplayNameKey(const std::string& className)
+{
+    std::string key = "creature.";
+    for(std::string::size_type i = 0; i < className.size(); ++i)
+        key += static_cast<char>(std::tolower(static_cast<unsigned char>(className[i])));
+    return key + ".name";
+}
+
+//! \brief The name of a creature class in the chosen language, the class id when the language files have no name.
+std::string CreatureDefinition::getDisplayNameOf(const std::string& className)
+{
+    const std::string key = getDisplayNameKey(className);
+    if(!Translation::hasText(key))
+        return className;
+    return Translation::tr(key);
+}
 
 //! Default level-one combat ratings used by definitions without explicit ratings.
 static const double DEFAULT_ATTACK_RATING = 300.0;
