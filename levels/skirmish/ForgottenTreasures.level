@@ -1,8 +1,8 @@
 OpenDungeons_Version:0.7.1  # The version of OpenDungeons which created this file (for compatibility reasons).
 
 [Info]
-Name	Forgotten treasures
-Description	You have been reported a dungeon with a lot of treasures. It is said that dragons took them from a powefull civilisation after crushing them. It seems another keeper is trying to grab it. Time to show them they cannot stand your power.
+Name	@level.forgottentreasures.name
+Description	@level.forgottentreasures.description
 Music	Searching_yd.ogg
 FightMusic	TheDarkAmulet_MP.ogg
 [/Info]

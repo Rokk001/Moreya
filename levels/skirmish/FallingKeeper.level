@@ -1,8 +1,8 @@
 OpenDungeons_Version:0.7.1  # The version of OpenDungeons which created this file (for compatibility reasons).
 
 [Info]
-Name	Falling Keeper
-Description	A strong keeper is being attacked by heroes. Kill them all to gain control of the underground.
+Name	@level.fallingkeeper.name
+Description	@level.fallingkeeper.description
 Music	Searching_yd.ogg
 FightMusic	TheDarkAmulet_MP.ogg
 [/Info]

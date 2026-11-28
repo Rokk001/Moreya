@@ -1,8 +1,8 @@
 OpenDungeons_Version:0.7.1  # The version of OpenDungeons which created this file (for compatibility reasons).
 
 [Info]
-Name	Campaign 2 - Forgotten Treasures
-Description	You have been reported a dungeon with a lot of treasures. It is said that dragons took them from a powefull civilisation after crushing them. It seems another keeper is trying to grab it. Time to show them they cannot stand your power.
+Name	@level.campaign2.name
+Description	@level.campaign2.description
 Music	Searching_yd.ogg
 FightMusic	TheDarkAmulet_MP.ogg
 [/Info]
@@ -3492,14 +3492,14 @@ ProtectDungeonTemple	NULL
 Name	intro
 Mode	once
 Cond	time	3
-Action	message	-1	A rival keeper is after the same treasure. Claim it first.
-Action	objectiveid	-1	campaign2-o01	Defeat the rival keeper; protect your heart.
+Action	message	-1	@level.campaign2.message.01
+Action	objectiveid	-1	campaign2-o01	@level.campaign2.objective.campaign2-o01
 [/Trigger]
 [Trigger]
 Name	hint
 Mode	once
 Cond	time	180
-Action	message	-1	Build a Treasury and a Training Room before the rival gets strong.
+Action	message	-1	@level.campaign2.message.02
 [/Trigger]
 
 [Trigger]
@@ -3514,17 +3514,17 @@ Action	objectivestate	-1	campaign2-o01	reached
 Name	mainGoalListSeat2
 Mode	once
 Cond	time	0
-Action	mainobjectiveid	2	campaign2-main-heart-s2	Protect your heart.
-Action	mainobjectiveid	2	campaign2-main-enemies-s2	Defeat all enemies.
-Action	optionalobjectiveid	2	campaign2-extra-gold-s2	Mine 1000 gold.
+Action	mainobjectiveid	2	campaign2-main-heart-s2	@level.campaign2.objective.campaign2-main-heart-s2
+Action	mainobjectiveid	2	campaign2-main-enemies-s2	@level.campaign2.objective.campaign2-main-enemies-s2
+Action	optionalobjectiveid	2	campaign2-extra-gold-s2	@level.campaign2.objective.campaign2-extra-gold-s2
 [/Trigger]
 [Trigger]
 Name	mainGoalListSeat1
 Mode	once
 Cond	time	0
-Action	mainobjectiveid	1	campaign2-main-heart-s1	Protect your heart.
-Action	mainobjectiveid	1	campaign2-main-enemies-s1	Defeat all enemies.
-Action	optionalobjectiveid	1	campaign2-extra-gold-s1	Mine 1000 gold.
+Action	mainobjectiveid	1	campaign2-main-heart-s1	@level.campaign2.objective.campaign2-main-heart-s1
+Action	mainobjectiveid	1	campaign2-main-enemies-s1	@level.campaign2.objective.campaign2-main-enemies-s1
+Action	optionalobjectiveid	1	campaign2-extra-gold-s1	@level.campaign2.objective.campaign2-extra-gold-s1
 [/Trigger]
 [Trigger]
 Name	mainHeartSeat1
