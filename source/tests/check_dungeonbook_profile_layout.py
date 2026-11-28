@@ -513,7 +513,12 @@ items = ['Soul crystal', 'Ectoplasm', 'Mana crystal', 'Research book']
 for cfg in ('items.cfg', 'potions.cfg'):
     items += re.findall(r'^\s*Display\s+(.+?)\s*$', content_packages.read_layout_text(repo, 'config/' + cfg), re.M)
 posts_source = (repo / 'source/social/CreaturePosts.cpp').read_text()
-rooms = re.findall(r'return "([a-z ]+)";', posts_source[posts_source.index('CreaturePosts::getRoomName'):][:3000])
+# The room names are entries of the language files (getSocialCodeText(key, English fallback)); the English text of
+# the key is measured, the fallback stands in for it without the content
+room_keys = re.findall(r'getSocialCodeText\("(social\.code\.room\.[a-z_]+)", "([a-z ]+)"\)',
+                       posts_source[posts_source.index('CreaturePosts::getRoomName'):][:3000])
+english_rooms = language_package_texts.english(repo)
+rooms = [english_rooms.get(key, fallback) for key, fallback in room_keys]
 assert len(items) > 50 and len(rooms) > 15, (len(items), len(rooms))
 slot_values = {'name': WIDEST_NAMES_8, 'friend': WIDEST_NAMES_8, 'hometown': widest([h for g in name_groups for h in g['home']]),
                'job': widest(pools['job']), 'like': widest(pools['like']), 'dislike': widest(pools['dislike']),
