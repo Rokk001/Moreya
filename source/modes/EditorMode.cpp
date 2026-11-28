@@ -1045,7 +1045,7 @@ void EditorMode::updateCursorText()
     if(def == nullptr)
         textSS << "Creature (C): ?";
     else
-        textSS << "Creature (C): " << def->getClassName();
+        textSS << "Creature (C): " << def->getDisplayName();
 
     textSS << ", level (L): " << mCurrentCreatureLevel;
 
@@ -1223,7 +1223,7 @@ void EditorMode::showPortalWaveWindow(const std::string& roomName, const RoomPor
         if(def == nullptr)
             continue;
 
-        CEGUI::ListboxTextItem* item = new CEGUI::ListboxTextItem(def->getClassName(), i);
+        CEGUI::ListboxTextItem* item = new CEGUI::ListboxTextItem(Gui::toCeguiText(def->getDisplayName()), i);
         item->setSelectionBrushImage(selImg);
         classCb->addItem(item);
     }
@@ -1334,7 +1334,7 @@ void EditorMode::refreshPortalWaveSelectedWave()
     {
         const std::pair<std::string, uint32_t>& p = wave.mSpawnCreatureClassName[i];
         CEGUI::ListboxTextItem* item = new CEGUI::ListboxTextItem(
-            p.first + " (level " + Helper::toString(p.second) + ")", i);
+            Gui::toCeguiText(CreatureDefinition::getDisplayNameOf(p.first) + " (level " + Helper::toString(p.second) + ")"), i);
         item->setSelectionBrushImage(selImg);
         creatureList->addItem(item);
     }
@@ -1463,8 +1463,12 @@ bool EditorMode::onPortalWaveAddCreature(const CEGUI::EventArgs& /*arg*/)
         level = MAX_LEVEL;
 
     readPortalWaveWindow();
+    // The item text is the name the player sees; the id of the item is the index of the creature class
+    const CreatureDefinition* selectedClass = mGameMap->getClassDescription(static_cast<int>(classItem->getID()));
+    if(selectedClass == nullptr)
+        return true;
     mPortalWaveConfig.mWaves[mPortalWaveSelectedWave].mSpawnCreatureClassName.push_back(
-        std::pair<std::string, uint32_t>(classItem->getText().c_str(), level));
+        std::pair<std::string, uint32_t>(selectedClass->getClassName(), level));
 
     // The wave list shows how many creatures a wave holds, so it changed too
     refreshPortalWaveWindow();
@@ -2986,7 +2990,7 @@ void EditorMode::installCreaturesMenuButtons()
     for(unsigned int ii = 0 ;  ii < mGameMap->numClassDescriptions()   ; ++ii )
     {
         CEGUI::Window* ww = CEGUI::WindowManager::getSingletonPtr()->createWindow("OD/MenuItem");
-        ww->setText(mGameMap->getClassDescription(ii)->getClassName());
+        ww->setText(Gui::toCeguiText(mGameMap->getClassDescription(ii)->getDisplayName()));
         ww->setName(mGameMap->getClassDescription(ii)->getClassName());
         mRootWindow->getChild("Menubar")->getChild("Creatures")
         ->getChild("PopupMenu4")->addChild(ww);

@@ -160,8 +160,7 @@ static std::string getDirtPileHoverText(Tile* tile)
     if(pile == nullptr)
         pile = DirtPileEntity::getEntityOnTile(tile, DirtPileKind::bones);
     if(pile != nullptr)
-        return std::string(PILE_HOVER_PREFIX) + social::SocialGenerator::displayClassName(
-            social::SocialProfileCache::getSingleton().getData(), pile->getCreatureClass()) + ")";
+        return std::string(PILE_HOVER_PREFIX) + CreatureDefinition::getDisplayNameOf(pile->getCreatureClass()) + ")";
 
     if(DirtPileEntity::getEntityOnTile(tile, DirtPileKind::blood) != nullptr)
         return BLOOD_HOVER_TEXT;
@@ -5427,7 +5426,7 @@ void GameMode::refreshActionFeedback(float elapsed)
         inputManager.mCommandState = previousState;
     }
 
-    mRootWindow->getChild("ContextInfo")->setText(mActionTargetText);
+    mRootWindow->getChild("ContextInfo")->setText(Gui::toCeguiText(mActionTargetText));
     CEGUI::Window* icon = mRootWindow->getChild("HandActionIcon");
     const bool overGui = isMouseDownOnCEGUIWindow();
     Player* player = mGameMap->getLocalPlayer();
@@ -6457,7 +6456,7 @@ void GameMode::handlePlayerActionNone()
                     if(creature != nullptr && HandLimitRules::isFightingCreature(true,
                            creature->getDefinition()->isWorker(), creature->getSeatPrison() != nullptr))
                         mHandCooldownCreatureName = creature->getName();
-                    std::string text = creature != nullptr ? creature->getDefinition()->getClassName() : closest->getName();
+                    std::string text = creature != nullptr ? creature->getDefinition()->getDisplayName() : closest->getName();
                     // Strongest friend and worst enemy of an own creature, one line (relationship option)
                     std::string relations = creature != nullptr ? creature->getRelationshipTooltip() : std::string();
                     if(!relations.empty())
