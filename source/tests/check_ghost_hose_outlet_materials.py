@@ -8,14 +8,16 @@ The check resolves every material the way Ogre does at run time: the group named
 default "General" when none is named) must hold a .material script that defines it, read from the resource groups of
 cmake/config/resources.cfg.in. A material that is not found becomes BaseWhite. On that resolved material it computes the
 colour the player sees:
-- hose and wires: the fragment programs of the material on the vertex colours that shadeGhostHose gives the configured
-  GhostHoseColour and GhostHoseWireColour1..N (the rubber is the mean of its texture), at the lit top and the dark
-  underside; every wire is clearly coloured and the rubber is dark, never white;
+- cable bundle (owner decision of 2026-11-28, the approved gear template: flat coloured cables with brass clamps, no
+  ribbed hose): the fragment program of the cable material on the vertex colours that shadeGhostHose gives the
+  configured GhostHoseWireColour1..N, at the lit top and the dark underside; every cable is clearly coloured, never
+  white; the clamps use the brass material;
 - outlet: the production builder buildGhostCauldronOutlet is executed in Python (its loops, vertices, texture
   coordinates and triangles); every section uses a material of the shipped GhostCauldron.mesh, resolves in its group,
   has a texture with surface detail, and every triangle covers texture area, so no face is flat or untextured.
 The code before the fix is run too and must fail, so the check tells the fixed outcome from the reported one.
-Fixed values counted once on this branch: 2 hose sections, 5 wires, 3 outlet sections with 150, 50 and 8 vertices.
+Fixed values counted once on this branch: 2 bundle sections (cables, clamps), 4 cables, 3 outlet sections with 150, 50
+and 8 vertices.
 """
 from pathlib import Path
 import importlib.util
@@ -134,16 +136,18 @@ def colour(key):
 
 
 def hose_colours(creature):
-    """Colours the player sees on the rubber and every wire, at the lit top and the dark underside."""
-    shape = body(creature, 'static void shapeGhostHose(')
+    """Colours the player sees on every cable of the bundle, at the lit top and the dark underside."""
+    shape = body(creature, 'static void shapeGhostCableBundle(')
     sections = begins(shape)
-    assert [material for material, _ in sections] == ['GhostHose', 'GhostHoseWire'], sections
+    assert [material for material, _ in sections] == ['GhostHoseWire', 'GhostBrass'], sections
+    assert resolve('GhostBrass', sections[1][1]) == 'GhostBrass', 'the clamps find the brass material'
+    sections = sections[:1]
     light = re.search(r'const Ogre::Real light=(.*?);', body(creature, 'static Ogre::ColourValue shadeGhostHose(')).group(1)
     light = re.sub(r'(\d)f\b', r'\1', light).replace('normal.z', 'up')
     glow = float(config['GhostHoseGlow'])
     wires = [colour('GhostHoseWireColour%d' % n) for n in range(1, int(config['GhostHoseWireCount']) + 1)]
     seen = {}
-    for (material, group), inputs in zip(sections, ([colour('GhostHoseColour')], wires)):
+    for (material, group), inputs in zip(sections, (wires,)):
         rendered = resolve(material, group)
         result = []
         for vertex in inputs:
@@ -171,14 +175,13 @@ def hose_colours(creature):
 
 
 def check_hose(creature):
-    """Every wire shows its own strong colour and the rubber is dark textured hose, never white."""
+    """Every cable of the bundle shows its own strong colour, never white."""
     seen = hose_colours(creature)
+    assert len(seen['GhostHoseWire']) == 2 * 4, 'four cables, each at the lit top and the dark underside'
     for pixel in seen['GhostHoseWire']:
-        assert max(pixel) - min(pixel) > 0.3, ('wire is clearly coloured, not white or grey', pixel)
+        assert max(pixel) - min(pixel) > 0.3, ('cable is clearly coloured, not white or grey', pixel)
     hues = {max(range(3), key=lambda channel: pixel[channel]) for pixel in seen['GhostHoseWire']}
-    assert len(hues) == 3, ('wires show red, green and blue leading channels', hues)
-    for pixel in seen['GhostHose']:
-        assert max(pixel) < 0.5, ('rubber is the dark textured hose, not white', pixel)
+    assert len(hues) == 3, ('cables show red, green and blue leading channels', hues)
 
 
 # --- K4: the cauldron outlet, executed ---------------------------------------------------------------------------------
@@ -387,7 +390,7 @@ def main():
         pass
     else:
         raise AssertionError('a liquid on one texel must fail')
-    print('ghost hose and outlet materials: 2 hose sections, 5 wires coloured, 1 outlet section textured: ok')
+    print('ghost hose and outlet materials: 2 bundle sections, 4 cables coloured, brass clamps, 1 outlet section textured: ok')
 
 
 if __name__ == '__main__':

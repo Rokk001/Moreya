@@ -32,9 +32,10 @@ spec.loader.exec_module(rules)
 def shaders():
     # The code side: the viewport scheme, the colours of the hose and the resource folder of the scripts
     assert "mViewport->setMaterialScheme(Ogre::RTShader::ShaderGenerator::DEFAULT_SCHEME_NAME);" in rules.read("source/render/RenderManager.cpp")
-    shape = rules.function(rules.read("source/entities/Creature.cpp"), "static void shapeGhostHose(")
-    assert "hose.colour(shadeGhostHose(look.mWires[wire],normal,look.mGlow));" in shape
-    assert "hose.textureCoord(0.0f,share);" in shape
+    # Since the owner decision of 2026-11-28 the cables of the flat bundle carry the configured colours
+    shape = rules.function(rules.read("source/entities/Creature.cpp"), "static void shapeGhostCableBundle(")
+    assert "bundle.colour(shadeGhostHose(look.mWires[cable],normal,look.mGlow));" in shape
+    assert "bundle.textureCoord(0.0f,share);" in shape
     assert "FileSystem=materials/scripts" in rules.read("cmake/config/resources.cfg.in")
     missing = [name for name in SHADER_FILES if content_packages.data_file(repo, name) is None]
     if content_packages.unchecked("check_ghost_output_presentation", missing):

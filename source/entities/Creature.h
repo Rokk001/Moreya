@@ -2500,9 +2500,9 @@ private:
     //! \brief The world direction the cannon's barrel points in this frame of the beam (decision 998): it follows the
     //! ghost smoothly and never pitches below GhostCannonMaxDownDegrees; zero while no beam is on.
     Ogre::Vector3 mGhostCannonAim = Ogre::Vector3::ZERO;
-    //! \brief The flexible hose from the pack to the cannon (decision 894): a textured tube re-shaped every frame between
-    //! the pack's port and the rear end of the cannon, wherever the cannon is (holster or hand), wound with coloured wires
-    //! (decision 998).
+    //! \brief The flexible hose from the pack to the cannon (decision 894): re-shaped every frame between the pack's port
+    //! and the rear end of the cannon, wherever the cannon is (holster or hand); since the owner decision of 2026-11-28
+    //! the flat bundle of four coloured cables (decision 998) with brass clamps of the approved gear template.
     Ogre::SceneNode* mGhostHoseNode = nullptr;
     Ogre::ManualObject* mGhostHose = nullptr;
     bool mGhostOwnWeaponsHidden = false;

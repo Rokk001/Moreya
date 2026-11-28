@@ -9,7 +9,9 @@
 2. While beaming the hunter held the cannon slanted backwards. The cannon now points at the ghost's aim point for the whole
    beam step (aimGhostCannon, every frame), whatever pose the Beam clip holds the hand in.
 3. A clearly visible textured hose connects the backpack with the cannon and follows the hunter and the cannon (hose
-   shaping every frame, dynamic tube, material GhostHose with the ribbed rubber texture).
+   shaping every frame, dynamic tube, material GhostHose with the ribbed rubber texture). Since the owner decision of
+   2026-11-28 (the approved gear template) the pack's connection is a flat bundle of four coloured cables with three
+   brass clamps on the same sagging curve (shapeGhostCableBundle); the ribbed tube stays for other cables.
 Fixed values measured once on this branch: 4 setAnimationState calls with a direction in the hunt, 128 rings and 8 sides.
 
 The hunter skeletons, Ghost.material and GhostPackRubber.png are content (core-models package, found through
@@ -420,8 +422,8 @@ has(visuals, 'the hose joins the pack port and the rear end of the cannon, in th
     'const Ogre::Vector3 portOut=mGhostBackpackNode->_getDerivedOrientation()*Ogre::Vector3::NEGATIVE_UNIT_Y;',
     'const Ogre::Vector3 rear=gunTransform*Ogre::Vector3(gunBounds.getCenter().x,gunBounds.getCenter().y,gunBounds.getMinimum().z);',
     'const Ogre::Real radius=0.025f*body->getBoundingBox().getSize().z*getEntityNode()->_getDerivedScale().z;',
-    'shapeGhostHose(*mGhostHose,port,portOut,rear,')
-assert visuals.index('shapeGhostHose(') < visuals.index('if(mGhostBeamSample<flickerSeconds) return;'), 'shaped every frame'
+    'shapeGhostCableBundle(*mGhostHose,port,portOut,rear,')
+assert visuals.index('shapeGhostCableBundle(') < visuals.index('if(mGhostBeamSample<flickerSeconds) return;'), 'shaped every frame'
 clear = body(creature_source, 'void Creature::clearGhostHuntVisuals()')
 has(clear, 'the hose goes with the hunt', 'scene->destroyManualObject(mGhostHose)', 'scene->destroySceneNode(mGhostHoseNode)')
 has(read('source/entities/Creature.h'), 'members', 'Ogre::SceneNode* mGhostHoseNode = nullptr;', 'Ogre::ManualObject* mGhostHose = nullptr;')
@@ -493,34 +495,47 @@ assert visuals.index('coupling->setPosition(') < visuals.index('if(mGhostBeamSam
 has(clear, 'fittings and child nodes released with the hose', 'scene->destroyEntity(name);',
     'mGhostHoseNode->removeAndDestroyAllChildren();')
 
-# --- 4. Coloured wires from the pack to the cannon (decision 998) ---------------------------------------------------------
-# Mario: the plain hose looks boring; bright red, blue, green wires must run from the back to the front, to the cannon.
-has(creature_source, 'six-sided wires', 'static const size_t GHOST_HOSE_WIRE_SIDES=6;')
-has(shape, 'a second section of wires on the same curve, rebuilt in place every frame',
-    'if(hose.getNumSections()<2) hose.begin("GhostHoseWire",Ogre::RenderOperation::OT_TRIANGLE_LIST,"Graphics");',
-    'else hose.beginUpdate(1);',
+# --- 4. The cable bundle from the pack to the cannon (decision 998; owner decision of 2026-11-28) -------------------------
+# Decision 998: bright red, blue, green cables run from the back to the front, to the cannon. The approved gear template
+# (owner decision of 2026-11-28) makes them a flat bundle of four cables side by side in red, blue, green and yellow, held
+# by three brass clamps; the ribbed hose and the wires wound round it are gone.
+bundle = body(creature_source, 'static void shapeGhostCableBundle(')
+has(creature_source, 'six-sided cables and three clamps', 'static const size_t GHOST_HOSE_WIRE_SIDES=6;',
+    'static const std::vector<Ogre::Real> GHOST_BUNDLE_CLAMPS={0.25f,0.5f,0.75f};',
+    'static const size_t GHOST_BUNDLE_CLAMP_SIDES=16;', 'static const Ogre::Real GHOST_BUNDLE_CLAMP_MARGIN=0.45f;')
+has(bundle, 'cables in section 0 and brass clamps in section 1 on the hose curve, rebuilt in place every frame',
+    'if(bundle.getNumSections()==0) bundle.begin("GhostHoseWire",Ogre::RenderOperation::OT_TRIANGLE_LIST,"Graphics");',
+    'else bundle.beginUpdate(0);',
+    'if(bundle.getNumSections()<2) bundle.begin("GhostBrass",Ogre::RenderOperation::OT_TRIANGLE_LIST,"Graphics");',
+    'else bundle.beginUpdate(1);',
+    'const Ogre::Vector3 sag(0.0f,0.0f,-0.18f*span-2.0f*radius);',
+    'return port*(u*u*u)+control1*(3.0f*u*u*t)+control2*(3.0f*u*t*t)+rear*(t*t*t);',
     'const Ogre::Real speedPort=3.0f*(control1-port).length(),speedRear=3.0f*(rear-control2).length();',
     'const Ogre::Real first=speedPort>1.0e-6f?std::min(0.25f,look.mEndInset*radius/speedPort):0.0f;',
     'const Ogre::Real last=speedRear>1.0e-6f?std::max(0.75f,1.0f-look.mEndInset*radius/speedRear):1.0f;',
     'const Ogre::Real thickness=radius*look.mWireRadius;',
-    'const Ogre::Vector3 centre=frame(first+(last-first)*share,tangent,side,up);',
-    'const Ogre::Real turn=2.0f*Ogre::Math::PI*(static_cast<Ogre::Real>(wire)/static_cast<Ogre::Real>(look.mWires.size())+',
-    'look.mTwist*share);', 'const Ogre::Vector3 out=side*std::cos(turn)+up*std::sin(turn);',
-    'const Ogre::Vector3 core=centre+out*(radius+thickness);', 'hose.position(core+normal*thickness);',
-    'hose.colour(shadeGhostHose(look.mWires[wire],normal,look.mGlow));',
-    'const Ogre::uint32 a=static_cast<Ogre::uint32>(wire*wireVertices+ring*(GHOST_HOSE_WIRE_SIDES+1)+k),b=a+1;')
-assert shape.index('hose.begin("GhostHose",') < shape.index('hose.begin("GhostHoseWire",'), 'hose section 0, wires section 1'
+    'const Ogre::Real offset=(static_cast<Ogre::Real>(cable)-0.5f*static_cast<Ogre::Real>(cables-1))*2.0f*thickness;',
+    'const Ogre::Vector3 core=frame(first+(last-first)*share,tangent,side,up)+side*offset;',
+    'bundle.position(core+normal*thickness);',
+    'bundle.colour(shadeGhostHose(look.mWires[cable],normal,look.mGlow));',
+    'const Ogre::Real wide=static_cast<Ogre::Real>(cables)*thickness+GHOST_BUNDLE_CLAMP_MARGIN*thickness;',
+    'const Ogre::Real high=thickness+GHOST_BUNDLE_CLAMP_MARGIN*thickness;',
+    'bundle.position(centre+side*(x*wide)+up*(y*high));')
+assert bundle.index('"GhostHoseWire"') < bundle.index('"GhostBrass"'), 'cables section 0, clamps section 1'
+assert 'look.mWires' not in shape and 'GhostHoseWire' not in shape, 'the ribbed tube carries no wires any more'
+for removed in ('mTwist', 'GhostHoseWireTwist', '"GhostHoseColour"'):
+    assert removed not in creature_source, ('no wound wires and no tint of a ribbed pack hose any more', removed)
 has(body(creature_source, 'static Ogre::ColourValue shadeGhostHose('), 'glow plus light from above',
     'const Ogre::Real light=glow+(1.0f-glow)*(0.5f+0.5f*normal.z);')
 look_source = body(creature_source, 'static const GhostHoseLook& ghostHoseLook()')
-has(look_source, 'every look value comes from rooms.cfg', 'ghostHoseConfigColour("GhostHoseColour")',
+has(look_source, 'every look value comes from rooms.cfg',
     'config.getRoomConfigUInt32("GhostHoseWireCount")', 'ghostHoseConfigColour("GhostHoseWireColour"+std::to_string(wire))',
-    'config.getRoomConfigDouble("GhostHoseWireRadius")', 'config.getRoomConfigDouble("GhostHoseWireTwist")',
+    'config.getRoomConfigDouble("GhostHoseWireRadius")',
     'config.getRoomConfigDouble("GhostHoseGlow")', 'config.getRoomConfigDouble("GhostHoseWireEndInset")')
 has(body(creature_source, 'static Ogre::ColourValue ghostHoseConfigColour('), 'red,green,blue parsing',
     'if(!(stream>>red>>comma1>>green>>comma2>>blue) || comma1!=\',\' || comma2!=\',\')')
-# The shaping still happens every frame for the hose in the hand and in the holster (asserted above), so the wires move
-# with every sag of the hose.
+# The shaping happens every frame for the bundle in the hand and in the holster (asserted above), so the cables move
+# with every sag of the bundle.
 
 
 def colour(key):
@@ -531,23 +546,23 @@ def colour(key):
 
 # The wire and hose look are own rows of config/rooms.cfg: without the content only the names are checked
 if not CONTENT:
-    assert not re.search(r'(?i)ghostbust|proton|ecto-?1|slimer', rooms + shape), 'no names of other games or films'
-    missing_content.append('config/rooms.cfg (hose and wire look and the wire model)')
+    assert not re.search(r'(?i)ghostbust|proton|ecto-?1|slimer', rooms + shape + bundle), 'no names of other games or films'
+    missing_content.append('config/rooms.cfg (cable bundle look and the cable model)')
     content_packages.unchecked('check_ghost_hunter_pose', missing_content)
-    print('ghost hunter pose, cannon aim, hose and wires: ok')
+    print('ghost hunter pose, cannon aim, flat bundle of four cables with brass clamps: ok')
     sys.exit(0)
 wire_count = int(config_value('GhostHoseWireCount'))
 wires = [colour('GhostHoseWireColour%d' % n) for n in range(1, wire_count + 1)]
-assert not re.search(r'^\s*GhostHoseWireColour%d\s' % (wire_count + 1), rooms, re.M), 'no unused wire colour'
-hose_tint = colour('GhostHoseColour')
+assert not re.search(r'^\s*GhostHoseWireColour%d\s' % (wire_count + 1), rooms, re.M), 'no unused cable colour'
+for removed in ('GhostHoseColour', 'GhostHoseWireTwist'):
+    assert not re.search(r'^\s*' + removed + r'\s', rooms, re.M), ('no row of the ribbed hose any more', removed)
 glow = float(config_value('GhostHoseGlow'))
 wire_share = float(config_value('GhostHoseWireRadius'))
-twist = float(config_value('GhostHoseWireTwist'))
 end_inset = float(config_value('GhostHoseWireEndInset'))
-for key in ('GhostHoseColour', 'GhostHoseGlow', 'GhostHoseWireCount', 'GhostHoseWireColour1', 'GhostHoseWireTwist',
-            'GhostHoseWireRadius', 'GhostHoseWireEndInset'):
+for key in ('GhostHoseGlow', 'GhostHoseWireCount', 'GhostHoseWireColour1', 'GhostHoseWireRadius', 'GhostHoseWireEndInset'):
     documented(key)
-assert wire_count >= 4 and len(wires) == wire_count
+# Fixed for the approved gear template: four cables
+assert wire_count == 4 and len(wires) == wire_count, wire_count
 
 
 def hue_name(rgb):
@@ -555,37 +570,25 @@ def hue_name(rgb):
     names = [name for name, value in zip(('red', 'green', 'blue'), rgb) if value == top]
     second = sorted(rgb)[1]
     if second > 0.6 * top:
-        return 'mixed'
+        return 'yellow' if rgb[2] < 0.2 and min(rgb[0], rgb[1]) > 0.6 else 'mixed'
     return names[0]
 
 
 hues = [hue_name(rgb) for rgb in wires]
-assert {'red', 'green', 'blue'} <= set(hues), ('red, blue and green wires', hues)
-assert len(set(tuple(rgb) for rgb in wires)) == wire_count, 'every wire has its own colour'
+assert hues == ['red', 'blue', 'green', 'yellow'], ('red, blue, green and yellow side by side as in the template', hues)
 for rgb in wires:
     # Bright and saturated: one channel near full, one near zero; even the shadowed underside keeps it vivid
     assert max(rgb) >= 0.9 and min(rgb) <= 0.2, ('saturated', rgb)
     assert glow * max(rgb) >= 0.5, ('bright on the underside too', glow, rgb)
-assert 0.4 <= glow < 1.0, 'shaded so the wires read as round, but always bright'
-# The hose under the wires no longer reads white: tint x mean rubber texture, fully lit, stays dark
-try:
-    from PIL import Image
-    if texture is None:
-        raise ImportError('the texture is content and not present')
-    pixels = Image.open(texture).convert('RGB').resize((64, 64))
-    mean = [sum(p[i] for p in pixels.getdata()) / (64 * 64 * 255.0) for i in range(3)]
-except ImportError:
-    mean = [0.3, 0.29, 0.26]  # measured once: mean of GhostPackRubber.png 77/73/65 of 255
-assert all(t * m <= 0.35 for t, m in zip(hose_tint, mean)), ('dark hose, not white', hose_tint, mean)
-# The wires fit inside the steel couplings at both ends (sleeve 1.35 hose radii out, 2 hose radii long, see
-# check_ghost_assets.py: bounds -1.35..1.35 across, -0.3..2.0 along) and lie on the rib crests
-assert 1.0 + 2.0 * wire_share < 1.35 and 0.05 <= wire_share, ('thin wires inside the coupling sleeve', wire_share)
-assert 0.0 < end_inset < 2.0, 'the wires end inside the coupling sleeve'
-assert 1.0 <= twist <= 5.0, 'twisted round the hose, a few turns from the pack to the cannon'
+assert 0.4 <= glow < 1.0, 'shaded so the cables read as round, but always bright'
+# The flat bundle fits inside the steel couplings at both ends (sleeve 1.35 hose radii out, 2 hose radii long, see
+# check_ghost_assets.py: bounds -1.35..1.35 across, -0.3..2.0 along) and is thick enough to see each cable
+assert wire_count * wire_share <= 1.25 and wire_share >= 0.2, ('cables thick, the bundle inside the coupling', wire_share)
+assert 0.0 < end_inset < 2.0, 'the cables end inside the coupling sleeve'
 
 
 def hose_frame(port, port_out, rear, rear_out, radius, t):
-    """Model of the frame lambda of shapeGhostHose: centre, tangent, side, up at t."""
+    """Model of the frame lambda of shapeGhostCableBundle: centre, tangent, side, up at t."""
     span = length(sub(rear, port))
     reach = 0.4 * span + 4 * radius
     sag = (0.0, 0.0, -0.18 * span - 2 * radius)
@@ -602,8 +605,8 @@ def hose_frame(port, port_out, rear, rear_out, radius, t):
     return centre, tangent, side, cross(tangent, side)
 
 
-def wire_cores(port, port_out, rear, rear_out, radius):
-    """Model of the wire section: the core line of every wire, ring by ring."""
+def cable_cores(port, port_out, rear, rear_out, radius):
+    """Model of the cable section: the core line of every cable, ring by ring, and the share range they run over."""
     span = length(sub(rear, port))
     reach = 0.4 * span + 4 * radius
     sag = (0.0, 0.0, -0.18 * span - 2 * radius)
@@ -611,18 +614,17 @@ def wire_cores(port, port_out, rear, rear_out, radius):
     speed_rear = 3 * length(add(mul(rear_out, reach), sag))
     first = min(0.25, end_inset * radius / speed_port)
     last = max(0.75, 1 - end_inset * radius / speed_rear)
+    thickness = radius * wire_share
     result = []
-    for wire in range(wire_count):
+    for cable in range(wire_count):
+        offset = (cable - 0.5 * (wire_count - 1)) * 2.0 * thickness
         line = []
         for ring in range(rings + 1):
-            share = ring / rings
-            t = first + (last - first) * share
+            t = first + (last - first) * ring / rings
             centre, tangent, side, up = hose_frame(port, port_out, rear, rear_out, radius, t)
-            turn = 2 * math.pi * (wire / wire_count + twist * share)
-            out = add(mul(side, math.cos(turn)), mul(up, math.sin(turn)))
-            line.append((t, centre, add(centre, mul(out, radius + radius * wire_share)), tangent))
+            line.append((t, centre, add(centre, mul(side, offset)), tangent, up))
         result.append(line)
-    return result
+    return result, first, last
 
 
 for _ in range(150):
@@ -630,37 +632,39 @@ for _ in range(150):
     if length(sub(rear, port)) < 0.2:
         continue
     rear_out = unit((rng.uniform(-1, 1), rng.uniform(-1, 1), rng.uniform(-0.2, 0.2)))
-    lines = wire_cores(port, (-1.0, 0.0, 0.0), rear, rear_out, radius)
+    lines, first_share, last_share = cable_cores(port, (-1.0, 0.0, 0.0), rear, rear_out, radius)
     for line in lines:
-        for t, centre, core, tangent in line:
-            # on the rib crests of the same sagging curve, every frame
-            assert abs(length(sub(core, centre)) - radius * (1 + wire_share)) < 1e-9
-            assert abs(dot(sub(core, centre), tangent)) < 1e-9
-        # from the pack's coupling to the cannon's coupling: both ends lie inside a sleeve, within 2 radii of the hose end
+        for t, centre, core, tangent, up in line:
+            # flat: every cable lies across the curve, level with the bundle's middle, on the same sagging curve
+            assert abs(dot(sub(core, centre), tangent)) < 1e-9 and abs(dot(sub(core, centre), up)) < 1e-9
+        # from the pack's coupling to the cannon's coupling: both ends lie inside a sleeve, within 2 radii of the curve end
         first, last = line[0], line[-1]
         assert length(sub(first[1], port)) <= 2.0 * radius + 1e-9 and length(sub(last[1], rear)) <= 2.0 * radius + 1e-9, \
             (length(sub(first[1], port)) / radius, length(sub(last[1], rear)) / radius)
-        assert length(sub(first[1], port)) > 0.5 * radius, 'the wire end hides in the coupling, not at the hose mouth'
+        assert length(sub(first[1], port)) > 0.5 * radius, 'the cable end hides in the coupling, not at the mouth'
         steps = [length(sub(line[i + 1][2], line[i][2])) for i in range(rings)]
-        assert max(steps) < 0.1 * sum(steps), 'a continuous wire without jumps'
+        assert max(steps) < 0.1 * sum(steps), 'a continuous cable without jumps'
         assert sum(steps) > length(sub(rear, port)) - 4.0 * radius, 'it runs the whole way from the pack to the cannon'
-    # the wires are spread evenly round the hose and twist: at the middle they sit at different sides
-    middle = [line[rings // 2][2] for line in lines]
-    for a in range(wire_count):
-        for b in range(a + 1, wire_count):
-            assert length(sub(middle[a], middle[b])) > 0.5 * radius, 'the wires do not lie on top of each other'
-# Fixed vertex count of the wire section: rebuilt in place
-assert wire_count * (rings + 1) * 7 == wire_count * 903
+    # side by side and touching: neighbouring cables are one cable thickness apart everywhere, in the template's order
+    for ring in range(rings + 1):
+        for a in range(wire_count - 1):
+            gap = length(sub(lines[a + 1][ring][2], lines[a][ring][2]))
+            assert abs(gap - 2.0 * radius * wire_share) < 1e-9, ('cables touch side by side', gap)
+    # the three clamps hold the bundle where the cables run, between the couplings
+    assert all(first_share < share < last_share for share in (0.25, 0.5, 0.75)), (first_share, last_share)
+# Fixed vertex counts, rebuilt in place: four cables of 129 rings of 7 vertices, three clamps of 2 rings of 17 vertices
+assert wire_count * (rings + 1) * 7 == 3612 and 3 * 2 * 17 == 102
+# The clamp reaches beyond the outer cables
+assert wire_count * wire_share + 0.45 * wire_share > (wire_count - 1) * wire_share + wire_share
 # Shaded colours of the model: top lit fully, underside at the glow share, never white
-for rgb in wires + [hose_tint]:
+for rgb in wires:
     for normal_z in (-1.0, 0.0, 1.0):
         light = glow + (1 - glow) * (0.5 + 0.5 * normal_z)
         shaded = [value * light for value in rgb]
         assert max(shaded) <= 1.0
-    if rgb is not hose_tint:
-        assert min(rgb) * 1.0 <= 0.2, 'no wire is white or grey'
+    assert min(rgb) * 1.0 <= 0.2, 'no cable is white or grey'
 wire_block = material_block('GhostHoseWire') if GHOST_MATERIAL else ''
-assert not re.search(r'(?i)ghostbust|proton|ecto-?1|slimer', rooms + shape + wire_block), \
+assert not re.search(r'(?i)ghostbust|proton|ecto-?1|slimer', rooms + shape + bundle + wire_block), \
     'no names of other games or films'
 content_packages.unchecked('check_ghost_hunter_pose', missing_content)
-print('ghost hunter pose, cannon aim, hose and wires: ok')
+print('ghost hunter pose, cannon aim, flat bundle of four cables with brass clamps: ok')
