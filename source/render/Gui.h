@@ -139,8 +139,22 @@ public:
     //! \brief Returns the UI scale in percent from the user config, limited to the allowed range.
     static float getConfiguredUiScalePercent();
 
-    //! \brief Registers a window tree for resolution-independent scaling.
+    //! \brief Registers a window tree for resolution-independent scaling and shows its texts in the chosen language.
     void registerWindowHierarchy(CEGUI::Window* window);
+
+    //! \brief Prefix of a layout text or tooltip that names the key of a text of the language files instead of the
+    //! text itself, for example "@settings.language".
+    static const std::string TEXT_KEY_PREFIX;
+
+    //! \brief The CEGUI text of a UTF-8 text (CEGUI reads a plain std::string byte by byte, which breaks umlauts).
+    static CEGUI::String toCeguiText(const std::string& text);
+
+    //! \brief The text of the key in the chosen language as a CEGUI text (Translation::tr and toCeguiText).
+    static CEGUI::String trCegui(const std::string& key);
+
+    //! \brief Shows the texts of every gui sheet and of the windows on them in the chosen language again; called when
+    //! the language changes.
+    void translateAll();
 
     //! \brief Creates a fixed size information window with a text area named "TextDisplay" from
     //! WindowStats.layout, registered for scaling. The caller adds it to the root window.
@@ -257,6 +271,11 @@ public:
     bool playButtonClickSound(const CEGUI::EventArgs& e = {});
 
 private:
+    //! \brief Shows the text and the tooltip of one window in the chosen language when the layout gave them as keys
+    //! (TEXT_KEY_PREFIX). The keys are kept as user strings of the window, so a later language change finds them.
+    void translateWindow(CEGUI::Window* window);
+    //! \brief translateWindow for the window and every window below it.
+    void translateWindowTree(CEGUI::Window* window);
     //! \brief Places the visible buttons with the given names in the panel, in one row of large buttons if
     //! they fit and otherwise in two rows of small ones, and applies the UI scale to them.
     void arrangeActionButtons(CEGUI::Window* panel, std::initializer_list<const char*> names);
@@ -294,6 +313,9 @@ private:
     CEGUI::Event::ScopedConnection mDisplaySizeChangedConnection;
     //! \brief Keeps the window destroyed subscription alive; disconnected in the destructor.
     CEGUI::Event::ScopedConnection mWindowDestroyedConnection;
+
+    //! \brief Id of the listener that calls translateAll when the language changes (Translation::addListener).
+    unsigned int mLanguageListener;
 
     //! \brief Used to play the button click sound.
     SoundEffectsManager* mSoundEffectsManager;
