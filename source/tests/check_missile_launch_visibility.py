@@ -87,7 +87,7 @@ struct Creature {
  double getModifierStrength()const{return 1.0;}
  // Damage passives, bow carrying and attribute level read by the shared scaler and the launch method.
  double getSkillPassive(const std::string&)const{return 0.0;}
- bool carriesBowOrCrossbow()const{return false;}
+ bool carriesBow()const{return false;}
  // Critical chance the launch method snapshots into the shot.
  double getCritChance()const{return 0.0;}
  double getDexterityLevel()const{return 1.0;}

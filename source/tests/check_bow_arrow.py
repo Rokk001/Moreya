@@ -1,8 +1,9 @@
-"""Arrow in the pulling hand and visible crossbow reload (client side only, no compiler, no game).
+"""Arrow of the bow in the pulling hand (client side only, no compiler, no game).
 
 Pure source wiring check: the settings in config/creatureReactions.cfg, the choice of the pulling hand bone (also
-against the real skeleton files of the Elf and the DarkElf), the release at the moment of the projectile start, a reload
-that is never longer than the time between the shots, clean up and the fallback without a hand bone.
+against the real skeleton file of the Elf), the release at the moment of the projectile start, a new arrow that is
+never taken longer than the time between the shots, clean up, the fallback without a hand bone, and that the crossbow
+reload left the game with the crossbow.
 config/creatureReactions.cfg lies in the content package core-config; without the content its settings are named as
 not checked and the code wiring is still checked."""
 from pathlib import Path
@@ -31,7 +32,7 @@ config_cpp = read('source/render/CreatureReactionConfig.cpp')
 # The reaction settings lie in the content package core-config (None without the content)
 cfg = read('config/creatureReactions.cfg') if content_packages.has_content(root) else None
 if cfg is None:
-    content_packages.unchecked('check_crossbow_arrow', ['config/creatureReactions.cfg settings and header'])
+    content_packages.unchecked('check_bow_arrow', ['config/creatureReactions.cfg settings and header'])
 tool = read('tools/check_creature_reactions.py')
 
 # 1. Settings: cfg value, cfg header text, parser, default, getter, check script
@@ -42,14 +43,11 @@ KEYS = {
     'ArrowRetakeGap': ('mArrowRetakeGap(DEFAULT_ARROW_RETAKE_GAP)', 'getArrowRetakeGap'),
     'ArrowReloadTime': ('mArrowReloadTime(DEFAULT_ARROW_RELOAD_TIME)', 'getArrowReloadTime'),
     'ArrowHandOffset': ('mArrowHandOffset(Ogre::Vector3::ZERO)', 'getArrowHandOffset'),
-    'CrossbowReloadTime': ('mCrossbowReloadTime(DEFAULT_CROSSBOW_RELOAD_TIME)', 'getCrossbowReloadTime'),
-    'CrossbowReloadJolt': ('mCrossbowReloadJolt(DEFAULT_CROSSBOW_RELOAD_JOLT)', 'getCrossbowReloadJolt'),
 }
 # The named defaults keep the numbers the defaults had before they got names
 for constant, value in (('DEFAULT_ARROW_FOLLOWS_HAND', 'true'), ('DEFAULT_ARROW_PULL_DISTANCE', '0.12'),
                         ('DEFAULT_ARROW_DRAW_TIME', '1.6'), ('DEFAULT_ARROW_RETAKE_GAP', '0.3'),
-                        ('DEFAULT_ARROW_RELOAD_TIME', '0.45'), ('DEFAULT_CROSSBOW_RELOAD_TIME', '1.1'),
-                        ('DEFAULT_CROSSBOW_RELOAD_JOLT', '5.0')):
+                        ('DEFAULT_ARROW_RELOAD_TIME', '0.45')):
     assert re.search(constant + r' = ' + re.escape(value) + ';', config_cpp), constant
 if cfg is not None:
     settings_start = cfg.rindex('[Settings]')
@@ -95,14 +93,12 @@ def skeleton_bones(name):
     return set(m.decode() for m in re.findall(rb'Weapon_[LR]|LeftHand|RightHand', data))
 
 
-# The skeletons lie in the content package creatures; without the content they are named as not checked
+# The skeleton lies in the content package creatures; without the content it is named as not checked
 if content_packages.has_content(root):
     elf = skeleton_bones('Elf')
-    dark_elf = skeleton_bones('DarkElf')
     assert find_pull_hand(elf, 'Weapon_L') == 'Weapon_R', 'Elf: bow in the left hand, the right hand pulls'
-    assert find_pull_hand(dark_elf, 'LeftHand') in ('Weapon_R', 'RightHand'), 'DarkElf: crossbow on the left hand'
 else:
-    content_packages.unchecked('check_crossbow_arrow', ['models/Elf.skeleton and models/DarkElf.skeleton hands'])
+    content_packages.unchecked('check_bow_arrow', ['models/Elf.skeleton hands'])
 assert find_pull_hand({'Weapon_R'}, 'Weapon_R') == '', 'the weapon bone is never its own pulling hand'
 assert find_pull_hand({'Body'}, 'Weapon_L') == '', 'no hand bone: fallback'
 assert find_pull_hand({'Weapon_L', 'LeftHand'}, 'Spine') == '', 'unknown side: fallback'
@@ -121,9 +117,9 @@ assert 'setVisible(false)' in shot, 'the held arrow is hidden at once at the lau
 assert 'event.mText.empty()' in shot, 'magic missiles have no arrow'
 assert 'sinceShot < config.getArrowRetakeGap()' in place and 'arrow->setVisible(false)' in place
 
-# 5. The reload is never longer than the time between the shots
+# 5. A new arrow is never taken longer than the time between the shots
 duration = function_body(cpp, 'double getReloadDuration(')
-assert 'getCrossbowReloadTime()' in duration and 'shooter.mShotInterval - config.getArrowRetakeGap()' in duration
+assert 'getArrowReloadTime()' in duration and 'shooter.mShotInterval - config.getArrowRetakeGap()' in duration
 assert 'std::min(duration,' in duration
 assert 'held.mShotInterval = (held.mReleasedAt > -999.0) ? (now - held.mReleasedAt) : 0.0;' in shot
 
@@ -133,21 +129,22 @@ def reload_duration(setting, interval, gap, minimum=0.05):
 
 
 for interval in (0.0, 0.5, 0.9, 1.4, 2.0, 5.0, 12.0):
-    d = reload_duration(1.1, interval, 0.3)
-    assert d <= 1.1
+    d = reload_duration(0.45, interval, 0.3)
+    assert d <= 0.45
     if interval > 0.35:
         assert d + 0.3 <= interval + 1e-9, 'reload longer than the shot interval'
-assert reload_duration(1.1, 3.0, 0.3) == 1.1
+assert reload_duration(0.45, 3.0, 0.3) == 0.45
 
-# 6. The crossbow reload has three visible parts and a jolt of the weapon that is set straight again
-assert 'BOLT_TAKEN_SHARE' in place and 'BOLT_ON_RAIL_SHARE' in place and 'getCrossbowReloadJolt()' in place
-assert 'weaponTag->setOrientation(shooter.mMountRotation * tilt)' in place
-assert 'tagPoint->setOrientation(shooter.mMountRotation)' in function_body(cpp, 'void straightenWeapon(')
-assert 'BOLT_TAKEN_SHARE = 0.3' in cpp and 'BOLT_ON_RAIL_SHARE = 0.7' in cpp
+# 6. The crossbow left the game (drop items plan): no crossbow reload, setting, mount or weapon kind is left
+render = read('source/render/RenderManager.cpp')
+for text in (cpp, config_h, config_cpp, tool, render, read('source/render/CreatureCombatReactions.cpp')):
+    assert 'rossbow' not in text and 'BOLT_' not in text and 'straightenWeapon' not in text, 'crossbow code left'
+if cfg is not None:
+    assert 'Crossbow' not in cfg, 'crossbow setting left in config/creatureReactions.cfg'
 
-# 7. Clean up: removeArrow (arrow gone, weapon straight) on every way out
+# 7. Clean up: removeArrow (arrow gone) on every way out
 remove = function_body(cpp, 'void removeArrow(')
-assert 'straightenWeapon(shooter)' in remove and 'destroyArrow(shooter.mArrowName)' in remove
+assert 'destroyArrow(shooter.mArrowName)' in remove
 tick = function_body(cpp, 'void tick(')
 assert tick.count('removeArrow(') >= 3, 'not armed, dead or gone, creature removed'
 assert 'removeArrow(it->second)' in function_body(cpp, 'void removeAllArrows(')
@@ -160,7 +157,7 @@ assert 'detachFromParent()' in destroy and 'destroyEntity' in destroy
 
 # 8. Fallback without a hand bone: old behavior (arrow on the bow), logged once per mesh
 assert 'sNoHandLogged' in cpp and 'OD_LOG_INF(' in cpp
-assert 'if(followsHand)' in place and place.count('No hand known') == 2
+assert 'if(followsHand)' in place and place.count('No hand known') == 1
 assert 'getArrowFollowsHand()' in function_body(cpp, 'bool createArrow(')
 
 # 9. Nothing on the server or the network was touched by this feature
@@ -168,5 +165,5 @@ for forbidden in ('ODServer', 'ServerNotification', 'ClientNotification', 'sendC
     assert forbidden not in cpp, forbidden
 assert 'mActivity' not in cpp
 
-print('check_crossbow_arrow: ok')
+print('check_bow_arrow: ok')
 sys.exit(0)

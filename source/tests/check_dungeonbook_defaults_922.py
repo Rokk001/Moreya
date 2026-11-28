@@ -34,7 +34,7 @@ def main():
     # The creature and equipment rows are own rows of the content package core-config (read joined by blocks());
     # without the content only the public rows are there and the counts are named as not checked
     # Roster change (CREATURE-ROSTER W4a): 36 classes; BasicAxeOrc, Sabre, Wand and Crossbow are no default weapon any
-    # more, BasicAxe and BasicHammer are (Minotaur, Runelord Dwarf)
+    # more (the wand and the crossbow later left the game), BasicAxe and BasicHammer are (Minotaur, Runelord Dwarf)
     if content_packages.has_content(ROOT):
         assert len(creatures) == 36, len(creatures)
         assert len(defaults) == 17, defaults

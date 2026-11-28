@@ -40,7 +40,7 @@ SETTINGS = ("MaxSimultaneous", "MaxCameraDistance", "GroupStaggerMin", "GroupSta
             "InteractionPause", "ArenaSpectatorInterval", "ArenaCheerPause",
             "TwoWeaponMode", "TwoWeaponArmStrength", "ArrowFollowsHand",
             "ArrowPullDistance", "ArrowDrawTime", "ArrowRetakeGap", "ArrowReloadTime", "ArrowHandOffset",
-            "CrossbowReloadTime", "CrossbowReloadJolt", "WeaponTrail", "WeaponTrailLife",
+            "WeaponTrail", "WeaponTrailLife",
             "WeaponTrailWidth", "WeaponTrailLength", "WeaponTrailColour", "WeaponTrailBrightness",
             "WeaponTrailMinShare", "WeaponTrailMax")
 DRAG_EVENTS = ("DragWounded", "DraggedGroan", "PutWoundedDown")

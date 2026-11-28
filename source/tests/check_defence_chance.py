@@ -113,7 +113,7 @@ client_kinds = function_body(read('source/render/CreatureCombatReactions.cpp'), 
 assert 'getWeaponType()' in client_kinds and 'getMeshName()' not in client_kinds
 for keyword in ('shield', 'sword', 'axe', 'dagger', 'club', 'mace', 'hammer', 'scepter', 'spear', 'polearm'):
     assert '"' + keyword + '"' in header, keyword
-for excluded in ('bow', 'crossbow', 'staff', 'orb', 'tool', 'throwing', 'javelin', 'claw'):
+for excluded in ('bow', 'staff', 'orb', 'tool', 'throwing', 'javelin', 'claw'):
     assert '"' + excluded + '"' not in function_body(header, 'inline bool isParryWeaponType('), excluded
 
 # ---------------------------------------------------------------------------------------------------------------

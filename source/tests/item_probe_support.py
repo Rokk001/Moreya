@@ -326,7 +326,7 @@ void loadCatalogue(const std::string& root, GameMap& map) {
             else if(row>>number) cfg.settings[section][key]=number;
         }
     }
-    check(cfg.items.size()==187&&cfg.potions.size()==29,"actual catalogue sizes");
+    check(cfg.items.size()==178&&cfg.potions.size()==29,"actual catalogue sizes");
 }
 '''
     definitions = cpp("source/entities/ItemDefinition.cpp") + cpp("source/entities/PotionDefinition.cpp")

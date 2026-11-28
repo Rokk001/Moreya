@@ -71,7 +71,7 @@ def field(block, key):
 def weapon_kind(weapon_type):
     """Use the equipment type rather than guessing from a mesh."""
     mesh = weapon_type.lower()
-    for kind, parts in (('Shield', ('shield',)), ('Bow', ('bow', 'crossbow')), ('Axe', ('axe',)), ('Hammer', ('club', 'hammer', 'mace', 'scepter')),
+    for kind, parts in (('Shield', ('shield',)), ('Bow', ('bow',)), ('Axe', ('axe',)), ('Hammer', ('club', 'hammer', 'mace', 'scepter')),
                         ('Spear', ('spear', 'polearm', 'javelin')), ('Dagger', ('dagger', 'throwing', 'claw')),
                         ('Staff', ('staff', 'orb'))):
         if mesh in parts:
@@ -132,10 +132,10 @@ if WITH_CONTENT:
     assert two_attack_weapons(*creatures['TestTwoSwords'])
     assert not two_attack_weapons(*creatures['TestSwordShield']), 'sword and shield is no two weapon creature'
     assert not two_attack_weapons(*creatures['TestBowOnly']), 'a bow is no strike weapon'
-assert weapon_kind('crossbow') == 'Bow'
+assert weapon_kind('bow') == 'Bow'
 if WITH_CONTENT:
-    assert not two_attack_weapons('Crossbow', 'BasicSword'), 'a crossbow cannot be a strike weapon'
-    assert not two_attack_weapons('BasicSword', 'Crossbow'), 'a crossbow cannot be a strike weapon'
+    assert not two_attack_weapons('Bow', 'BasicSword'), 'a bow cannot be a strike weapon'
+    assert not two_attack_weapons('BasicSword', 'Bow'), 'a bow cannot be a strike weapon'
     assert not two_attack_weapons(*creatures['TestOneSword']), 'one sword is one weapon'
 for name in creatures:
     # config and levels of the public tree and of the content packages
@@ -159,7 +159,7 @@ assert longest <= 2, 'never more than two on a side in a row'
 assert irregular != [i % 2 == 1 for i in range(32)], 'the irregular mode is not the plain alternation'
 
 # Existing creatures: only the Dark Elf carries two attack weapons (two daggers, Roster change (CREATURE-ROSTER W4a)); sword and
-# shield, bow and crossbow creatures stay as they were
+# shield and bow creatures stay as they were
 if WITH_CONTENT:
     game = parse_blocks(read('config/creatures.cfg'), 'Creature')
     dual = [field(b, 'Name') for b in game if two_attack_weapons(field(b, 'WeaponSpawnL'), field(b, 'WeaponSpawnR'))]

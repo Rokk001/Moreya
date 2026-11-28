@@ -39,10 +39,10 @@ import config_own_rows  # noqa: E402
 import content_packages  # noqa: E402
 
 #: The mixed data tables and interface files and their number of marker lines, counted once when the own rows were
-#: split off
+#: split off; equipments.cfg 147 since the Wand and Crossbow blocks left (counted on feature/drop-items-roster; was 154)
 OWN_ROW_TABLES = {
     'config/creatures.cfg': 603,
-    'config/equipments.cfg': 154,
+    'config/equipments.cfg': 147,
     'config/global.cfg': 17,
     'config/mainmenuscene.cfg': 19,
     'config/rooms.cfg': 25,

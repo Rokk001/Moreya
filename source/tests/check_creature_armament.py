@@ -32,7 +32,7 @@ TYPES = {
     'sword': (('RustySword', 'BasicSword', 'ShortSword', 'Sabre', 'T2SwordGood'), 1),
     'dagger': (('Knife', 'RitualDagger'), 1),
     'axe': (('BasicAxe', 'BasicAxeOrc', 'MinotaurAxe'), 2),
-    'staff': (('Staff', 'StaffLich'), 2), 'bow': (('Bow',), 2), 'crossbow': (('Crossbow',), 2),
+    'staff': (('Staff', 'StaffLich'), 2), 'bow': (('Bow',), 2),
     'tool': (('KoboldPick', 'Pickaxe'), 1), 'club': (('Club', 'CyclopsClub'), 1), 'spear': (('Trident',), 2),
 }
 EXPECTED_TYPES = {name: (kind, hands) for kind, (names, hands) in TYPES.items() for name in names}
@@ -239,7 +239,7 @@ def check_source():
     for condition, kind in re.findall(r'if\((.*?)\)\s*return "(\w+)";', reaction):
         for name in re.findall(r'type == "(\w+)"', condition):
             actual[name] = kind
-    expected = {'axe': 'Axe', 'shield': 'Shield', 'bow': 'Bow', 'crossbow': 'Bow',
+    expected = {'axe': 'Axe', 'shield': 'Shield', 'bow': 'Bow',
                 'club': 'Hammer', 'mace': 'Hammer', 'hammer': 'Hammer', 'scepter': 'Hammer',
                 'spear': 'Spear', 'polearm': 'Spear', 'javelin': 'Spear', 'dagger': 'Dagger',
                 'throwing': 'Dagger', 'claw': 'Dagger', 'staff': 'Staff', 'orb': 'Staff'}

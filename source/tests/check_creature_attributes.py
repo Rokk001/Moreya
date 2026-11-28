@@ -194,14 +194,14 @@ assert attack.index('getSkillPassive("ar%")') < attack.index('mWeaponL->getAttac
 defense = function(creature, 'double Creature::getDefenseRating() const')
 assert 'getDexterityLevel()' in defense and 'defenseRatingMultiplierAt' in defense and 'getSkillPassive("dr%")' in defense
 for name in ('getStrength', 'getDexterity', 'getLife', 'getMana', 'getStrengthLevel', 'getDexterityLevel', 'getLifeLevel',
-             'getManaLevel', 'getEquipmentCritChance', 'carriesBowOrCrossbow', 'getSkillPassive'):
+             'getManaLevel', 'getEquipmentCritChance', 'carriesBow', 'getSkillPassive'):
     assert re.search(r'\b' + name + r'\(', creature_h), name
     assert 'Creature::' + name + '(' in creature, name
 # Channel defenses keep the creature level (section 5 does not change them)
 assert build_stats.count('CreatureProgression::damageMultiplier') == 3
-# Bow and crossbow weapon types make the missile lines use the Dexterity level
-carries = function(creature, 'bool Creature::carriesBowOrCrossbow() const')
-assert '"bow"' in carries and '"crossbow"' in carries
+# The bow weapon type makes the missile lines use the Dexterity level (the crossbow left the game)
+carries = function(creature, 'bool Creature::carriesBow() const')
+assert '"bow"' in carries and 'crossbow' not in carries
 
 damage = text('source/entities/CombatDamage.h')
 scale = function(damage, 'inline void scale(')
@@ -210,7 +210,7 @@ assert scale.index('damageMultiplierAt(damageLevel)') < damage.index('weapon->ge
 melee = text('source/creatureskill/CreatureSkillMeleeFight.cpp')
 assert 'creature->getStrengthLevel(), "dmg%"' in melee.replace(chr(10), ' ').replace('  ', '')
 launch = text('source/creatureskill/CreatureSkillMissileLaunch.cpp')
-assert 'creature->getDexterityLevel()' in launch and 'carriesBowOrCrossbow()' in launch
+assert 'creature->getDexterityLevel()' in launch and 'carriesBow()' in launch
 assert 'getSkillName() != "Grenade"' in launch, 'the grenade keeps the creature level'
 assert 'isFirstAttackSkill(this)' in launch and '"spell%"' in launch
 assert 'bool CreatureDefinition::isFirstAttackSkill(' in definition_cpp
@@ -468,7 +468,7 @@ def mana_cost_model(group, skill_name, is_first_attack, carries_bow, manacost_pe
     if skill_name != 'MissileLaunch':
         return 0.0
     if is_first_attack and (carries_bow or group == 'marksman'):
-        # The weapon shot of a bow or crossbow and of a marksman (ranged fighter with weapons) is free
+        # The weapon shot of a bow and of a marksman (ranged fighter with weapons) is free
         return 0.0
     caster = is_first_attack
     if group != 'none':
@@ -548,7 +548,7 @@ def check_mana_part_b():
             continue
         type_name = first_value(block, 'Name')
         spawn = [first_value(block, 'WeaponSpawnL'), first_value(block, 'WeaponSpawnR')]
-        has_bow = any(weapon_types.get(weapon) in ('bow', 'crossbow') for weapon in spawn)
+        has_bow = any(weapon_types.get(weapon) == 'bow' for weapon in spawn)
         if attack_names[0] != 'MissileLaunch':
             second_line_types.add(type_name)
         elif has_bow:
@@ -569,7 +569,7 @@ def check_mana_part_b():
                 assert names == ['MissileLaunch', 'Melee'], level_name
     assert 'if(group != "none")' in cost and \
         'casterShot = (group == "mage" || group == "healer" || group == "supporter");' in cost and \
-        '(carriesBowOrCrossbow() || mDefinition->getSkillGroup() == "marksman")' in cost, 'the marksman shot is free'
+        '(carriesBow() || mDefinition->getSkillGroup() == "marksman")' in cost, 'the marksman shot is free'
 
     # 6.4 not enough mana: the skill is not used, as with a cooldown; 6.5 mana is subtracted when the skill starts
     assert 'bool Creature::hasManaFor(' in creature and 'return mMana >= getSkillManaCost(skill);' in creature
