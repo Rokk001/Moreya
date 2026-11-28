@@ -2257,19 +2257,19 @@ void Gui::registerWindow(CEGUI::Window* window)
         registerWindow(window->getChildAtIdx(i));
 }
 
-//! rief A CEGUI string read as UTF-8.
+//! \brief A CEGUI string read as UTF-8.
 CEGUI::String Gui::toCeguiText(const std::string& text)
 {
     return CEGUI::String(reinterpret_cast<const CEGUI::utf8*>(text.c_str()));
 }
 
-//! rief The translated text of the key as a CEGUI string.
+//! \brief The translated text of the key as a CEGUI string.
 CEGUI::String Gui::trCegui(const std::string& key)
 {
     return toCeguiText(Translation::tr(key));
 }
 
-//! rief Replaces a text or tooltip given as "@<key>" by its text and keeps the key for later language changes.
+//! \brief Replaces a text or tooltip given as "@<key>" by its text and keeps the key for later language changes.
 void Gui::translateWindow(CEGUI::Window* window)
 {
     static const CEGUI::String TEXT_KEY = "LocalizationTextKey";
@@ -2308,7 +2308,7 @@ void Gui::translateWindow(CEGUI::Window* window)
     }
 }
 
-//! rief Translates the window and all windows below it.
+//! \brief Translates the window and all windows below it.
 void Gui::translateWindowTree(CEGUI::Window* window)
 {
     translateWindow(window);
@@ -2316,7 +2316,7 @@ void Gui::translateWindowTree(CEGUI::Window* window)
         translateWindowTree(window->getChildAtIdx(i));
 }
 
-//! rief Translates every sheet (the open windows and dialogs lie on them) and applies the scale to the new texts.
+//! \brief Translates every sheet (the open windows and dialogs lie on them) and applies the scale to the new texts.
 void Gui::translateAll()
 {
     for(const std::pair<const guiSheet, CEGUI::Window*>& sheet : mSheets)
