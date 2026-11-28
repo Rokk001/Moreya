@@ -262,8 +262,13 @@ for line in content_packages.read_layout_text(repo, 'config/social-texts.cfg').s
     if cells[0] in texts:
         texts[cells[0]].append(cells[-1])
 check(all(texts.values()), 'relations, jobs and bios are read')
-statuses = re.findall(r'return "([A-Za-z\' ]+)";', (repo / 'source/social/CreaturePosts.cpp').read_text(encoding='utf-8')[
+# The statuses are entries of the language files (getSocialCodeText(key, English fallback)); the English text of the
+# key is used, the fallback stands in for it without the content
+status_keys = re.findall(r'getSocialCodeText\("(social\.code\.status\.[a-z]+)", "([A-Za-z\' ]+)"\)',
+                         (repo / 'source/social/CreaturePosts.cpp').read_text(encoding='utf-8')[
     (repo / 'source/social/CreaturePosts.cpp').read_text(encoding='utf-8').index('CreaturePosts::getRelationshipStatus'):][:600])
+english_statuses = english_texts(repo) or {}
+statuses = [english_statuses.get(key, fallback) for key, fallback in status_keys]
 check('Single' in statuses and 'In a relationship' in statuses, 'relationship statuses are read')
 paths = sorted(set(re.findall(r'^Path\s+(.+?)\s*$', content_packages.read_layout_text(repo, 'config/creatureSkills.cfg'), re.M)))
 check(len(paths) >= 3, 'skill paths are read')
