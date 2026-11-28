@@ -583,3 +583,14 @@ if(UNIX)
         ab-TestTraps-boost_test
         PROPERTIES RESOURCE_LOCK od-test-server)
 endif()
+
+# Voice lines of the chosen language with the English fallback (localization plan R9)
+add_boost_test(00-VoiceLanguage
+        SOURCES
+        test_VoiceLanguage.cpp
+        ${SRC}/sound/VoiceLanguage.h
+        ${SRC}/sound/VoiceLanguage.cpp
+        LIBRARIES
+        ${Boost_FILESYSTEM_LIBRARY_RELEASE}
+        ${Boost_SYSTEM_LIBRARY_RELEASE}
+        Threads::Threads)
