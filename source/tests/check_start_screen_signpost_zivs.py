@@ -557,8 +557,8 @@ def check_ziv_names(failures):
         "source/render/SocialWindow.cpp": ('{"All", "Zivs", "Fighters", "Unhappy"}',),
         "source/render/CreaturePanel.cpp": ('count->setTooltipText("Zivs");',),
         "source/modes/GameMode.cpp": ('std::make_pair(Gui::BUTTON_CREATURE_WORKER, "Zivs")',),
-        "source/game/Player.cpp": ('"You redeemed your Ziv into "', '"You have no Ziv to fulfill your dark wishes."'),
-        "source/gamemap/GameMap.cpp": ('"Your Zivs vanished because the mana ran out"',),
+        "source/game/Player.cpp": ('"msg.redeem.ziv"', '"msg.ziv.none"'),
+        "source/gamemap/GameMap.cpp": ('"msg.ziv.vanished"',),
         "source/spells/SpellPlague.cpp": ('"Zivs and champions never get sick."',),
     }
     for path, texts in shown.items():
@@ -569,6 +569,18 @@ def check_ziv_names(failures):
         for expected in texts:
             if expected not in text:
                 failures.append("%s does not show %s" % (path, expected))
+
+    # The texts of these messages are in the language package lang-en (texts/messages.txt)
+    lang_en = content_packages.packages(ROOT).get("lang-en")
+    if lang_en is None:
+        content_packages.unchecked(CHECK, ["lang-en texts of the Ziv messages"])
+    else:
+        messages = (lang_en / "texts" / "messages.txt").read_text(encoding="utf-8")
+        for expected in ("msg.redeem.ziv=You redeemed your Ziv into {mana} mana",
+                         "msg.ziv.none=You have no Ziv to fulfill your dark wishes.",
+                         "msg.ziv.vanished=Your Zivs vanished because the mana ran out"):
+            if expected not in messages:
+                failures.append("lang-en texts/messages.txt does not show %s" % expected)
 
     # Identifiers of saves, network, config and scripts stay unchanged.
     kept = {

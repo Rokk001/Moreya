@@ -928,7 +928,7 @@ void Player::notifyNoWorker()
         return;
     }
 
-    const std::string chatMsg = Translation::makeReference("msg.worker.none");
+    const std::string chatMsg = Translation::makeReference("msg.ziv.none");
     ServerNotification *serverNotification = new ServerNotification(
         ServerNotificationType::chatServer, this);
     serverNotification->mPacket << chatMsg << EventShortNoticeType::genericGameInfo;

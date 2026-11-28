@@ -2582,7 +2582,7 @@ void GameMap::updateSeatWorkerPop(Seat* seat, bool shortage, double timeSinceLas
         ServerNotification* serverNotification = new ServerNotification(
             ServerNotificationType::chatServer, seat->getPlayer());
         serverNotification->mPacket
-            << Translation::makeReference("msg.worker.vanished")
+            << Translation::makeReference("msg.ziv.vanished")
             << EventShortNoticeType::majorGameEvent;
         ODServer::getSingleton().queueServerNotification(serverNotification);
     }
