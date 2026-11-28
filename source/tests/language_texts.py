@@ -40,17 +40,28 @@ def _cpp_string(text):
 
 def translation_stub():
     """C++ source of a stand-in for Translation::tr that answers with the English texts of the language files, for
-    the probes that compile production functions without the language system."""
+    the probes that compile production functions without the language system. The texts are a plain array of
+    C strings that fills the map on the first call: an initializer list of std::string pairs for every text of all
+    language files needs more sections than an object file may have (MSVC C1128)."""
     rows = ''.join('        {"%s", "%s"},\n' % (_cpp_string(key), _cpp_string(text))
                    for key, text in sorted(english_texts().items()))
-    return '''#include <map>
+    if not rows:
+        rows = '        {"", ""},\n'
+    return '''#include <cstddef>
+#include <map>
 #include <string>
 namespace Translation
 {
 inline const std::map<std::string, std::string>& probeTexts()
 {
-    static const std::map<std::string, std::string> texts = {
+    static const char* const rows[][2] = {
 %s    };
+    static std::map<std::string, std::string> texts;
+    if(texts.empty())
+    {
+        for(std::size_t i = 0; i < sizeof(rows) / sizeof(rows[0]); ++i)
+            texts[rows[i][0]] = rows[i][1];
+    }
     return texts;
 }
 inline std::string tr(const std::string& key)

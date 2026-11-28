@@ -20,7 +20,6 @@ args = parser.parse_args()
 repo = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(repo / 'scripts'))
 import content_packages  # noqa: E402
-import language_package_texts  # noqa: E402
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import language_texts  # noqa: E402
 prefix = Path(os.environ['CMAKE_PREFIX_PATH'])
@@ -88,28 +87,9 @@ def joined_gui_folders(base):
                 shutil.copyfile(file, target / file.name)
 
 
-# The research names come from the language package: the probe gets the English texts of the research entries as a table
-# in place of Translation (the game reads them from the language files with the same keys)
-translation_stub = r'''
-namespace Translation
-{
-static const std::map<std::string, std::string>& englishTable()
-{
-    static const std::map<std::string, std::string> table = {
-TABLE
-    };
-    return table;
-}
-inline std::string tr(const std::string& key)
-{
-    std::map<std::string, std::string>::const_iterator it = englishTable().find(key);
-    return (it == englishTable().end()) ? key : it->second;
-}
-}
-'''
-english_rows = ',\n'.join('{"%s", "%s"}' % (key, text.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n'))
-                          for key, text in sorted(language_package_texts.english(repo).items()) if key.startswith('research.'))
-translation_stub = translation_stub.replace('TABLE', english_rows)
+# The research names come from the language package: the probe gets the English texts of the language files from
+# language_texts.translation_stub(), written in front of the probe (the game reads them with the same keys)
+translation_stub = ''
 
 probe = r'''
 #include <CEGUI/CEGUI.h>

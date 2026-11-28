@@ -42,13 +42,6 @@ probe = r'''
 #include <map>
 #include <string>
 #include <vector>
-namespace Translation
-{
-//! \brief Stand-in of the language texts: a text is its key, the hint of the dungeon heart is its English text (the
-//! check below reads it from the language package).
-inline std::string tr(const std::string& key) {return key == "room.hint.heart_not_sellable" ? "Dungeon hearts cannot be sold." : key;}
-inline std::string tr(const std::string& key, const std::map<std::string, std::string>&) {return key;}
-}
 namespace Ogre {struct ColourValue {static const int Red=0,White=1;};}
 enum class InputCommandState {infoOnly,building,validated};
 enum class TileVisual {normal,portalRoom,portalWaveRoom,dungeonTempleRoom};
