@@ -11,8 +11,8 @@ files (texts/campaign.txt and texts/levels-*.txt of the language packages). Chec
     unused, no text is empty and both languages hold the same line breaks and placeholders per key (R1.1, R1.5);
   - the English texts together are the texts the game showed before they moved into the language files, word for word:
     their sha256 is the fixed value ENGLISH_DIGEST (R1.6);
-  - the campaign menu, the level lists and the editor show the texts through LevelText::display (the client resolves
-    the references when it shows them).
+  - the campaign menu, the level lists and the editor show the texts through LevelText::display, a thin wrapper of
+    Translation::resolve (the client resolves the references when it shows them).
 
 Calls (from the repository root):
   python source/tests/check_campaign_texts.py
@@ -149,8 +149,8 @@ def check_code():
     if handler.count('LevelText::display(') != 2:
         errors.append('MapHandler.cpp getMapInfo must show the name and the description through LevelText::display')
     header = (repo / 'source/utils/LevelText.h').read_text(encoding='utf-8')
-    if 'Translation::tr(text.substr(1))' not in header:
-        errors.append('LevelText::display must show a reference through Translation::tr')
+    if 'return Translation::resolve(text);' not in header:
+        errors.append('LevelText::display must show a reference through Translation::resolve')
 
 
 check_code()

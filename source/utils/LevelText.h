@@ -29,22 +29,22 @@
 //! text reference "@<key>" whose text lies in the language files of the language packages (keys of the areas
 //! "campaign." and "level."). The reference stays in the file and in a level saved by the editor, so a level keeps
 //! working in every language; it is turned into the text of the chosen language only where it is shown.
+//! LevelText is a thin wrapper of Translation::resolve, so a level text resolves the same way as a text reference of
+//! the server, with or without values.
 namespace LevelText
 {
     //! \brief True when the text of a wing package or level file is a reference "@<key>" to a language text
+    //! (Translation::isReference)
     inline bool isReference(const std::string& text)
     {
-        return (text.size() > 1) && (text[0] == '@');
+        return Translation::isReference(text);
     }
 
-    //! \brief The text to show: the text of the chosen language (else English) for a reference "@<key>", any other
-    //! text unchanged. A key without a text shows the key itself (Translation::tr).
+    //! \brief The text to show: the text of the chosen language (else English) for a reference "@<key>" with its
+    //! values filled in, any other text unchanged (Translation::resolve). A key without a text shows the key itself.
     inline std::string display(const std::string& text)
     {
-        if(!isReference(text))
-            return text;
-
-        return Translation::tr(text.substr(1));
+        return Translation::resolve(text);
     }
 }
 
