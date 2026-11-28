@@ -34,8 +34,8 @@ namespace CampaignPackages
     extern const std::string DEFINITION_FILE;
     //! Environment variable naming an additional folder of wing packages
     extern const std::string CONTENT_VARIABLE;
-    //! Text shown on the campaign map for a wing whose package is missing
-    extern const std::string MISSING_WING_TEXT;
+    //! \brief Text shown on the campaign map for a wing whose package is missing, in the chosen language
+    std::string getMissingWingText();
 
     //! \brief The folders whose subfolders are searched for packages: levels/campaign/ of the game data, then the
     //! folder of MOREYA_CONTENT_DIR when the variable is set and not empty.

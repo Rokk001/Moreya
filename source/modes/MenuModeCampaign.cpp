@@ -481,7 +481,7 @@ void MenuModeCampaign::activate()
     {
         OD_LOG_INF("Campaign menu shows the campaign end message after level " + Helper::toString(playedLevel));
         mCampaignEnd = true;
-        mResultText = Campaign::CAMPAIGN_END_MESSAGE;
+        mResultText = Campaign::getEndMessage();
     }
     else if(playedLevel < campaign.getNumLevels())
     {
@@ -844,7 +844,7 @@ void MenuModeCampaign::fillMap()
         else if(named && !campaign.isWingAvailable(cave.mWing))
         {
             createMapText("CaveName_" + caveId, cave.mLabel, FONT_CAVE, colour, "WordWrapCentreAligned",
-                CampaignPackages::MISSING_WING_TEXT);
+                CampaignPackages::getMissingWingText());
         }
     }
 
@@ -1163,7 +1163,7 @@ void MenuModeCampaign::updateTooltip(const CEGUI::Vector2f& position, size_t cav
     const CampaignWorldCave& worldCave = caves[cave];
     size_t level = mWorld.findLevel(campaign, cave);
     bool known = (level < campaign.getNumLevels());
-    std::string text = known ? campaign.getLevel(level).mTitle : CampaignPackages::MISSING_WING_TEXT;
+    std::string text = known ? campaign.getLevel(level).mTitle : CampaignPackages::getMissingWingText();
     std::string wingName;
     if((worldCave.mWing >= 1) && (worldCave.mWing <= mWorld.getWings().size()))
         wingName = mWorld.getWings()[worldCave.mWing - 1].mName;
@@ -1284,7 +1284,7 @@ bool MenuModeCampaign::mapClicked(const CEGUI::EventArgs& e)
         if(level < campaign.getNumLevels())
             statusText->setText("This cave is locked. Defeat the levels before it first.");
         else if(!campaign.isWingAvailable(mWorld.getCaves()[cave].mWing))
-            statusText->setText("This wing is locked: " + CampaignPackages::MISSING_WING_TEXT + ".");
+            statusText->setText("This wing is locked: " + CampaignPackages::getMissingWingText() + ".");
         else
             statusText->setText("This cave cannot be played yet.");
         return true;

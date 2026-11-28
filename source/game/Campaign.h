@@ -325,8 +325,9 @@ public:
     //! replays included.
     bool isPlayedLevelCampaignEnd() const;
 
-    //! \brief Message shown in place of the campaign map after a win that leaves every story level defeated
-    static const std::string CAMPAIGN_END_MESSAGE;
+    //! \brief Message shown in place of the campaign map after a win that leaves every story level defeated, in the
+    //! chosen language
+    static std::string getEndMessage();
 
     //! \brief The statistics of the level that was just won, as text lines. Set by the client when the
     //! server sends them at the victory, shown by the campaign menu. Empty if there are none.
