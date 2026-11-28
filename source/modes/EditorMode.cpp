@@ -57,6 +57,7 @@
 #include "utils/ResourceManager.h"
 #include "utils/Helper.h"
 #include "utils/LevelFileNameInput.h"
+#include "utils/LevelText.h"
 #include "utils/MapSizeInput.h"
 #include "ODApplication.h"
 
@@ -1052,9 +1053,11 @@ void EditorMode::updateCursorText()
     posWin->setText(textSS.str());
 }
 
+//! \brief Shows the name of the edited level (in the chosen language when the file holds a text reference).
 void EditorMode::updateLevelNameText()
 {
-    std::string levelName = mGameMap->getLevelName();
+    // The name of a level file may be a reference to a language text
+    std::string levelName = LevelText::display(mGameMap->getLevelName());
     if(levelName.empty())
         levelName = "unnamed";
 

@@ -36,6 +36,7 @@
 #include "utils/ContentPackages.h"
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
+#include "utils/LevelText.h"
 #include "utils/LogManager.h"
 #include "utils/ResourceManager.h"
 #include "utils/RunLevelTest.h"
@@ -230,6 +231,7 @@ bool readBriefingSeat(std::istream& level, Seat& player)
 }
 
 //! \brief Reads grouped main/optional goals or the legacy list using the gameplay parsers.
+//! The objective and hint texts of the level script are shown in the chosen language (LevelText::display).
 //! \return True when level goal metadata was read; no game state or script action is executed.
 bool readBriefingGoals(const std::string& path, std::string& descriptions)
 {
@@ -273,9 +275,9 @@ bool readBriefingGoals(const std::string& path, std::string& descriptions)
                    (action.mSeatId >= 0 && action.mSeatId != player.getId()))
                     continue;
                 if(action.mObjectiveGroup == LevelScriptObjectiveGroup::optional)
-                    optionalObjectives.push_back(action.mText);
+                    optionalObjectives.push_back(LevelText::display(action.mText));
                 else
-                    mainObjectives.push_back(action.mText);
+                    mainObjectives.push_back(LevelText::display(action.mText));
             }
         }
         if(!mainObjectives.empty() || !optionalObjectives.empty())
@@ -297,10 +299,10 @@ bool readBriefingGoals(const std::string& path, std::string& descriptions)
                     continue;
                 if(action.mType == LevelScriptActionType::hint)
                 {
-                    descriptions += "\nHint: " + action.mText;
+                    descriptions += "\nHint: " + LevelText::display(action.mText);
                     continue;
                 }
-                descriptions += "\n[image='GoalStatus/Open'] " + action.mText;
+                descriptions += "\n[image='GoalStatus/Open'] " + LevelText::display(action.mText);
             }
         }
         break;
@@ -489,7 +491,8 @@ void MenuModeCampaign::activate()
         playedLevelWon = campaign.getPlayedLevelWon();
         if(playedLevelWon)
         {
-            mResultText = "Debriefing - " + level.mTitle + "\n\n" + level.mDebriefing + "\n\n";
+            mResultText = "Debriefing - " + LevelText::display(level.mTitle) + "\n\n"
+                + LevelText::display(level.mDebriefing) + "\n\n";
             if(level.mBonus)
             {
                 mResultText += "You have cleared the hidden chamber.";
@@ -839,7 +842,7 @@ void MenuModeCampaign::fillMap()
         if(named && (level < campaign.getNumLevels()))
         {
             createMapText("CaveName_" + caveId, cave.mLabel, FONT_CAVE, colour, "WordWrapCentreAligned",
-                campaign.getLevel(level).mTitle);
+                LevelText::display(campaign.getLevel(level).mTitle));
         }
         else if(named && !campaign.isWingAvailable(cave.mWing))
         {
@@ -982,7 +985,7 @@ void MenuModeCampaign::setTooltipVisible(bool visible)
 
 //! \brief Shows the banner, the leader's portrait, the name, leader, raid size and origin of the guild that raids the
 //! current level on a carved stone slab, with a trail of embers from it to the current level and its banner there.
-//! Once every story level is defeated no guild comes any more.
+//! Once every story level is defeated no guild comes any more. The names come from the chosen language.
 void MenuModeCampaign::fillGuildPanel()
 {
     Campaign& campaign = Campaign::getSingleton();
@@ -1014,9 +1017,16 @@ void MenuModeCampaign::fillGuildPanel()
     createMapImage("GuildPortrait", guild.mPortrait, static_cast<float>(panel.mPortrait.mX),
         static_cast<float>(panel.mPortrait.mY), static_cast<float>(panel.mPortrait.mWidth),
         static_cast<float>(panel.mPortrait.mHeight), packageDirectory);
-    createMapText("GuildName", panel.mName, FONT_GUILD_NAME, COLOUR_HIGHLIGHT, "WordWrapLeftAligned", guild.mName);
+    // The names of the guild and its leaders come from the language files
+    CampaignWorldGuild shownGuild = guild;
+    shownGuild.mName = LevelText::display(guild.mName);
+    shownGuild.mLeader = LevelText::display(guild.mLeader);
+    shownGuild.mFirstLeader = LevelText::display(guild.mFirstLeader);
+    shownGuild.mOrigin = LevelText::display(guild.mOrigin);
+    createMapText("GuildName", panel.mName, FONT_GUILD_NAME, COLOUR_HIGHLIGHT, "WordWrapLeftAligned",
+        shownGuild.mName);
     createMapText("GuildDetails", panel.mDetails, FONT_GUILD_DETAILS, COLOUR_TEXT, "WordWrapLeftAligned",
-        CampaignWorld::getGuildDetailsText(guild));
+        CampaignWorld::getGuildDetailsText(shownGuild));
 }
 
 //! \brief Progress: defeated story levels and wings, Heartstone shards, cleared bonus caves, and a bar of the defeated
@@ -1163,14 +1173,15 @@ void MenuModeCampaign::updateTooltip(const CEGUI::Vector2f& position, size_t cav
     const CampaignWorldCave& worldCave = caves[cave];
     size_t level = mWorld.findLevel(campaign, cave);
     bool known = (level < campaign.getNumLevels());
-    std::string text = known ? campaign.getLevel(level).mTitle : CampaignPackages::MISSING_WING_TEXT;
+    std::string text = known ? LevelText::display(campaign.getLevel(level).mTitle) :
+        CampaignPackages::MISSING_WING_TEXT;
     std::string wingName;
     if((worldCave.mWing >= 1) && (worldCave.mWing <= mWorld.getWings().size()))
         wingName = mWorld.getWings()[worldCave.mWing - 1].mName;
     if(worldCave.mBonus)
         text += "\nBonus cave of " + wingName;
     else if(known && !campaign.getLevel(level).mGuild.mName.empty())
-        text += "\n" + wingName + "\nGuild: " + campaign.getLevel(level).mGuild.mName;
+        text += "\n" + wingName + "\nGuild: " + LevelText::display(campaign.getLevel(level).mGuild.mName);
     else
         text += "\n" + wingName;
 
@@ -1295,7 +1306,8 @@ bool MenuModeCampaign::mapClicked(const CEGUI::EventArgs& e)
     return true;
 }
 
-//! \brief Shows the unchanged story beside the actual goals and optional preview of the selected level.
+//! \brief Shows the unchanged story beside the actual goals and optional preview of the selected level. Title and
+//! story are shown in the chosen language.
 void MenuModeCampaign::showBriefing(size_t level)
 {
     Campaign& campaign = Campaign::getSingleton();
@@ -1307,7 +1319,8 @@ void MenuModeCampaign::showBriefing(size_t level)
     setBriefingPreviewVisible(image != nullptr);
     if(image != nullptr)
         sheet->getChild(CMP_BRIEFING_IMAGE)->setProperty("Image", WORLD_IMAGE_PREFIX + campaignLevel.mPreview);
-    std::string text = "Briefing - " + campaignLevel.mTitle + "\n\n" + campaignLevel.mBriefing;
+    std::string text = "Briefing - " + LevelText::display(campaignLevel.mTitle) + "\n\n"
+        + LevelText::display(campaignLevel.mBriefing);
     sheet->getChild(CMP_BRIEFING_TEXT)->setText(reinterpret_cast<const CEGUI::utf8*>(text.c_str()));
     std::string goals;
     const std::string path = CampaignPackages::getLevelFile(campaignLevel,

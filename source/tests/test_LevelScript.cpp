@@ -1940,3 +1940,41 @@ BOOST_AUTO_TEST_CASE(test_shard_action)
     std::istringstream isBad("[Trigger]\nName\tx\nMode\tonce\nCond\ttime\t1\nAction\tshard\t1\n[/Trigger]\n[/Triggers]\n");
     BOOST_CHECK(!invalid.importFromStream(isBad));
 }
+
+//! \brief Checks that the texts of a level script that are references to language texts ("@<key>") pass through
+//! import and export unchanged, so a level saved by the editor keeps them (R8.3).
+BOOST_AUTO_TEST_CASE(language_text_references_round_trip)
+{
+    static const std::string text =
+        "[Trigger]\n"
+        "Name\tintro\n"
+        "Mode\tonce\n"
+        "Cond\ttime\t0\n"
+        "Action\tmessage\t1\t@level.sample.message.01\n"
+        "Action\tmainobjectiveid\t1\tsample-main\t@level.sample.objective.sample-main\n"
+        "Action\toptionalobjectiveid\t1\tsample-extra\t@level.sample.objective.sample-extra\n"
+        "Action\thint\t1\t@level.sample.hint.01\n"
+        "Action\tobjective\t1\t@level.sample.goal.01\n"
+        "[/Trigger]\n"
+        "[/Triggers]\n";
+    LevelScript script;
+    std::istringstream is(text);
+    BOOST_REQUIRE(script.importFromStream(is));
+    const std::vector<LevelScriptAction>& actions = script.getTriggers()[0].mActions;
+    BOOST_REQUIRE_EQUAL(actions.size(), 5u);
+    BOOST_CHECK_EQUAL(actions[0].mText, "@level.sample.message.01");
+    BOOST_CHECK_EQUAL(actions[1].mObjectiveId, "sample-main");
+    BOOST_CHECK_EQUAL(actions[1].mText, "@level.sample.objective.sample-main");
+    BOOST_CHECK_EQUAL(actions[2].mText, "@level.sample.objective.sample-extra");
+    BOOST_CHECK_EQUAL(actions[3].mText, "@level.sample.hint.01");
+    BOOST_CHECK_EQUAL(actions[4].mText, "@level.sample.goal.01");
+
+    std::ostringstream os;
+    script.exportToStream(os);
+    std::string written = os.str();
+    BOOST_CHECK(written.find("Action\tmessage\t1\t@level.sample.message.01\n") != std::string::npos);
+    BOOST_CHECK(written.find("Action\tmainobjectiveid\t1\tsample-main\t@level.sample.objective.sample-main\n")
+        != std::string::npos);
+    BOOST_CHECK(written.find("Action\thint\t1\t@level.sample.hint.01\n") != std::string::npos);
+    BOOST_CHECK(written.find("Action\tobjective\t1\t@level.sample.goal.01\n") != std::string::npos);
+}

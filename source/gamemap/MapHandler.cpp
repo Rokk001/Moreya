@@ -58,6 +58,7 @@
 #include "utils/ContentPackages.h"
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
+#include "utils/LevelText.h"
 #include "utils/LogManager.h"
 #include "utils/ResourceManager.h"
 #include "utils/SafeSave.h"
@@ -1719,7 +1720,8 @@ bool writeGameMapToFile(const std::string& fileName, GameMap& gameMap)
 }
 
 //! \brief Lists supported level formats independently of the executable build suffix.
-//! \brief Exposes optional campaign save metadata without changing campaign activity.
+//! \brief Exposes optional campaign save metadata without changing campaign activity. The name and description of
+//! the level are returned in the chosen language when the file holds language text references ("@<key>").
 bool getMapInfo(const std::string& fileName, LevelInfo& levelInfo)
 {
     levelInfo = LevelInfo();
@@ -1759,7 +1761,8 @@ bool getMapInfo(const std::string& fileName, LevelInfo& levelInfo)
         param = "Name\t";
         if (nextParam.compare(0, param.size(), param) == 0)
         {
-            levelInfo.mLevelName = nextParam.substr(param.size());
+            // The name may be a reference to a language text ("@level.<level>.name")
+            levelInfo.mLevelName = LevelText::display(nextParam.substr(param.size()));
             mapInfo << levelInfo.mLevelName << std::endl << std::endl;
             continue;
         }
@@ -1767,7 +1770,8 @@ bool getMapInfo(const std::string& fileName, LevelInfo& levelInfo)
         param = "Description\t";
         if (nextParam.compare(0, param.size(), param) == 0)
         {
-            mapInfo << nextParam.substr(param.size()) << std::endl << std::endl;
+            // The description may be a reference to a language text ("@level.<level>.description")
+            mapInfo << LevelText::display(nextParam.substr(param.size())) << std::endl << std::endl;
             continue;
         }
 

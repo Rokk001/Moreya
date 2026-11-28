@@ -128,6 +128,9 @@
 //!
 //! Every comparison of a number accepts the operators >= <= == != > < (the older conditions
 //! only had >= and <=).
+//! The <text> of message, objective, hint and of the objective actions (the rest of the line) is either written out
+//! or a reference @<key> to a text of the language files; the level keeps the reference, and the client shows the
+//! text of its own language (see LevelText.h).
 //!   Action  message <seatId> <text>           # seat -1: every human player
 //!   Action  objective <seatId> <text>
 //!   Action  hint <seatId> <text>             # advice with no ID, state or completion tick
