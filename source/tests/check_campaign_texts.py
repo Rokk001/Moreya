@@ -8,7 +8,7 @@ files (texts/campaign.txt and texts/levels-*.txt of the language packages). Chec
   - no such text is written out in a wing package or level file, and the numbers of references are the fixed numbers
     below (R8.1, R8.2);
   - every referenced key has a text in English and in German, no key of the areas "campaign." and "level." is left
-    unused, no text is empty and both languages hold the same line breaks and placeholders per key (R1.1, R1.5);
+    unused (the texts of the campaign code, "campaign.code.", are not wing package or level texts and are skipped), no text is empty and both languages hold the same line breaks and placeholders per key (R1.1, R1.5);
   - the English texts together are the texts the game showed before they moved into the language files, word for word:
     their sha256 is the fixed value ENGLISH_DIGEST (R1.6);
   - the campaign menu, the level lists and the editor show the texts through LevelText::display, a thin wrapper of
@@ -49,6 +49,9 @@ EXPECTED_KEYS = 1087
 ENGLISH_DIGEST = '9ac256c22118a01dda9510fbf0db65d586cfb4ac7d6e50f0f43b73e192d6d8d8'
 #: Prefixes of the keys this check covers
 PREFIXES = ('campaign.', 'level.')
+#: Prefix of the texts the campaign code shows itself (end message, missing wing, guild details; area of the world
+#: texts in world.txt): they share the area "campaign." but are no wing package or level texts, so this check skips them
+CODE_PREFIX = 'campaign.code.'
 
 errors = []
 
@@ -80,7 +83,7 @@ def language_texts(folder, code):
     entries = {}
     for path in sorted((Path(folder) / ('lang-' + code) / 'texts').glob('*.txt')):
         for key, value in parse_texts(path).items():
-            if key.startswith(PREFIXES):
+            if key.startswith(PREFIXES) and not key.startswith(CODE_PREFIX):
                 if key in entries:
                     errors.append('%s: key %s is also in another file of the language' % (path.name, key))
                 entries[key] = value
