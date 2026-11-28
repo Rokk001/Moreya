@@ -120,7 +120,7 @@ def cauldron_delivery(credits, chunks_module):
                      read('source/gamemap/RoomObjectBounds.h')), 'cauldron metadata'
     geometry = next((start,end) for kind,start,end in parts if kind == 0x5000)
     count = struct.unpack_from('<I',mesh,geometry[0])[0]
-    assert count == 6403, count
+    assert count == 6426, count
     positions = []
     for kind,start,end in children(mesh,geometry[0]+4,geometry[1]):
         if kind == 0x5200:
