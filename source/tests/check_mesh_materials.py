@@ -26,8 +26,8 @@ HEADER, MESH, SUBMESH = 0x1000, 0x3000, 0x4000
 CHUNK = 6
 #: shipped content meshes of this branch (counted once; 478, the trap crate of the workshop, the five clip props, the four
 #: coin pouches and the four gold loads; 495 found on main, 503 with the four meshes each of the own items MinotaurAxe and
-#: CyclopsClub; 511 with the four meshes each of the own items LizardManStaff and SkeletonSword)
-CONTENT_MESHES = 511
+#: CyclopsClub; 515 with the four meshes each of the own items LizardManStaff, SkeletonSword and OrcShield)
+CONTENT_MESHES = 515
 TILE_MESHES = 17
 #: materials the engine itself defines
 ENGINE_MATERIALS = {'BaseWhite', 'BaseWhiteNoLighting'}

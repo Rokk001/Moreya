@@ -21,7 +21,7 @@ ASSIGNMENTS = {
 }
 UNCHANGED = {
     'Kobold': ('KoboldPick', 'none'), 'DwarfWorker': ('Pickaxe', 'none'), 'Goblin': ('Knife', 'none'),
-    'Knight': ('RustySword', 'RustyShield'), 'Orc': ('HandAxe', 'RustyShield'),
+    'Knight': ('RustySword', 'RustyShield'), 'Orc': ('BasicAxeOrc', 'OrcShield'),
     'Dwarf2': ('BasicHammerDwarf2', 'RustyShield'), 'Paladin': ('none', 'RustyShield'),
     'DarkElf': ('Knife', 'Knife'), 'Elf': ('none', 'Bow'),
     'Defender': ('DefenderWeapon', 'none'),
@@ -31,7 +31,7 @@ UNARMED = ('Monk', 'Hunter', 'Vampire', 'Ghoul', 'Butcher', 'Banshee', 'Witch', 
 TYPES = {
     'sword': (('RustySword', 'BasicSword', 'SkeletonSword', 'ShortSword', 'Sabre', 'T2SwordGood'), 1),
     'dagger': (('Knife', 'RitualDagger'), 1),
-    'axe': (('BasicAxe', 'BasicAxeOrc', 'MinotaurAxe'), 2),
+    'axe': (('BasicAxe', 'MinotaurAxe'), 2),
     'staff': (('Staff', 'StaffLich', 'LizardManStaff'), 2), 'bow': (('Bow',), 2), 'crossbow': (('Crossbow',), 2),
     'tool': (('KoboldPick', 'Pickaxe'), 1), 'club': (('Club', 'CyclopsClub'), 1), 'spear': (('Trident',), 2),
     'wand': (('Wand',), 1),
@@ -41,7 +41,9 @@ EXPECTED_TYPES.update({name: ('sword', 2) for name in ('Longsword', 'T3SwordGood
 EXPECTED_TYPES.update({name: ('hammer', 1) for name in ('BasicHammer', 'BasicHammerDwarf2')})
 EXPECTED_TYPES.update({name: ('hammer', 2) for name in ('T2HammerGood', 'T3HammerGood', 'T4HammerGood')})
 EXPECTED_TYPES['HandAxe'] = ('axe', 1)
-EXPECTED_TYPES.update({name: ('shield', 1) for name in ('RustyShield', 'Roundshield', 'BasicShield')})
+# The orc's own axe is a look-only copy of the one-handed HandAxe (2026-11-28)
+EXPECTED_TYPES['BasicAxeOrc'] = ('axe', 1)
+EXPECTED_TYPES.update({name: ('shield', 1) for name in ('RustyShield', 'Roundshield', 'BasicShield', 'OrcShield')})
 EXPECTED_TYPES.update({f'T{tier}Shield{side}': ('shield', 1) for tier in (2, 3, 4) for side in ('Good', 'Evil')})
 # The skeleton file of each armed creature class (the skeleton of its MeshName in creatures.cfg; the class Dwarf1 uses
 # Jaeger.mesh) and the bone that holds its Weapon_R mount: the right hand bone RightHand of the 24-bone humanoid rig of
@@ -149,9 +151,10 @@ def check_equipment(equipment):
             assert float(equipment[name][field]) == 0, (name, field)
     # The copies differ from their originals only in Name, MeshName and the name the player reads (DisplayName,
     # plan INGAME-QS-11 K6), which every equipment has
-    for name, original in (('BasicAxeOrc', 'BasicAxe'), ('BasicHammerDwarf2', 'BasicHammer'), ('StaffLich', 'Staff'),
+    for name, original in (('BasicAxeOrc', 'HandAxe'), ('BasicHammerDwarf2', 'BasicHammer'), ('StaffLich', 'Staff'),
                            ('MinotaurAxe', 'BasicAxe'), ('CyclopsClub', 'Club'),
-                           ('LizardManStaff', 'Staff'), ('SkeletonSword', 'BasicSword')):
+                           ('LizardManStaff', 'Staff'), ('SkeletonSword', 'BasicSword'),
+                           ('OrcShield', 'RustyShield')):
         expected = dict(equipment[original], Name=name, MeshName=name + '.mesh')
         expected.pop('DisplayName', None)
         copy = dict(equipment[name])

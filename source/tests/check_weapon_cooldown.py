@@ -193,7 +193,7 @@ EXPECTED_WEAPON_COOLDOWN = {
     # weapons that belong to the model: knife and pick count as tools (1 turn), the Defender weapon follows its damage
     'Knife': 1, 'KoboldPick': 1, 'Pickaxe': 1, 'DefenderWeapon': 4,
     'HandAxe': 2, 'Club': 2, 'Trident': 4, 'RitualDagger': 1, 'Wand': 2,
-    'BasicAxeOrc': 3, 'BasicHammerDwarf2': 1, 'StaffLich': 3, 'LizardManStaff': 3, 'SkeletonSword': 2,
+    'BasicAxeOrc': 2, 'BasicHammerDwarf2': 1, 'StaffLich': 3, 'LizardManStaff': 3, 'SkeletonSword': 2,
     # look-only copies of BasicAxe and Club for the neutral Minotaurus and Zyklop (same values)
     'MinotaurAxe': 3, 'CyclopsClub': 2,
 }

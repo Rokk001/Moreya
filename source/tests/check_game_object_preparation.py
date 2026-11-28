@@ -59,8 +59,9 @@ def mesh_exists(name):
 # MinotaurAxe and CyclopsClub of the neutral creatures (counted on the branch)
 # 228 since Pile_VeteranScarab.mesh was removed with the VeteranScarab class (Mario 2026-11-27; counted on
 # feature/creature-roster after the merge of main; was 229); 230 with the look-only weapons
-# LizardManStaff and SkeletonSword of the lizardman and the skeleton (counted on feature/keeper-weapons)
-LISTED = 230
+# LizardManStaff and SkeletonSword of the lizardman and the skeleton, 231 with the orc's OrcShield (counted on
+# feature/keeper-weapons)
+LISTED = 231
 OBJECT_SOURCES = ('source/rooms/', 'source/entities/', 'source/traps/', 'source/spells/', 'source/render/',
                   'source/modes/', 'source/gamemap/', 'source/utils/')
 OBJECT_CONFIGS = ('config/roomAmbience', 'config/creatureSkills', 'config/equipments')
