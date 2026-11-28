@@ -30,6 +30,8 @@ import xml.etree.ElementTree as ElementTree
 repo = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(repo / 'scripts'))
 import content_packages  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import language_texts  # noqa: E402
 deps = Path(os.environ.get('BUILD_DEPS_ROOT', str(Path.home() / 'build-deps')))
 cegui_include = deps / 'install/include/cegui-0'
 cegui_lib = deps / 'install/lib'
@@ -126,7 +128,9 @@ namespace OIS
 struct MouseEvent {float x;float y;};
 enum MouseButtonID {MB_Left};
 }
-namespace Gui {inline CEGUI::MouseButton convertButton(OIS::MouseButtonID) {return CEGUI::LeftButton;}}
+namespace Gui {inline CEGUI::MouseButton convertButton(OIS::MouseButtonID) {return CEGUI::LeftButton;}
+inline CEGUI::String trCegui(const std::string& key) {return CEGUI::String(Translation::tr(key));}
+inline CEGUI::String toCeguiText(const std::string& text) {return CEGUI::String(text);}}
 //! \brief Mirrors the base-mode GUI injection now shared by all production mouse handlers.
 struct AbstractApplicationMode
 {
@@ -519,7 +523,7 @@ with tempfile.TemporaryDirectory(prefix='odp-defeat-click-') as directory:
         shutil.copy(source, work / source.name)
         sources.append(source.name)
     shutil.copy(null_source / 'RenderTarget.inl', work / 'RenderTarget.inl')
-    (work / 'check.cpp').write_text(probe)
+    (work / 'check.cpp').write_text(language_texts.translation_stub() + probe)
     subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17', '/W1', '/DCEGUINULLRENDERER_EXPORTS',
                     '/I', str(work), '/I', str(cegui_include), '/I', str(deps / 'install/include/OGRE'),
                     '/I', str(repo / 'source'), 'check.cpp'] + sources +

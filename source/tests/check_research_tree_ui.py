@@ -20,6 +20,8 @@ args = parser.parse_args()
 repo = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(repo / 'scripts'))
 import content_packages  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import language_texts  # noqa: E402
 prefix = Path(os.environ['CMAKE_PREFIX_PATH'])
 game = (repo / 'source/modes/GameMode.cpp').read_text()
 manager = (repo / 'source/game/SkillManager.cpp').read_text()
@@ -90,6 +92,7 @@ probe = r'''
 #include <CEGUI/RendererModules/Null/Renderer.h>
 #include <CEGUI/RendererModules/Ogre/ResourceProvider.h>
 #include <CEGUI/RendererModules/Ogre/ImageCodec.h>
+namespace Gui {inline CEGUI::String toCeguiText(const std::string& text) {return CEGUI::String(text);}}
 #include <OgreRoot.h>
 #include <OgreResourceGroupManager.h>
 #include "game/SkillType.h"
@@ -403,7 +406,7 @@ if args.render:
 probe = probe.replace('GUI_FOLDERS', gui_folders)
 with tempfile.TemporaryDirectory(prefix='odp-research-tree-') as directory:
     work = Path(directory)
-    (work / 'check.cpp').write_text(probe)
+    (work / 'check.cpp').write_text(language_texts.translation_stub() + probe)
     cegui_source = prefix.parent / 'src/cegui/cegui'
     subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17', '/DCEGUINULLRENDERER_EXPORTS',
         f'/I{repo / "source"}', f'/I{prefix / "include/cegui-0"}', f'/I{cegui_source / "include"}', f'/I{prefix / "include/OGRE"}', f'/I{prefix / "include/OGRE/RTShaderSystem"}',

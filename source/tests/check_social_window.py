@@ -12,6 +12,8 @@ their checks are named as not checked; the HUD layout, the scheme and the code a
 from pathlib import Path
 import re
 import sys
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from language_texts import english  # noqa: E402
 
 repo = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(repo / 'scripts'))
@@ -129,7 +131,7 @@ check('toggleSocialWindow' in gamemode and 'EventCloseClicked, CEGUI::Event::Sub
 body = gamemode[gamemode.index('bool GameMode::toggleSocialWindow'):]
 body = body[:body.index('\n}\n')]
 check('closeTopWindow' in body and 'getLocalPlayer() == nullptr' in body, 'exclusive windows / no local player')
-check('B opens the Dungeonbook' in gamemode, 'help text')
+check('mode.game.help.camera.body' in gamemode and 'B opens the Dungeonbook' in english('mode.game.help.camera.body'), 'help text')
 check('PostLog::getSingleton().start(' in gamemode and 'PostLog::getSingleton().stop()' in gamemode
       and 'SocialProfileCache::getSingleton().clear()' in gamemode, 'the feed is reset when a game starts and ends')
 frame = gamemode[gamemode.index('void GameMode::onFrameStarted'):]

@@ -5,6 +5,8 @@ Run from any directory. It does not start a game.
 from pathlib import Path
 import re
 import sys
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from language_texts import english  # noqa: E402
 
 root = Path(__file__).resolve().parents[2]
 game_mode = (root / "source/modes/GameMode.cpp").read_text(encoding="utf-8")
@@ -23,15 +25,20 @@ tile_cpp = (root / "source/entities/Tile.cpp").read_text(encoding="utf-8")
 check("mTileVisual == TileVisual::nullTileVisual && !mEverVisible && !getGameMap()->isServerGameMap()" in tile_cpp,
       "unexplored tiles are not markable on the client")
 fog_hover = game_mode[game_mode.index("void GameMode::handlePlayerActionNone()"):game_mode.index("void GameMode::handlePlayerActionSelectTile()")]
-check(fog_hover.index('"Unexplored. Click or drag to mark for digging."') < fog_hover.index('tile->fillWithEntities('),
+check(fog_hover.index('mode.game.cursor.unexplored') < fog_hover.index('tile->fillWithEntities('),
       "neutral fog hover must precede entity and type lookup")
+check(english('mode.game.cursor.unexplored') == 'Unexplored. Click or drag to mark for digging.',
+      "the neutral fog hover text is unchanged")
 
 # The selection error texts must not describe a fogged tile
 select = game_mode[game_mode.index("void GameMode::handlePlayerActionSelectTile()"):]
 select = select[:select.index("\n}\n")]
 fogged = select.index("!tile->getEverVisible()")
-check(fogged < select.index("is already dug out") and fogged < select.index("enemy's claimed wall"),
+check(fogged < select.index("mode.game.cursor.already_dug") and fogged < select.index("mode.game.cursor.enemy_wall"),
       "selection error texts describe a fogged tile")
+check("is already dug out" in english("mode.game.cursor.already_dug")
+      and "enemy's claimed wall" in english("mode.game.cursor.enemy_wall"),
+      "the selection error texts are unchanged")
 
 # The old special unlit fog plane is replaced by exact ordinary earth geometry and lighting.
 # This strict companion verifies complete common creation/material/overlay blocks and rejects eleven

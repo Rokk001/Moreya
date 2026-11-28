@@ -29,6 +29,9 @@ import os
 import math
 import re
 import sys
+from pathlib import Path as _LangPath
+sys.path.insert(0, str(_LangPath(__file__).resolve().parent))
+from language_texts import english  # noqa: E402
 import time
 
 import numpy as np
@@ -456,6 +459,8 @@ SOURCE_IDENTIFIERS = {
     ("source/social/SocialGenerator.cpp", '"worker"'): 2,
     ("source/render/WorkerExtras.cpp", '"Creatures/Worker/"'): 1,
     ("source/utils/RunLevelTest.cpp", '" workers="'): 1,
+    # The key of the Ziv group tooltip text (the shown text is checked below through the language file)
+    ("source/modes/GameMode.cpp", '"mode.game.group.workers"'): 1,
 }
 #: Player-facing config text that keeps the word by the owner's decision: the display name "Dwarf Worker" of the hero
 #: class DwarfWorker stays (it names a hero class, not the keeper's Ziv). Only this exact line is excepted, and it must
@@ -556,11 +561,13 @@ def check_ziv_names(failures):
         "source/giftboxes/GiftBoxBonus.cpp": ('"Stun Zivs"', '"Receive Zivs"'),
         "source/render/SocialWindow.cpp": ('{"All", "Zivs", "Fighters", "Unhappy"}',),
         "source/render/CreaturePanel.cpp": ('count->setTooltipText("Zivs");',),
-        "source/modes/GameMode.cpp": ('std::make_pair(Gui::BUTTON_CREATURE_WORKER, "Zivs")',),
+        "source/modes/GameMode.cpp": ('std::make_pair(Gui::BUTTON_CREATURE_WORKER, workerKey)', '"mode.game.group.workers"'),
         "source/game/Player.cpp": ('"You redeemed your Ziv into "', '"You have no Ziv to fulfill your dark wishes."'),
         "source/gamemap/GameMap.cpp": ('"Your Zivs vanished because the mana ran out"',),
         "source/spells/SpellPlague.cpp": ('"Zivs and champions never get sick."',),
     }
+    if english('mode.game.group.workers') != 'Zivs':
+        failures.append('the language file does not show Zivs for the worker group tooltip')
     for path, texts in shown.items():
         if missing_data(path) or missing_own_rows(path):
             content_packages.unchecked(CHECK, [path])

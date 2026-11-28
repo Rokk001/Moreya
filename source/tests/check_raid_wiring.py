@@ -18,6 +18,9 @@ Exit 0 and "raid wiring ok" when every item holds.
 import os
 import re
 import sys
+from pathlib import Path as _LangPath
+sys.path.insert(0, str(_LangPath(__file__).resolve().parent))
+from language_texts import english  # noqa: E402
 import time
 import xml.etree.ElementTree as ElementTree
 
@@ -305,14 +308,16 @@ panel_update = function(GAME_MODE, "void GameMode::updateRaidPanel()")
 check('getChild("RaidPanel")' in panel_update and "button->show();" in panel_update and "button->hide();" in panel_update
       and "countdown->setText(formatDebriefingTime(seconds));" in panel_update,
       "RA2/RA3/RA4: the panel shows the countdown, the button only while the gate is closed")
-check('"Raid waits at the gate"' in panel_update and "isRaidWaitingForKeeper()" in panel_update and
+check('mode.game.raid.waits' in panel_update and english('mode.game.raid.waits') == 'Raid waits at the gate' and "isRaidWaitingForKeeper()" in panel_update and
       panel_update.index("if(waits)") < panel_update.index("button->show();"),
       "R13/RA2: on Easy and Medium the panel shows no countdown but the button while a group waits for the player")
 check('"Raid in "' not in panel_update and '"Next group in "' not in panel_update and "Raid in" not in LAYOUT
       and "Next group in" not in LAYOUT,
       "K14: the countdown carries the time only, no words")
-check("Raid in" not in panel_update.replace("until the raid", "") and "Time left until the raid comes through" in panel_update
-      and "Time left until the next raid group comes through" in panel_update
+check("Raid in" not in panel_update.replace("until the raid", "")
+      and "mode.game.raid.arrival_tip" in panel_update and "mode.game.raid.next_tip" in panel_update
+      and english("mode.game.raid.arrival_tip").startswith("Time left until the raid comes through")
+      and english("mode.game.raid.next_tip").startswith("Time left until the next raid group comes through")
       and panel_update.count("icon->setTooltipText(") == 3 and panel_update.count("countdown->setTooltipText(") == 3,
       "K14: the tooltip of the picture and the time names the arrival or the next group")
 check("ClientNotificationType::askOpenRaidGate" in function(GAME_MODE, "bool GameMode::openRaidGate("),

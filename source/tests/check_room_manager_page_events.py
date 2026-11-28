@@ -105,6 +105,8 @@ CEGUI::ListboxItem* merchantItemAtPointer(CEGUI::MultiColumnList* list,const CEG
 typedef CEGUI::ListboxItem MerchantImageItem;
 //! Records the item card marks of the production tooltip service (Gui::markItemTooltip, Gui::setPlainTooltip).
 struct Gui {
+    static std::string toCeguiText(const std::string& text){return text;}
+    static std::string trCegui(const std::string& key){return Translation::tr(key);}
     static void setPlainTooltip(CEGUI::Window* window,const std::string& text){window->setTooltipText(text);window->properties["ItemTooltip"]="0";}
     static void markItemTooltip(CEGUI::Window* window,const std::string& colour,const std::string& area){
         window->properties["ItemTooltip"]="1";window->properties["ItemTooltipColour"]=colour;window->properties["ItemTooltipArea"]=area;}

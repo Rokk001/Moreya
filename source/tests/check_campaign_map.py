@@ -91,6 +91,18 @@ def check(condition, message):
         failures.append(message)
 
 
+def language_text(key):
+    """The English text of a key of the language package lang-en (empty when the content is missing)."""
+    folder = campaign_packages.content_folder(root)
+    if folder is None:
+        return ""
+    for path in sorted((folder / "lang-en" / "texts").glob("*.txt")):
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if line.startswith(key + "="):
+                return line[len(key) + 1:].replace("\\n", "\n")
+    return ""
+
+
 def function(text, name):
     """The body of a function of the menu code, from its definition to the next definition of the class."""
     start = text.index(name)
@@ -241,8 +253,10 @@ check(hidden.split("\n", 2)[1].strip() == "continue;", "a hidden bonus cave is n
 check("getDefeatedInWing(campaign, wing.mNumber)" in fill and "mWingDefeated" in fill
       and "CampaignWorld::STORY_CAVES_PER_WING" in fill, "every wing shows its defeated levels and its seal")
 progress = function(mode, "void MenuModeCampaign::fillProgressPanel()")
+check("mode.menu.campaign.progress" in progress, "the progress panel text comes from the language files")
+progress_text_en = language_text("mode.menu.campaign.progress")
 for text in ("Levels defeated: ", "Wings defeated: ", "Heartstone shards: ", "Bonus caves cleared: "):
-    check(text in progress, "the progress panel must show " + text.strip(": "))
+    check(text in progress_text_en, "the progress panel must show " + text.strip(": "))
 check("getHeartstonePieces()" in progress and "getHeartstoneTotal()" in progress, "shards found of the shard total")
 check("levelsDefeated * PERCENT_FULL / levelTotal" in progress, "the bar shows the defeated story levels in percent")
 
@@ -303,7 +317,11 @@ check("findCaveAt(" in hover and "updateHover(" in hover and "updateTooltip(" in
 ring = function(mode, "void MenuModeCampaign::updateHover")
 check("CampaignCaveState::locked" in ring, "locked caves get a tooltip but no ring")
 tip = function(mode, "void MenuModeCampaign::updateTooltip")
-check("Guild: " in tip and "Difficulty: " not in tip and "State: " in tip and "Bonus cave of " in tip,
+tip_keys_en = " ".join(language_text(key) for key in ("mode.menu.campaign.guild", "mode.menu.campaign.state_locked",
+                                                      "mode.menu.campaign.bonus_cave"))
+check("mode.menu.campaign.guild" in tip and "mode.menu.campaign.state_locked" in tip
+      and "mode.menu.campaign.bonus_cave" in tip and "Difficulty: " not in tip + tip_keys_en
+      and "Guild: " in tip_keys_en and "State: " in tip_keys_en and "Bonus cave of " in tip_keys_en,
       "tooltip shows wing, guild and state, and no per-level difficulty")
 check("getLayoutScale()" in tip and "std::min(TOOLTIP_WIDTH * scale, mapRect.getWidth())" in tip,
       "the tooltip scales with the layout and never gets larger than the map")
