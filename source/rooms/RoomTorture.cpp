@@ -39,6 +39,7 @@
 #include "utils/LogManager.h"
 #include "utils/MakeUnique.h"
 #include "utils/Random.h"
+#include "utils/Translation.h"
 
 #include <cmath>
 
@@ -399,7 +400,7 @@ void RoomTorture::revealEnemyInformation(Seat& keeperSeat, Creature& creature)
     {
         ServerNotification *serverNotification = new ServerNotification(
             ServerNotificationType::chatServer, keeperSeat.getPlayer());
-        std::string msg = "A tortured prisoner has given away an enemy room";
+        const std::string msg = Translation::makeReference("msg.torture.revealed");
         serverNotification->mPacket << msg << EventShortNoticeType::aboutCreatures;
         ODServer::getSingleton().queueServerNotification(serverNotification);
     }
@@ -423,7 +424,7 @@ void RoomTorture::convertVictim(Creature& creature)
     {
         ServerNotification *serverNotification = new ServerNotification(
             ServerNotificationType::chatServer, getSeat()->getPlayer());
-        std::string msg = "Your tormentors have convinced another creature how sweet it is to live under your rule";
+        const std::string msg = Translation::makeReference("msg.torture.converted");
         serverNotification->mPacket << msg << EventShortNoticeType::aboutCreatures;
         ODServer::getSingleton().queueServerNotification(serverNotification);
     }

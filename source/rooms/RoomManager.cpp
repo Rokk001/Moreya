@@ -35,6 +35,7 @@
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
+#include "utils/Translation.h"
 
 static const std::string EMPTY_STRING;
 
@@ -561,6 +562,13 @@ const std::string& RoomManager::getRoomReadableName(RoomType type)
 
     const RoomFactory& factory = *factories[index];
     return factory.getNameReadable();
+}
+
+//! \brief The key room.<id>.name with the readable name as the text for a language without the key.
+std::string RoomManager::getRoomNameReference(RoomType type)
+{
+    return Translation::makeNameReference("room." + Translation::toKeyPart(getRoomNameFromRoomType(type)) + ".name",
+        getRoomReadableName(type));
 }
 
 RoomType RoomManager::getRoomTypeFromRoomName(const std::string& name)

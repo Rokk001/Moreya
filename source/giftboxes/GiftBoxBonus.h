@@ -52,6 +52,10 @@ public:
     //! \brief The name of the special, used for the button and the message
     static std::string getDisplayName(GiftBoxType type);
 
+    //! \brief The display name of the special as a text reference (key giftbox.<type id>.name, the display name as
+    //! fallback) for the texts that the server sends to the clients.
+    static std::string getDisplayNameReference(GiftBoxType type);
+
     //! \brief What the special does, used as the tooltip of its button
     static std::string getDescription(GiftBoxType type);
 

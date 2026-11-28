@@ -16,6 +16,7 @@
 #include "network/ODServer.h"
 #include "utils/ConfigManager.h"
 #include "utils/MakeUnique.h"
+#include "utils/Translation.h"
 #include <algorithm>
 #include <limits>
 #include <queue>
@@ -58,7 +59,7 @@ class RoomInfirmaryFactory : public RoomFactory
         if(!RoomInfirmary::containsMinimumBlock(*map, player->getSeat(), tiles))
         {
             ServerNotification* notice = new ServerNotification(ServerNotificationType::chatServer, player);
-            notice->mPacket << std::string("An infirmary needs at least 4x4 tiles.") << EventShortNoticeType::genericGameInfo;
+            notice->mPacket << Translation::makeReference("msg.infirmary.size") << EventShortNoticeType::genericGameInfo;
             ODServer::getSingleton().queueServerNotification(notice);
             return false;
         }

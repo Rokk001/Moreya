@@ -46,6 +46,7 @@
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 #include "utils/MakeUnique.h"
+#include "utils/Translation.h"
 
 #include <istream>
 #include <ostream>
@@ -298,9 +299,9 @@ void Room::notifyOwnerChanged(Seat* oldSeat, Seat* newSeat)
         ServerNotification* serverNotification = new ServerNotification(
             ServerNotificationType::chatServer, newPlayer);
         if((oldSeat != nullptr) && oldSeat->isRogueSeat())
-            serverNotification->mPacket << "You have claimed a room" << EventShortNoticeType::majorGameEvent;
+            serverNotification->mPacket << Translation::makeReference("msg.room.claimed") << EventShortNoticeType::majorGameEvent;
         else
-            serverNotification->mPacket << "You have captured a room" << EventShortNoticeType::majorGameEvent;
+            serverNotification->mPacket << Translation::makeReference("msg.room.captured") << EventShortNoticeType::majorGameEvent;
         ODServer::getSingleton().queueServerNotification(serverNotification);
     }
 
@@ -312,7 +313,7 @@ void Room::notifyOwnerChanged(Seat* oldSeat, Seat* newSeat)
     {
         ServerNotification* serverNotification = new ServerNotification(
             ServerNotificationType::chatServer, oldPlayer);
-        serverNotification->mPacket << "A room has been lost" << EventShortNoticeType::majorGameEvent;
+        serverNotification->mPacket << Translation::makeReference("msg.room.lost") << EventShortNoticeType::majorGameEvent;
         ODServer::getSingleton().queueServerNotification(serverNotification);
     }
     else if(oldPlayer != nullptr && !oldPlayer->getHasLost())
@@ -387,7 +388,7 @@ void Room::notifyDirtAdded(double added)
     double meanNow = getDirtMean();
     double meanBefore = meanNow - added / static_cast<double>(mCoveredTiles.size());
     if((meanBefore < limit) && (meanNow >= limit))
-        player->notifyDirtEvent(Player::DirtEventKind::roomFilthy, RoomManager::getRoomReadableName(type), nullptr);
+        player->notifyDirtEvent(Player::DirtEventKind::roomFilthy, RoomManager::getRoomNameReference(type), nullptr);
 }
 
 //! \brief The dirt stage (1 - 3) of the mean dirt of this room.

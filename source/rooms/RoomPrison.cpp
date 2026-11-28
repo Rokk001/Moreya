@@ -43,6 +43,7 @@
 #include "utils/LogManager.h"
 #include "utils/MakeUnique.h"
 #include "utils/Random.h"
+#include "utils/Translation.h"
 
 #include <algorithm>
 #include <cmath>
@@ -150,7 +151,7 @@ class RoomPrisonFactory : public RoomFactory
         {
             ServerNotification *serverNotification = new ServerNotification(
                 ServerNotificationType::displayText, player->getSeat()->getPlayer());
-            std::string msg = "Prison can be extended when there are \n no creatures at prison's fence and unusued tiles";
+            const std::string msg = Translation::makeReference("msg.prison.extend");
             serverNotification->mPacket << msg;
             ODServer::getSingleton().queueServerNotification(serverNotification);
             return false;
@@ -197,7 +198,7 @@ class RoomPrisonFactory : public RoomFactory
         {
             ServerNotification *serverNotification = new ServerNotification(
                 ServerNotificationType::displayText, player->getSeat()->getPlayer());
-            std::string msg = "Prison can be extended when there are \n no creatures at prison's fence and unusued tiles";
+            const std::string msg = Translation::makeReference("msg.prison.extend");
             serverNotification->mPacket << msg;
             ODServer::getSingleton().queueServerNotification(serverNotification);            
             return false;
@@ -368,7 +369,7 @@ void RoomPrison::doUpkeep()
             {
                 ServerNotification *serverNotification = new ServerNotification(
                     ServerNotificationType::chatServer, getSeat()->getPlayer());
-                std::string msg = "A creature died starving in your prison";
+                const std::string msg = Translation::makeReference("msg.prison.starved");
                 serverNotification->mPacket << msg << EventShortNoticeType::aboutCreatures;
                 ODServer::getSingleton().queueServerNotification(serverNotification);
             }
@@ -570,7 +571,7 @@ void RoomPrison::freePrisonersIfLiberated()
     {
         ServerNotification *serverNotification = new ServerNotification(
             ServerNotificationType::chatServer, getSeat()->getPlayer());
-        std::string msg = "Jailbreak! Enemy creatures freed prisoners from your prison";
+        const std::string msg = Translation::makeReference("msg.prison.jailbreak");
         serverNotification->mPacket << msg << EventShortNoticeType::aboutCreatures;
         ODServer::getSingleton().queueServerNotification(serverNotification);
     }

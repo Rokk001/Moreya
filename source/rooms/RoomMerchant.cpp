@@ -23,6 +23,7 @@
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 #include "utils/MakeUnique.h"
+#include "utils/Translation.h"
 
 #include <algorithm>
 #include <cmath>
@@ -931,6 +932,6 @@ void RoomMerchant::announceDeal(Creature& creature, const ItemInstance& item, ui
     creature.setLastItemDeal(deal, name);
     Player* player = creature.getSeat() == nullptr ? nullptr : creature.getSeat()->getPlayer();
     if(item.mQuality != Quality::epic || player == nullptr || !player->getIsHuman() || deal == 4) return;
-    if(deal == 5) player->notifyCreatureEvent(creature, " found " + name + "!");
-    else player->notifyCreatureEvent(creature, " bought " + name);
+    if(deal == 5) player->notifyCreatureEvent(creature, Translation::makeReference("msg.merchant.found", {{"item", name}}));
+    else player->notifyCreatureEvent(creature, Translation::makeReference("msg.merchant.bought", {{"item", name}}));
 }

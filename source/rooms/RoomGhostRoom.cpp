@@ -25,6 +25,7 @@
 #include "utils/Random.h"
 #include "utils/LogManager.h"
 #include "utils/MakeUnique.h"
+#include "utils/Translation.h"
 #include <functional>
 #include <algorithm>
 #include <cmath>
@@ -73,7 +74,7 @@ class RoomGhostRoomFactory : public RoomFactory
         if(!RoomGhostRoom::containsMinimumBlock(*map,player->getSeat(),tiles))
         {
             ServerNotification* notice = new ServerNotification(ServerNotificationType::chatServer,player);
-            notice->mPacket << std::string("A ghost room needs at least 4x4 tiles.") << EventShortNoticeType::genericGameInfo;
+            notice->mPacket << Translation::makeReference("msg.ghostroom.size") << EventShortNoticeType::genericGameInfo;
             ODServer::getSingleton().queueServerNotification(notice);
             return false;
         }
