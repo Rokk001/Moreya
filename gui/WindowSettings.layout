@@ -216,16 +216,17 @@
                         <Property name="Visible" value="False" />
                         <Property name="Text" value="@layout.window_settings.settings_window.main_tab_control.game.game_sp.ko_creature_checkbox.text" />
 <!--#@own 49-->
-                    <!-- Language of all texts of the game (localization plan R2); the texts are keys of the language files. -->
+                    <!-- Language of all texts of the game (localization plan R2); the texts are keys of the language files.
+                         It sits below the light slider, where its drop list opens inside the visible part of the pane. -->
                     <Window type="OD/StaticText" name="LanguageText" >
-                        <Property name="Area" value="{{0,32},{0,458},{0,190},{0,482}}" />
+                        <Property name="Area" value="{{0,32},{0,220},{0,190},{0,244}}" />
                         <Property name="MaxSize" value="{{1,0},{1,0}}" />
                         <Property name="Text" value="@settings.language" />
                         <Property name="BackgroundEnabled" value="False" />
                         <Property name="FrameEnabled" value="False" />
                     </Window>
                     <Window type="OD/Combobox" name="LanguageCombo" >
-                        <Property name="Area" value="{{0,200},{0,458},{0,360},{0,538}}" />
+                        <Property name="Area" value="{{0,200},{0,218},{0,360},{0,298}}" />
                         <Property name="MaxSize" value="{{1,0},{1,0}}" />
                         <Property name="ReadOnly" value="True" />
                         <Property name="TooltipText" value="@settings.language.tooltip" />
