@@ -37,10 +37,12 @@
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 #include "utils/Random.h"
+#include "utils/Translation.h"
 
 #include <CEGUI/Window.h>
 #include <CEGUI/widgets/PushButton.h>
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <functional>
 #include <map>
@@ -83,17 +85,17 @@ static const std::string TREE_PREFIX_TRAPS = "SkillTabs/Traps/";
 //! \brief Path prefix of the research buttons of the Spells tab inside SkillTreeWindow/Skills
 static const std::string TREE_PREFIX_SPELLS = "SkillTabs/Spells/";
 
-//! \brief Titles of the tabs of the research tree window
-static const std::string TAB_TITLE_ROOMS = "Rooms";
-static const std::string TAB_TITLE_TRAPS = "Traps and doors";
-static const std::string TAB_TITLE_SPELLS = "Spells";
+//! \brief Language keys of the titles of the tabs of the research tree window
+static const std::string TAB_TITLE_ROOMS = "research.tab.rooms";
+static const std::string TAB_TITLE_TRAPS = "research.tab.traps";
+static const std::string TAB_TITLE_SPELLS = "research.tab.spells";
 
-//! \brief Tooltip titles of the keeper skills
-static const std::string KEEPER_TITLE_DOMINION = "Dominion";
-static const std::string KEEPER_TITLE_HEART_FORTITUDE = "Heart Fortitude";
-static const std::string KEEPER_TITLE_HEART_MENDING = "Heart Mending";
-static const std::string KEEPER_TITLE_MANA_FLOW = "Mana Flow";
-static const std::string KEEPER_TITLE_BEER = "Beer";
+//! \brief Language keys of the tooltip titles of the keeper skills
+static const std::string KEEPER_TITLE_DOMINION = "research.keeper.dominion.title";
+static const std::string KEEPER_TITLE_HEART_FORTITUDE = "research.keeper.heartfortitude.title";
+static const std::string KEEPER_TITLE_HEART_MENDING = "research.keeper.heartmending.title";
+static const std::string KEEPER_TITLE_MANA_FLOW = "research.keeper.manaflow.title";
+static const std::string KEEPER_TITLE_BEER = "research.keeper.beer.title";
 
 //! \brief Parent list of a skill without parents
 static const std::vector<SkillType> NO_PARENTS;
@@ -145,7 +147,8 @@ public:
     //! Short cost description shown in the button tooltip, or an empty string if there is none.
     virtual std::string getCostText(GameMap* gameMap) const = 0;
 
-    virtual const std::string& getTooltipTitle() const = 0;
+    //! \brief The title of the research button tooltip, in the chosen language.
+    virtual std::string getTooltipTitle() const = 0;
 
     virtual void connectGuiButtons(GameEditorModeBase* mode, CEGUI::Window* rootWindow, PlayerSelection& playerSelection) const = 0;
 
@@ -172,11 +175,12 @@ public:
     SkillFamily getSkillFamily() const override
     { return SkillFamily::rooms; }
 
-    const std::string& getTooltipTitle() const override
+    //! \brief The name of the room, in the chosen language.
+    std::string getTooltipTitle() const override
     { return RoomManager::getRoomReadableName(mRoomType); }
 
     std::string getCostText(GameMap* gameMap) const override
-    { return Helper::toString(RoomManager::costPerTile(mRoomType)) + " gold per tile"; }
+    { return Translation::tr("research.cost.gold_per_tile", {{"value", Helper::toString(RoomManager::costPerTile(mRoomType))}}); }
 
     //! \brief Connects the build button of the room; the button of a room whose room package is missing is hidden.
     void connectGuiButtons(GameEditorModeBase* mode, CEGUI::Window* rootWindow, PlayerSelection& playerSelection) const override
@@ -232,11 +236,12 @@ public:
     SkillFamily getSkillFamily() const override
     { return SkillFamily::traps; }
 
-    const std::string& getTooltipTitle() const override
+    //! \brief The name of the trap, in the chosen language.
+    std::string getTooltipTitle() const override
     { return TrapManager::getTrapReadableName(mTrapType); }
 
     std::string getCostText(GameMap* gameMap) const override
-    { return Helper::toString(TrapManager::costPerTile(mTrapType)) + " gold per tile"; }
+    { return Translation::tr("research.cost.gold_per_tile", {{"value", Helper::toString(TrapManager::costPerTile(mTrapType))}}); }
 
     void connectGuiButtons(GameEditorModeBase* mode, CEGUI::Window* rootWindow, PlayerSelection& playerSelection) const override
     {
@@ -284,15 +289,16 @@ public:
     SkillFamily getSkillFamily() const override
     { return SkillFamily::spells; }
 
-    const std::string& getTooltipTitle() const override
+    //! \brief The name of the spell, in the chosen language.
+    std::string getTooltipTitle() const override
     { return SpellManager::getSpellReadableName(mSpellType); }
 
     //! \brief Returns the cost line of the tooltip; Summon Ziv shows the price of the next Ziv.
     std::string getCostText(GameMap* gameMap) const override
     {
         if(mSpellType == SpellType::summonWorker)
-            return Helper::toString(SpellSummonWorker::getNextWorkerPriceForPlayer(gameMap,
-                gameMap->getLocalPlayer())) + " mana for next Ziv";
+            return Translation::tr("research.cost.mana_next_ziv", {{"value",
+                Helper::toString(SpellSummonWorker::getNextWorkerPriceForPlayer(gameMap, gameMap->getLocalPlayer()))}});
 
         const char* key = nullptr;
         switch(mSpellType)
@@ -322,7 +328,7 @@ public:
             case SpellType::revealEnemy: key = "RevealEnemyPrice"; break;
             default: return "";
         }
-        const std::string unit = (mSpellType == SpellType::callToWar || mSpellType == SpellType::eyeEvil ||
+        const char* const costKey = (mSpellType == SpellType::callToWar || mSpellType == SpellType::eyeEvil ||
             mSpellType == SpellType::createGold || mSpellType == SpellType::lightning ||
             mSpellType == SpellType::tremor || mSpellType == SpellType::defector ||
             mSpellType == SpellType::hexenHen || mSpellType == SpellType::inferno ||
@@ -330,15 +336,15 @@ public:
             mSpellType == SpellType::curse || mSpellType == SpellType::blessing ||
             mSpellType == SpellType::invisibility || mSpellType == SpellType::plague ||
             mSpellType == SpellType::breakWall || mSpellType == SpellType::revealEnemy) ?
-            " mana" : " mana per creature";
+            "research.cost.mana" : "research.cost.mana_per_creature";
         // The Break Wall price follows its research (the price the local keeper pays now)
         if((mSpellType == SpellType::breakWall) && (gameMap != nullptr) && (gameMap->getLocalPlayer() != nullptr))
         {
-            return Helper::toString(static_cast<int32_t>(std::lround(SkillManager::getResearchValue(
-                gameMap->getLocalPlayer()->getSeat(), SkillType::spellBreakWall,
-                ConfigManager::getSingleton().getSpellConfigDouble(key), ResearchEffect::Price)))) + unit;
+            return Translation::tr(costKey, {{"value", Helper::toString(static_cast<int32_t>(std::lround(
+                SkillManager::getResearchValue(gameMap->getLocalPlayer()->getSeat(), SkillType::spellBreakWall,
+                ConfigManager::getSingleton().getSpellConfigDouble(key), ResearchEffect::Price))))}});
         }
-        return Helper::toString(ConfigManager::getSingleton().getSpellConfigInt32(key)) + unit;
+        return Translation::tr(costKey, {{"value", Helper::toString(ConfigManager::getSingleton().getSpellConfigInt32(key))}});
     }
 
     //! \brief Connects the spell's cast button of the game bar; the level editor has no spells tab, so there is
@@ -393,21 +399,21 @@ public:
     SkillFamily getSkillFamily() const override
     { return SkillFamily::keeper; }
 
-    //! \brief The name of the keeper skill
-    const std::string& getTooltipTitle() const override
+    //! \brief The name of the keeper skill, in the chosen language
+    std::string getTooltipTitle() const override
     {
         switch(mSkill->getType())
         {
             case SkillType::keeperDominion:
-                return KEEPER_TITLE_DOMINION;
+                return Translation::tr(KEEPER_TITLE_DOMINION);
             case SkillType::keeperHeartFortitude:
-                return KEEPER_TITLE_HEART_FORTITUDE;
+                return Translation::tr(KEEPER_TITLE_HEART_FORTITUDE);
             case SkillType::keeperHeartMending:
-                return KEEPER_TITLE_HEART_MENDING;
+                return Translation::tr(KEEPER_TITLE_HEART_MENDING);
             case SkillType::tavernBeer:
-                return KEEPER_TITLE_BEER;
+                return Translation::tr(KEEPER_TITLE_BEER);
             default:
-                return KEEPER_TITLE_MANA_FLOW;
+                return Translation::tr(KEEPER_TITLE_MANA_FLOW);
         }
     }
 
@@ -439,17 +445,16 @@ class SkillDefPlain : public SkillDef
 public:
     //! \brief Creates a research-only entry in its configured tab and tier.
     SkillDefPlain(const std::string& skillFamily, const std::string& buttonName, const Skill* skill, uint32_t tier) :
-        SkillDef(skillFamily, buttonName, skill, tier),
-        mTitle(Skills::skillTypeToPlayerVisibleString(skill->getType()))
+        SkillDef(skillFamily, buttonName, skill, tier)
     {}
 
     //! \brief A research-only entry has no buildable or castable family.
     SkillFamily getSkillFamily() const override
     { return SkillFamily::keeper; }
 
-    //! \brief Returns the approved research title.
-    const std::string& getTooltipTitle() const override
-    { return mTitle; }
+    //! \brief Returns the approved research title, in the chosen language.
+    std::string getTooltipTitle() const override
+    { return Skills::skillTypeToPlayerVisibleString(mSkill->getType()); }
 
     //! \brief A passive research entry has no build or cast cost.
     std::string getCostText(GameMap* gameMap) const override
@@ -469,10 +474,6 @@ public:
     //! \brief Research-only entries have no room, trap or spell mapping.
     void mapSkill(std::vector<std::vector<SkillType>>& skillsFamily) const override
     {}
-
-private:
-    //! \brief Player-facing title retained for the tooltip reference.
-    std::string mTitle;
 };
 
 //! \brief Creates the Skill of the given type with its parents. The cost and the free level one come from skills.cfg.
@@ -954,16 +955,16 @@ uint32_t SkillManager::getSkillTier(SkillType resType)
     return getSkillManager().mSkills[index]->mTier;
 }
 
-const std::string& SkillManager::getTabTitle(SkillTab tab)
+std::string SkillManager::getTabTitle(SkillTab tab)
 {
     switch(tab)
     {
         case SkillTab::traps:
-            return TAB_TITLE_TRAPS;
+            return Translation::tr(TAB_TITLE_TRAPS);
         case SkillTab::spells:
-            return TAB_TITLE_SPELLS;
+            return Translation::tr(TAB_TITLE_SPELLS);
         default:
-            return TAB_TITLE_ROOMS;
+            return Translation::tr(TAB_TITLE_ROOMS);
     }
 }
 
@@ -1156,84 +1157,42 @@ static double readResearchBase(ResearchBaseSource source, const std::string& key
     }
 }
 
-//! \brief The player visible text of an effect name of skills.cfg
+//! \brief The text in lower case, used to build language keys
+static std::string lowerText(const std::string& text)
+{
+    std::string result = text;
+    for(std::string::iterator it = result.begin(); it != result.end(); ++it)
+        *it = static_cast<char>(std::tolower(static_cast<unsigned char>(*it)));
+    return result;
+}
+
+//! \brief The player visible text of an effect name of skills.cfg, in the chosen language
 //! \param effect The effect name, one of the ResearchEffect constants
 //! \return The text in front of the value in a tooltip
 static std::string getResearchEffectText(const std::string& effect)
 {
-    static std::map<std::string, std::string> texts;
-    if(texts.empty())
-    {
-        texts[ResearchEffect::GoldPerTile] = "Storage per tile";
-        texts[ResearchEffect::SleepRecovery] = "Sleep recovery";
-        texts[ResearchEffect::LayInterval] = "Egg laying time";
-        texts[ResearchEffect::Capacity] = "Capacity";
-        texts[ResearchEffect::PointsPerWork] = "Points per work";
-        texts[ResearchEffect::XpPerHit] = "Experience per hit";
-        texts[ResearchEffect::WakefulnessPerDuty] = "Tiredness per duty turn";
-        texts[ResearchEffect::Fee] = "Keeper fee";
-        texts[ResearchEffect::Mood] = "Mood gain";
-        texts[ResearchEffect::LevelCap] = "Level cap";
-        texts[ResearchEffect::SkeletonLevel] = "Skeleton level";
-        texts[ResearchEffect::HealTime] = "Healing time";
-        texts[ResearchEffect::EctoplasmLevels] = "Ghost levels per ectoplasm";
-        texts[ResearchEffect::BoxCapacity] = "Ghosts per box";
-        texts[ResearchEffect::BeamRange] = "Beam range";
-        texts[ResearchEffect::CatchTime] = "Beam and transfer time";
-        texts[ResearchEffect::RevivePrice] = "Revival price";
-        texts[ResearchEffect::LichCorpses] = "Corpses per lich";
-        texts[ResearchEffect::LichLevel] = "Lich level bonus";
-        texts[ResearchEffect::ClaimResistance] = "Claim resistance";
-        texts[ResearchEffect::ConversionSpeed] = "Conversion speed";
-        texts[ResearchEffect::PrayerMana] = "Prayer mana";
-        texts[ResearchEffect::CreatureLimit] = "Creature limit";
-        texts[ResearchEffect::Damage] = "Damage";
-        texts[ResearchEffect::Reload] = "Reload time";
-        texts[ResearchEffect::Duration] = "Duration";
-        texts[ResearchEffect::AuraRadius] = "Alarm radius";
-        texts[ResearchEffect::Radius] = "Radius";
-        texts[ResearchEffect::HP] = "Health";
-        texts[ResearchEffect::HeartHP] = "Heart health";
-        texts[ResearchEffect::HeartHeal] = "Heart healing per second";
-        texts[ResearchEffect::HeartMana] = "Heart mana per second";
-        texts[ResearchEffect::Price] = "Price";
-        texts[ResearchEffect::HealPerTurn] = "Healing per turn";
-        texts[ResearchEffect::Speed] = "Speed";
-        texts[ResearchEffect::Bonus] = "Defense bonus";
-        texts[ResearchEffect::Factor] = "Factor";
-        texts[ResearchEffect::Lifetime] = "Duration";
-        texts[ResearchEffect::ManaPerSecond] = "Mana per second";
-        texts[ResearchEffect::Gold] = "Gold";
-        texts[ResearchEffect::PortalCooldown] = "Portal cooldown";
-        texts[ResearchEffect::RelaxTime] = "Relaxation time";
-        texts[ResearchEffect::MoodLoss] = "Prisoner mood loss";
-        texts[ResearchEffect::BetrayChance] = "Betrayal chance";
-        texts[ResearchEffect::MoodGain] = "Mood gain over time";
-        texts["GrowTime"] = "Growth time";
-        texts["BrewTime"] = "Brewing time";
-        texts["CrackTime"] = "Cracking effort";
-    }
-
-    std::map<std::string, std::string>::const_iterator it = texts.find(effect);
-    return (it == texts.end()) ? effect : it->second;
+    // The text of an effect is the entry research.effect.<effect name in lower case>; an effect without a text is
+    // shown as its name
+    const std::string key = "research.effect." + lowerText(effect);
+    return Translation::hasText(key) ? Translation::tr(key) : effect;
 }
 
-//! \brief The description sentence of a keeper skill, empty for every other skill
+//! \brief The description sentence of a keeper skill in the chosen language, empty for every other skill
 //! \param type The skill
 static std::string getKeeperDescription(SkillType type)
 {
     switch(type)
     {
         case SkillType::keeperDominion:
-            return "More creatures in your dungeon.";
+            return Translation::tr("research.keeper.dominion.description");
         case SkillType::keeperHeartFortitude:
-            return "Your dungeon heart has more health.";
+            return Translation::tr("research.keeper.heartfortitude.description");
         case SkillType::keeperHeartMending:
-            return "Your dungeon heart heals faster.";
+            return Translation::tr("research.keeper.heartmending.description");
         case SkillType::keeperManaFlow:
-            return "Your dungeon heart gives more mana.";
+            return Translation::tr("research.keeper.manaflow.description");
         case SkillType::tavernBeer:
-            return "Your taverns serve beer.";
+            return Translation::tr("research.keeper.beer.description");
         default:
             return "";
     }
@@ -1252,7 +1211,7 @@ static std::string getResearchValueText(const std::string& effect, double value)
 }
 }
 
-//! \brief Describes research effects, showing the merchant's actual whole places per table.
+//! \brief Describes research effects, showing the merchant's actual whole places per table, in the chosen language.
 std::string SkillManager::getResearchDescription(SkillType type, uint32_t level)
 {
     const ConfigManager& config = ConfigManager::getSingleton();
@@ -1292,20 +1251,20 @@ std::string SkillManager::getResearchDescription(SkillType type, uint32_t level)
             description += "\n";
         // The Curse spell shares the effect name MoodLoss with the prison, but it takes the mood of any creature
         if((type == SkillType::spellCurse) && (line.first == ResearchEffect::MoodLoss))
-            description += "Mood loss over time: " + value;
+            description += Translation::tr("research.effect.line", {{"name", Translation::tr("research.effect.curse_moodloss")},
+                {"value", value}});
         else
-            description += getResearchEffectText(line.first) + ": " + value;
+            description += Translation::tr("research.effect.line", {{"name", getResearchEffectText(line.first)}, {"value", value}});
     }
 
     // The champion is not researched and has no effect line: it keeps its text
     if(type == SkillType::spellSummonChampion)
     {
-        description = "Summons one champion that cannot be hurt and charges at the enemies. Costs " +
-            Helper::toString(config.getSpellConfigDouble("SummonChampionPrice")) + " mana, free for " +
-            Helper::toString(config.getSpellConfigDouble("SummonChampionPrice") /
-            config.getSpellConfigDouble("SummonChampionDrainPerSecond")) + " seconds, then " +
-            Helper::toString(config.getSpellConfigDouble("SummonChampionDrainPerSecond")) +
-            " mana per second. Unlocked by the complete Heartstone.";
+        description = Translation::tr("research.spellsummonchampion.description",
+            {{"price", Helper::toString(config.getSpellConfigDouble("SummonChampionPrice"))},
+             {"seconds", Helper::toString(config.getSpellConfigDouble("SummonChampionPrice") /
+                config.getSpellConfigDouble("SummonChampionDrainPerSecond"))},
+             {"drain", Helper::toString(config.getSpellConfigDouble("SummonChampionDrainPerSecond"))}});
     }
     return description;
 }
@@ -1427,6 +1386,7 @@ void SkillManager::connectGuiButtons(GameEditorModeBase* mode, CEGUI::Window* ro
     }
 }
 
+//! \brief Shows the cost of the hovered research button, in the chosen language.
 void SkillManager::updateCostTooltip(GameMap* gameMap, CEGUI::Window* rootWindow, CEGUI::Window* hoveredWindow)
 {
     for(const SkillDef* skill : getSkillManager().mSkills)
@@ -1435,14 +1395,23 @@ void SkillManager::updateCostTooltip(GameMap* gameMap, CEGUI::Window* rootWindow
             hoveredWindow != rootWindow->getChild(skill->getGuiPath() + skill->mButtonName))
             continue;
 
-        if(!hoveredWindow->isUserStringDefined("CostBaseDescription"))
+        // The description of the layout is kept for the language it was read in; after a language change the layout
+        // text of the button is the new one and is read again
+        const CEGUI::String language = Gui::toCeguiText(Translation::getLanguage());
+        if(!hoveredWindow->isUserStringDefined("CostBaseDescription") ||
+           !hoveredWindow->isUserStringDefined("CostBaseLanguage") ||
+           (hoveredWindow->getUserString("CostBaseLanguage") != language))
+        {
             hoveredWindow->setUserString("CostBaseDescription", hoveredWindow->getTooltipText());
+            hoveredWindow->setUserString("CostBaseLanguage", language);
+        }
         const std::string cost = skill->getCostText(gameMap);
         const CEGUI::String text = hoveredWindow->getUserString("CostBaseDescription") +
-            (cost.empty() ? "" : " (" + cost + ")");
+            (cost.empty() ? CEGUI::String("") : Gui::toCeguiText(" (" + cost + ")"));
         hoveredWindow->setUserString(Gui::USER_STRING_CONTEXT_HELP, text);
-        if(hoveredWindow->getTooltipText() != skill->getTooltipTitle())
-            hoveredWindow->setTooltipText(skill->getTooltipTitle());
+        const CEGUI::String title = Gui::toCeguiText(skill->getTooltipTitle());
+        if(hoveredWindow->getTooltipText() != title)
+            hoveredWindow->setTooltipText(title);
         return;
     }
 }
