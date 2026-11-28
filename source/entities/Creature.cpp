@@ -14884,7 +14884,7 @@ static const size_t GHOST_HOSE_SIDES=8;
 //! Every coloured wire on the hose (decision 998) is a thin tube with as many rings as the hose and six sides.
 static const size_t GHOST_HOSE_WIRE_SIDES=6;
 //! A brass ferrule on a cable is this many cable radii long and this many cable radii wide.
-static const Ogre::Real GHOST_FERRULE_LENGTH=5.0f;
+static const Ogre::Real GHOST_FERRULE_LENGTH=2.5f;
 static const Ogre::Real GHOST_FERRULE_WIDTH=1.3f;
 
 //! \brief The look of the hose and of the coloured wires wound round it (owner decision 998), read once from rooms.cfg.
