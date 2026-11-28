@@ -21,6 +21,7 @@
 
 #include "game/Player.h"
 #include "gamemap/GameMap.h"
+#include "utils/Translation.h"
 
 GoalProtectCreature::GoalProtectCreature(const std::string& nName, const std::string& nArguments) :
     Goal(nName, nArguments),
@@ -38,18 +39,21 @@ bool GoalProtectCreature::isMet(const Seat&, const GameMap& gameMap)
     return false;
 }
 
+//! \brief The text reference goal.protectcreature.success with the name of the creature.
 std::string GoalProtectCreature::getSuccessMessage(const Seat&)
 {
-    return mCreatureName + " is still alive";
+    return Translation::makeReference("goal.protectcreature.success", {{"creature", mCreatureName}});
 }
 
+//! \brief The text reference goal.protectcreature.failed with the name of the creature.
 std::string GoalProtectCreature::getFailedMessage(const Seat&)
 {
-    return mCreatureName + " is not alive";
+    return Translation::makeReference("goal.protectcreature.failed", {{"creature", mCreatureName}});
 }
 
+//! \brief The text reference goal.protectcreature.description with the name of the creature.
 std::string GoalProtectCreature::getDescription(const Seat&)
 {
-    return "Protect the creature named " + mCreatureName + ".";
+    return Translation::makeReference("goal.protectcreature.description", {{"creature", mCreatureName}});
 }
 

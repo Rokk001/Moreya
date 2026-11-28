@@ -22,6 +22,7 @@
 #include "gamemap/GameMap.h"
 #include "rooms/Room.h"
 #include "rooms/RoomType.h"
+#include "utils/Translation.h"
 
 #include <iostream>
 
@@ -59,18 +60,20 @@ bool GoalKillAllEnemies::isMet(const Seat &s, const GameMap& gameMap)
     return true;
 }
 
+//! \brief The text reference goal.killall.success.
 std::string GoalKillAllEnemies::getSuccessMessage(const Seat&)
 {
-    return "You have killed all the enemy creatures,\ntemples and portals.";
+    return Translation::makeReference("goal.killall.success");
 }
 
+//! \brief The text reference goal.killall.failed.
 std::string GoalKillAllEnemies::getFailedMessage(const Seat&)
 {
-    return "You have failed to kill all the enemy creatures,\ntemples and portals.";
+    return Translation::makeReference("goal.killall.failed");
 }
 
-//! \brief Describes the objective as a short player-facing instruction.
+//! \brief Describes the objective as a short player-facing instruction (the text reference goal.killall.description).
 std::string GoalKillAllEnemies::getDescription(const Seat&)
 {
-    return "Defeat all enemies, hearts and portals.";
+    return Translation::makeReference("goal.killall.description");
 }
