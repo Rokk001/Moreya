@@ -105,7 +105,7 @@ Diese Pfade direkt verwenden, nie danach suchen.
   only for a main release: a release build in which major, minor or patch changes (for example 0.7.4.N to 0.7.5.1).
   A release build that only increases the build number (0.7.4.N to 0.7.4.N+1) runs no full check run. Feature and fix
   branches still run the checks of the files they change before they are pushed.
-- Every release build that is merged into main and deployed gets the next build number (version 0.7.3.N); branch and test builds use build number 0. Major, minor and patch version change only on the owner's explicit instruction. When major, minor or patch changes (for example 0.7.3 to 0.7.4), the build number starts again at 1 (0.7.4.1); otherwise every release build only increases the last digit. `scripts/next-build-number.py` computes N by comparing OD_MAJOR_VERSION, OD_MINOR_VERSION and OD_PATCH_LEVEL in CMakeLists.txt with the last deployed state.
+- Every release build that is merged into main and deployed gets the next build number (version 0.7.3.N); branch and test builds use build number 0. Major, minor and patch version change only on the owner's explicit instruction: never automatically; an agent may at most propose such a version change (for example 0.7.4.N to 0.7.5.1), and the owner decides. When major, minor or patch changes (for example 0.7.3 to 0.7.4), the build number starts again at 1 (0.7.4.1); otherwise every release build only increases the last digit. `scripts/next-build-number.py` computes N by comparing OD_MAJOR_VERSION, OD_MINOR_VERSION and OD_PATCH_LEVEL in CMakeLists.txt with the last deployed state.
 
 ## Working rules
 
