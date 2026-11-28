@@ -93,6 +93,7 @@
 #include "utils/RunLevelTest.h"
 #include "utils/SelectionSize.h"
 #include "utils/EdgePlaces.h"
+#include "utils/Translation.h"
 #include "ODApplication.h"
 
 #include <CEGUI/CEGUI.h>
@@ -2236,8 +2237,11 @@ void GameMode::refreshCreaturePanel(const CreaturePanelData& data)
 
 void GameMode::refreshPlayerGoals(const std::string& goalsDisplayString)
 {
+    mPlayerGoalsRaw = goalsDisplayString;
+    mPlayerGoalsLanguage = Translation::getLanguage();
+    const std::string goalsText = Translation::resolveLines(goalsDisplayString);
     CEGUI::Window* widget = mRootWindow->getChild(Gui::OBJECTIVE_TEXT);
-    widget->setText(reinterpret_cast<const CEGUI::utf8*>(goalsDisplayString.c_str()));
+    widget->setText(reinterpret_cast<const CEGUI::utf8*>(goalsText.c_str()));
 }
 
 bool GameMode::keyReleased(const OIS::KeyEvent &arg)
@@ -2725,6 +2729,10 @@ void GameMode::onFrameStarted(const Ogre::FrameEvent& evt)
     updateRaidPanel();
 
     updateSandboxStatus();
+
+    // A new language shows the goals again in that language
+    if(!mPlayerGoalsRaw.empty() && (mPlayerGoalsLanguage != Translation::getLanguage()))
+        refreshPlayerGoals(mPlayerGoalsRaw);
 
     updatePossessionInput(evt.timeSinceLastFrame);
 
@@ -3379,18 +3387,18 @@ void GameMode::updateSandboxStatus()
                     bonusText += "\n";
 
                 if(bonus.mAwarded)
-                    bonusText += "[done] " + bonus.mText;
+                    bonusText += "[done] " + Translation::resolve(bonus.mText);
                 else
-                    bonusText += "+" + Helper::toString(bonus.mPoints) + ": " + bonus.mText;
+                    bonusText += "+" + Helper::toString(bonus.mPoints) + ": " + Translation::resolve(bonus.mText);
             }
-            mRootWindow->getChild("SandboxWindow/BonusText")->setText(bonusText);
+            mRootWindow->getChild("SandboxWindow/BonusText")->setText(Gui::toCeguiText(bonusText));
         }
 
         // The next room and the time until it becomes available
         std::string roomText;
         if(!status.mNextRoom.empty())
         {
-            roomText = status.mNextRoom;
+            roomText = Translation::resolve(status.mNextRoom);
             if(status.mSecondsLeft > 0)
                 roomText += " in " + formatDebriefingTime(status.mSecondsLeft);
         }
@@ -3399,9 +3407,9 @@ void GameMode::updateSandboxStatus()
         {
             mSandboxRoomShown = roomText;
             CEGUI::Window* roomDisplay = mRootWindow->getChild("HorizontalPipe/SandboxRoomDisplay");
-            roomDisplay->setText(roomText);
+            roomDisplay->setText(Gui::toCeguiText(roomText));
             roomDisplay->setVisible(!roomText.empty());
-            mRootWindow->getChild("SandboxWindow/RoomTimerText")->setText(roomText.empty() ? "" : "Next room: " + roomText);
+            mRootWindow->getChild("SandboxWindow/RoomTimerText")->setText(Gui::toCeguiText(roomText.empty() ? "" : "Next room: " + roomText));
         }
     }
 
@@ -3412,7 +3420,7 @@ void GameMode::updateSandboxStatus()
             SandboxProgress::markCompleted(client.getSandboxRealmId());
 
         CEGUI::Window* realmWindow = mRootWindow->getChild("SandboxRealmWindow");
-        realmWindow->getChild("RealmText")->setText(client.getSandboxRealmText());
+        realmWindow->getChild("RealmText")->setText(Gui::toCeguiText(Translation::resolve(client.getSandboxRealmText())));
         // The last realm has no next one to go to
         realmWindow->getChild("NextRealmButton")->setVisible(!mSandboxNextLevel.empty());
         realmWindow->getChild("StayButton")->setText(mSandboxNextLevel.empty() ? "Continue" : "Stay here");
@@ -5733,7 +5741,7 @@ void GameMode::displayText(const Ogre::ColourValue& txtColour, const std::string
     // Callers supply both eligibility and context; do not discard the former with the old label.
     mActionTargetValid = txtColour != Ogre::ColourValue::Red;
     mActionTargetText = txt;
-    mRootWindow->getChild("ContextInfo")->setText(txt);
+    mRootWindow->getChild("ContextInfo")->setText(Gui::toCeguiText(txt));
     TextRenderer::getSingleton().setText(ODApplication::POINTER_INFO_STRING, "");
 }
 
