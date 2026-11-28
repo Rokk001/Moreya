@@ -496,10 +496,8 @@ def small_textured_box():
     texture = re.search(r"^\s*texture\s+(\S+\.png)", scripts[main], re.M)
     assert texture, ("main box surface without texture", main)
     mean, deviation = png_luminance(room_file("materials/textures/" + texture.group(1)))
-    # Since 2026-11-28 the box is the approved Meshy trap: rusty iron with brass fittings in one texture (luminance 58.1,
-    # deviation 52.1), read well against the floor by its brass and its glowing seam
-    assert mean >= 55 and deviation >= 10, ("main box surface is dark or flat", main, round(mean, 1), round(deviation, 1))
-    assert len(set(materials)) >= 2, ("box needs its textured case with fittings, and glow", materials)
+    assert mean >= 90 and deviation >= 10, ("main box surface is dark or flat", main, round(mean, 1), round(deviation, 1))
+    assert len(set(materials)) >= 3, ("box needs case, fittings and glow", materials)
     # Build 41: one translucent slit on the front only, no opaque glow on the back.
     assert glow_front > 0.0 and glow_back > 0.0, ("opaque green glowing windows front and back", glow_front, glow_back)
     creature = read("source/entities/Creature.cpp")
