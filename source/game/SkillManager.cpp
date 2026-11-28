@@ -85,12 +85,12 @@ static const std::string TREE_PREFIX_TRAPS = "SkillTabs/Traps/";
 //! \brief Path prefix of the research buttons of the Spells tab inside SkillTreeWindow/Skills
 static const std::string TREE_PREFIX_SPELLS = "SkillTabs/Spells/";
 
-//! \brief Language keys of the titles of the tabs of the research tree window
+//! \brief Titles of the tabs of the research tree window (language keys)
 static const std::string TAB_TITLE_ROOMS = "research.tab.rooms";
 static const std::string TAB_TITLE_TRAPS = "research.tab.traps";
 static const std::string TAB_TITLE_SPELLS = "research.tab.spells";
 
-//! \brief Language keys of the tooltip titles of the keeper skills
+//! \brief Tooltip titles of the keeper skills (language keys)
 static const std::string KEEPER_TITLE_DOMINION = "research.keeper.dominion.title";
 static const std::string KEEPER_TITLE_HEART_FORTITUDE = "research.keeper.heartfortitude.title";
 static const std::string KEEPER_TITLE_HEART_MENDING = "research.keeper.heartmending.title";
