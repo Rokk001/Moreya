@@ -32,7 +32,10 @@ HAS_CONTENT = content_packages.has_content(repo)
 EXPECTED_CASES = 7
 # Languages of the game at the start (plan D1) and entries of each language, counted once for this branch
 EXPECTED_LANGUAGES = {'de': 'Deutsch', 'en': 'English'}
-EXPECTED_ENTRIES = 2
+EXPECTED_ENTRIES = 107
+# Keys of the server messages and goal texts (prefixes msg. and goal.) that the code of source/ names, counted once for
+# this branch (localization plan R5): 84 messages and 21 goal texts
+EXPECTED_SERVER_KEYS = 105
 
 boost_shim = r'''
 #include <functional>
@@ -225,6 +228,23 @@ else:
 def read(path):
     """The text of a repository file."""
     return (repo / path).read_text(encoding='utf-8', errors='replace')
+
+
+# R5: the texts that the server sends are text references; every key of them that the code names has a text in both
+# languages and no text of the prefixes msg. and goal. is unused
+if HAS_CONTENT and 'en' in texts:
+    named = set()
+    for path in sorted((repo / 'source').rglob('*.cpp')):
+        if 'tests' in path.relative_to(repo / 'source').parts:
+            continue
+        named.update(re.findall(r'"((?:msg|goal)\.[a-z0-9._-]+)"', path.read_text(encoding='utf-8', errors='replace')))
+    if len(named) != EXPECTED_SERVER_KEYS:
+        errors.append('server message keys named in source/: %d, expected %d' % (len(named), EXPECTED_SERVER_KEYS))
+    for code_ in sorted(texts):
+        for key in sorted(named - set(texts[code_])):
+            errors.append('language %s: server message key %s has no text' % (code_, key))
+        for key in sorted(k for k in texts[code_] if k.startswith(('msg.', 'goal.')) and k not in named):
+            errors.append('language %s: text %s is not used by the code' % (code_, key))
 
 
 # R3.1: the font of the texts above the creatures holds the German letters and the typographic quotes
