@@ -37,6 +37,7 @@
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 #include "utils/Random.h"
+#include "utils/Translation.h"
 
 #include <algorithm>
 #include <cctype>
@@ -429,7 +430,7 @@ void SandboxMode::takeHero(Player* player, const std::string& className, uint32_
     Seat* heroSeat = getHeroSeat();
     if(heroSeat == nullptr)
     {
-        sendMessage(player, "This level has no hero seat.");
+        sendMessage(player, Translation::makeReference("msg.sandbox.noheroseat"));
         return;
     }
 
@@ -439,7 +440,8 @@ void SandboxMode::takeHero(Player* player, const std::string& className, uint32_
     {
         if(isCreatureAlive(mGameMap, it->second))
         {
-            sendMessage(player, "There is already a " + className + " hero in your dungeon.");
+            sendMessage(player, Translation::makeReference("msg.sandbox.herotwice", {{"hero",
+                Translation::makeNameReference("creature." + Translation::toKeyPart(className) + ".name", className)}}));
             return;
         }
 
@@ -479,7 +481,7 @@ bool SandboxMode::launchWave(uint32_t waveNumber)
 
     if(portal == nullptr)
     {
-        sendMessage("This level has no hero portal.");
+        sendMessage(Translation::makeReference("msg.sandbox.noportal"));
         return false;
     }
 
@@ -521,7 +523,7 @@ bool SandboxMode::launchWave(uint32_t waveNumber)
     portal->spawnCreatures(creatures, spawnedNames);
     if(spawnedNames.empty())
     {
-        sendMessage("The heroes cannot come: too many creatures.");
+        sendMessage(Translation::makeReference("msg.sandbox.toomany"));
         return false;
     }
 
@@ -532,8 +534,8 @@ bool SandboxMode::launchWave(uint32_t waveNumber)
     if(waveNumber > mNbWavesLaunched)
         mNbWavesLaunched = waveNumber;
 
-    sendMessage("Heroes are invading! Wave " + Helper::toString(waveNumber) + " of "
-        + Helper::toString(static_cast<uint32_t>(ConfigManager::getSingleton().getSandboxWaves())) + ".");
+    sendMessage(Translation::makeReference("msg.sandbox.invasion", {{"wave", Helper::toString(waveNumber)},
+        {"waves", Helper::toString(static_cast<uint32_t>(ConfigManager::getSingleton().getSandboxWaves()))}}));
     return true;
 }
 
@@ -545,7 +547,7 @@ void SandboxMode::startInvasion(Player* player, bool continual)
 
     if(mIsWaveActive || mIsContinual)
     {
-        sendMessage(player, "A hero invasion is already under way.");
+        sendMessage(player, Translation::makeReference("msg.sandbox.underway"));
         return;
     }
 
@@ -592,7 +594,7 @@ std::string SandboxMode::getNextRoomName(int32_t& secondsLeft) const
         if(seconds < getRoomUnlockSeconds(i))
             secondsLeft = static_cast<int32_t>(getRoomUnlockSeconds(i) - seconds);
 
-        return Skills::skillTypeToPlayerVisibleString(ROOM_UNLOCKS[i]);
+        return Skills::skillTypeToReference(ROOM_UNLOCKS[i]);
     }
 
     return std::string();
@@ -617,8 +619,7 @@ void SandboxMode::updateUnlocks(const std::vector<Seat*>& keeperSeats)
     if(hasRoomToUnlock && !mIsIntroSent)
     {
         mIsIntroSent = true;
-        sendMessage("A Dormitory and a Hatchery are yours to begin with. Build them to start your dungeon, "
-            "so that your minions may sleep and eat. The other rooms become available over time.");
+        sendMessage(Translation::makeReference("msg.sandbox.intro"));
     }
 
     // The next rooms are available once their time has come. The seats tell their player with the usual notice
@@ -650,7 +651,7 @@ void SandboxMode::updateUnlocks(const std::vector<Seat*>& keeperSeats)
         }
 
         if(nbAdded > 0)
-            sendMessage(seat->getPlayer(), "Your workshop gives you every trap and door.");
+            sendMessage(seat->getPlayer(), Translation::makeReference("msg.sandbox.workshop"));
     }
 }
 
@@ -864,7 +865,8 @@ void SandboxMode::updateBonuses(const std::vector<Seat*>& keeperSeats)
 
         bonus.mAwarded = true;
         mScore += static_cast<int32_t>(bonus.mPoints);
-        sendMessage("Bonus objective reached: " + bonus.mText + " (+" + Helper::toString(bonus.mPoints) + " points)");
+        sendMessage(Translation::makeReference("msg.sandbox.bonus",
+            {{"bonus", bonus.mText}, {"points", Helper::toString(bonus.mPoints)}}));
     }
 }
 
@@ -884,10 +886,8 @@ void SandboxMode::updateRealmComplete()
         return;
 
     mIsRealmComplete = true;
-    std::string text = "Congratulations, Keeper! You have reached " + Helper::toString(mTarget)
-        + " points and mastered this realm.";
-    if(!mNextLevel.empty())
-        text += " Do you want to proceed to the next realm? If you stay, you can keep building here.";
+    const std::string text = Translation::makeReference(mNextLevel.empty() ? "msg.sandbox.realm" : "msg.sandbox.realm.next",
+        {{"points", Helper::toString(mTarget)}});
 
     sendMessage(text);
     for(Player* player : mGameMap.getPlayers())
@@ -973,15 +973,17 @@ void SandboxMode::doTurn()
             return;
 
         mIsWaveActive = false;
-        std::string beaten = "Wave " + Helper::toString(mNbWavesLaunched) + " was beaten.";
-        if(mWaveHeroPoints > 0)
-            beaten += " Reward: " + Helper::toString(mWaveHeroPoints) + " points.";
+        const std::string beaten = (mWaveHeroPoints > 0) ?
+            Translation::makeReference("msg.sandbox.beaten.reward", {{"wave", Helper::toString(mNbWavesLaunched)},
+                {"points", Helper::toString(mWaveHeroPoints)}}) :
+            Translation::makeReference("msg.sandbox.beaten", {{"wave", Helper::toString(mNbWavesLaunched)}});
 
         sendMessage(beaten);
         if(mNbWavesLaunched >= static_cast<uint32_t>(ConfigManager::getSingleton().getSandboxWaves()))
         {
             if(mIsContinual)
-                sendMessage("You survived all " + Helper::toString(static_cast<uint32_t>(ConfigManager::getSingleton().getSandboxWaves())) + " waves!");
+                sendMessage(Translation::makeReference("msg.sandbox.survived",
+                    {{"waves", Helper::toString(static_cast<uint32_t>(ConfigManager::getSingleton().getSandboxWaves()))}}));
 
             mIsContinual = false;
             return;

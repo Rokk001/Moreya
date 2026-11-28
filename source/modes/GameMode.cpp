@@ -94,6 +94,7 @@
 #include "utils/RunLevelTest.h"
 #include "utils/SelectionSize.h"
 #include "utils/EdgePlaces.h"
+#include "utils/Translation.h"
 #include "ODApplication.h"
 
 #include <CEGUI/CEGUI.h>
@@ -2244,8 +2245,11 @@ void GameMode::refreshCreaturePanel(const CreaturePanelData& data)
 
 void GameMode::refreshPlayerGoals(const std::string& goalsDisplayString)
 {
+    mPlayerGoalsRaw = goalsDisplayString;
+    mPlayerGoalsLanguage = Translation::getLanguage();
+    const std::string goalsText = Translation::resolveLines(goalsDisplayString);
     CEGUI::Window* widget = mRootWindow->getChild(Gui::OBJECTIVE_TEXT);
-    widget->setText(reinterpret_cast<const CEGUI::utf8*>(goalsDisplayString.c_str()));
+    widget->setText(reinterpret_cast<const CEGUI::utf8*>(goalsText.c_str()));
 }
 
 bool GameMode::keyReleased(const OIS::KeyEvent &arg)
@@ -2739,6 +2743,10 @@ void GameMode::onFrameStarted(const Ogre::FrameEvent& evt)
     updateRaidPanel();
 
     updateSandboxStatus();
+
+    // A new language shows the goals again in that language
+    if(!mPlayerGoalsRaw.empty() && (mPlayerGoalsLanguage != Translation::getLanguage()))
+        refreshPlayerGoals(mPlayerGoalsRaw);
 
     updatePossessionInput(evt.timeSinceLastFrame);
 
@@ -3399,11 +3407,11 @@ void GameMode::updateSandboxStatus()
                 if(bonus.mAwarded)
                 {
                     std::map<std::string, std::string> bonusValues;
-                    bonusValues["text"] = bonus.mText;
+                    bonusValues["text"] = Translation::resolve(bonus.mText);
                     bonusText += Translation::tr("mode.game.sandbox.bonus_done", bonusValues);
                 }
                 else
-                    bonusText += "+" + Helper::toString(bonus.mPoints) + ": " + bonus.mText;
+                    bonusText += "+" + Helper::toString(bonus.mPoints) + ": " + Translation::resolve(bonus.mText);
             }
             mRootWindow->getChild("SandboxWindow/BonusText")->setText(Gui::toCeguiText(bonusText));
         }
@@ -3412,7 +3420,7 @@ void GameMode::updateSandboxStatus()
         std::string roomText;
         if(!status.mNextRoom.empty())
         {
-            roomText = status.mNextRoom;
+            roomText = Translation::resolve(status.mNextRoom);
             if(status.mSecondsLeft > 0)
             {
                 std::map<std::string, std::string> roomTimeValues;
@@ -3441,7 +3449,7 @@ void GameMode::updateSandboxStatus()
             SandboxProgress::markCompleted(client.getSandboxRealmId());
 
         CEGUI::Window* realmWindow = mRootWindow->getChild("SandboxRealmWindow");
-        realmWindow->getChild("RealmText")->setText(client.getSandboxRealmText());
+        realmWindow->getChild("RealmText")->setText(Gui::toCeguiText(Translation::resolve(client.getSandboxRealmText())));
         // The last realm has no next one to go to
         realmWindow->getChild("NextRealmButton")->setVisible(!mSandboxNextLevel.empty());
         realmWindow->getChild("StayButton")->setText(Gui::trCegui(mSandboxNextLevel.empty() ?

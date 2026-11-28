@@ -59,6 +59,7 @@
 #include "utils/NameAliases.h"
 #include "utils/Random.h"
 #include "utils/EdgePlaces.h"
+#include "utils/Translation.h"
 
 #include <algorithm>
 #include <limits>
@@ -2131,7 +2132,8 @@ bool Seat::addSkill(SkillType type, bool notify)
         ServerNotification *serverNotification = new ServerNotification(
             ServerNotificationType::chatServer, getPlayer());
 
-        std::string msg = Skills::skillTypeToPlayerVisibleString(type) + " is now available.";
+        const std::string msg = Translation::makeReference("msg.skill.available",
+            {{"skill", Skills::skillTypeToReference(type)}});
         serverNotification->mPacket << msg << EventShortNoticeType::aboutSkills;
         ODServer::getSingleton().queueServerNotification(serverNotification);
     }
@@ -2302,8 +2304,9 @@ void Seat::completeResearch(SkillType type)
         if(getPlayer() != nullptr && getPlayer()->getIsHuman() && !getPlayer()->getHasLost())
         {
             ServerNotification* notice = new ServerNotification(ServerNotificationType::chatServer, getPlayer());
-            notice->mPacket << (Skills::skillTypeToPlayerVisibleString(type) + " reached research level " +
-                Helper::toString(level + 1) + ".") << EventShortNoticeType::aboutSkills;
+            notice->mPacket << Translation::makeReference("msg.skill.level",
+                {{"skill", Skills::skillTypeToReference(type)}, {"level", Helper::toString(level + 1)}})
+                << EventShortNoticeType::aboutSkills;
             ODServer::getSingleton().queueServerNotification(notice);
         }
     }

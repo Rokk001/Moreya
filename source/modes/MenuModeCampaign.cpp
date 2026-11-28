@@ -232,8 +232,8 @@ bool readBriefingSeat(std::istream& level, Seat& player)
 }
 
 //! \brief Reads grouped main/optional goals or the legacy list using the gameplay parsers.
-//! The objective and hint texts of the level script are shown in the chosen language (LevelText::display).
-//! \return True when level goal metadata was read; no game state or script action is executed.
+//! \return True when level goal metadata was read; no game state or script action is executed. The text holds one
+//! text reference or text of the level file per line; the caller shows it with Translation::resolveLines.
 bool readBriefingGoals(const std::string& path, std::string& descriptions)
 {
     std::stringstream level;
@@ -245,7 +245,7 @@ bool readBriefingGoals(const std::string& path, std::string& descriptions)
     std::string token;
     if(!(level >> token) || token != "[Goals]")
         return false;
-    descriptions = Translation::tr("mode.menu.campaign.goals");
+    descriptions = Translation::makeReference("goal.heading");
     while(level >> token)
     {
         if(token == "[/Goals]")
@@ -283,10 +283,10 @@ bool readBriefingGoals(const std::string& path, std::string& descriptions)
         }
         if(!mainObjectives.empty() || !optionalObjectives.empty())
         {
-            descriptions = Translation::tr("mode.menu.campaign.goals_main");
+            descriptions = Translation::makeReference("goal.main");
             for(const std::string& objective : mainObjectives)
                 descriptions += "\n[image='GoalStatus/Open'] " + objective;
-            descriptions += "\n\n" + Translation::tr("mode.menu.campaign.goals_optional");
+            descriptions += "\n\n" + Translation::makeReference("goal.optional");
             for(const std::string& objective : optionalObjectives)
                 descriptions += "\n[image='GoalStatus/Open'] " + objective;
             return true;
@@ -300,7 +300,7 @@ bool readBriefingGoals(const std::string& path, std::string& descriptions)
                     continue;
                 if(action.mType == LevelScriptActionType::hint)
                 {
-                    descriptions += "\n" + Translation::tr("mode.menu.campaign.hint", {{"text", LevelText::display(action.mText)}});
+                    descriptions += "\n" + Translation::makeReference("goal.hint", {{"text", action.mText}});
                     continue;
                 }
                 descriptions += "\n[image='GoalStatus/Open'] " + LevelText::display(action.mText);
@@ -1336,6 +1336,8 @@ void MenuModeCampaign::showBriefing(size_t level)
         BRIEFING_PREVIEW_STORY_AREA : BRIEFING_STORY_AREA);
     gui.setScaledArea(sheet->getChild(CMP_BRIEFING_GOALS), image != nullptr ?
         BRIEFING_PREVIEW_GOALS_AREA : BRIEFING_GOALS_AREA);
+    // The goals are text references of the goals and of the level file (one per line), shown in the chosen language
+    goals = Translation::resolveLines(goals);
     sheet->getChild(CMP_BRIEFING_GOALS)->setText(reinterpret_cast<const CEGUI::utf8*>(goals.c_str()));
     sheet->getChild(CMP_BRIEFING_GOALS)->setVisible(true);
     sheet->getChild(CMP_BRIEFING_START)->setVisible(true);

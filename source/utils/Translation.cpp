@@ -381,6 +381,204 @@ std::string Translation::tr(const std::string& key, const std::map<std::string, 
     return formatText(tr(key), values);
 }
 
+namespace
+{
+//! Deepest nesting of references inside values that resolve() follows
+const unsigned int MAX_REFERENCE_DEPTH = 8;
+
+//! Name of the value that holds the fallback text of a name reference
+const char* const FALLBACK_VALUE = "_";
+
+//! \brief True for the characters a key may have.
+bool isKeyCharacter(char c)
+{
+    return ((c >= 'a') && (c <= 'z')) || ((c >= '0') && (c <= '9')) || (c == '.') || (c == '_') || (c == '-');
+}
+
+//! \brief The value with a backslash, a '|' and line breaks escaped.
+std::string escapeValue(const std::string& value)
+{
+    std::string result;
+    for(std::string::size_type i = 0; i < value.size(); ++i)
+    {
+        const char c = value[i];
+        if((c == '\\') || (c == '|'))
+        {
+            result += '\\';
+            result += c;
+        }
+        else if(c == '\n')
+            result += "\\n";
+        else if(c == '\r')
+            result += "\\r";
+        else
+            result += c;
+    }
+    return result;
+}
+
+//! \brief Splits a text at every '|' that is not escaped; the segments stay escaped.
+std::vector<std::string> splitSegments(const std::string& text)
+{
+    std::vector<std::string> segments;
+    std::string current;
+    for(std::string::size_type i = 0; i < text.size(); ++i)
+    {
+        if((text[i] == '\\') && (i + 1 < text.size()))
+        {
+            current += text[i];
+            current += text[i + 1];
+            ++i;
+        }
+        else if(text[i] == '|')
+        {
+            segments.push_back(current);
+            current.clear();
+        }
+        else
+            current += text[i];
+    }
+    segments.push_back(current);
+    return segments;
+}
+
+//! \brief The value with the escapes of escapeValue() removed.
+std::string unescapeValue(const std::string& value)
+{
+    std::string result;
+    for(std::string::size_type i = 0; i < value.size(); ++i)
+    {
+        if((value[i] == '\\') && (i + 1 < value.size()))
+        {
+            ++i;
+            if(value[i] == 'n')
+                result += '\n';
+            else if(value[i] == 'r')
+                result += '\r';
+            else
+                result += value[i];
+        }
+        else
+            result += value[i];
+    }
+    return result;
+}
+
+//! \brief resolve() with the depth of the references that are already open.
+std::string resolveDepth(const std::string& text, unsigned int depth)
+{
+    if(!Translation::isReference(text))
+        return text;
+    const std::vector<std::string> segments = splitSegments(text);
+    const std::string key = segments[0].substr(1);
+    std::map<std::string, std::string> values;
+    for(std::vector<std::string>::size_type i = 1; i < segments.size(); ++i)
+    {
+        const std::string::size_type separator = segments[i].find('=');
+        if(separator == std::string::npos)
+            continue;
+        std::string value = unescapeValue(segments[i].substr(separator + 1));
+        if((depth < MAX_REFERENCE_DEPTH) && !value.empty() && (value[0] == '@'))
+            value = resolveDepth(value, depth + 1);
+        values[segments[i].substr(0, separator)] = value;
+    }
+    if(!Translation::hasText(key))
+    {
+        // The fallback text of a name reference, else the reference as it is
+        std::map<std::string, std::string>::const_iterator fallback = values.find(FALLBACK_VALUE);
+        return (fallback != values.end()) ? fallback->second : text;
+    }
+    return Translation::tr(key, values);
+}
+} // namespace
+
+//! \brief "@key" plus an escaped "|name=value" for every value.
+std::string Translation::makeReference(const std::string& key, const std::map<std::string, std::string>& values)
+{
+    std::string reference = "@" + key;
+    for(const std::pair<const std::string, std::string>& value : values)
+        reference += "|" + value.first + "=" + escapeValue(value.second);
+    return reference;
+}
+
+//! \brief "@key".
+std::string Translation::makeReference(const std::string& key)
+{
+    return "@" + key;
+}
+
+//! \brief "@key" with the fallback text in the value "_".
+std::string Translation::makeNameReference(const std::string& key, const std::string& fallback)
+{
+    std::map<std::string, std::string> values;
+    values[FALLBACK_VALUE] = fallback;
+    return makeReference(key, values);
+}
+
+//! \brief Lowercase letters; characters that are no key character become '_'.
+std::string Translation::toKeyPart(const std::string& id)
+{
+    std::string result;
+    for(std::string::size_type i = 0; i < id.size(); ++i)
+    {
+        char c = id[i];
+        if((c >= 'A') && (c <= 'Z'))
+            c = static_cast<char>(c - 'A' + 'a');
+        result += isKeyCharacter(c) ? c : '_';
+    }
+    return result;
+}
+
+//! \brief A leading '@', one or more key characters, then the end or a '|'.
+bool Translation::isReference(const std::string& text)
+{
+    if(text.empty() || (text[0] != '@'))
+        return false;
+    std::string::size_type end = 1;
+    while((end < text.size()) && isKeyCharacter(text[end]))
+        ++end;
+    if(end == 1)
+        return false;
+    return (end == text.size()) || (text[end] == '|');
+}
+
+//! \brief Looks up the key of a reference and fills in its values.
+std::string Translation::resolve(const std::string& text)
+{
+    return resolveDepth(text, 0);
+}
+
+//! \brief Resolves every line, keeping a picture tag at the start of the line.
+std::string Translation::resolveLines(const std::string& text)
+{
+    std::string result;
+    std::string::size_type position = 0;
+    while(position <= text.size())
+    {
+        std::string::size_type end = text.find('\n', position);
+        const bool last = (end == std::string::npos);
+        if(last)
+            end = text.size();
+        std::string line = text.substr(position, end - position);
+        std::string tag;
+        if(line.compare(0, 7, "[image=") == 0)
+        {
+            const std::string::size_type close = line.find("] ");
+            if(close != std::string::npos)
+            {
+                tag = line.substr(0, close + 2);
+                line.erase(0, close + 2);
+            }
+        }
+        result += tag + resolve(line);
+        if(last)
+            break;
+        result += '\n';
+        position = end + 1;
+    }
+    return result;
+}
+
 //! \brief Keeps the listener under a new id.
 unsigned int Translation::addListener(const std::function<void()>& listener)
 {

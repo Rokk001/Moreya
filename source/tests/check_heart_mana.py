@@ -316,7 +316,7 @@ int main(){
   if(n->player==&ownerPlayer&&n->type==ServerNotificationType::chatServer)lastChat=n;
  }
  check(lastChat!=nullptr&&lastChat->mPacket.texts.size()==1
-  &&lastChat->mPacket.texts[0]=="You redeemed your Ziv into 750 mana","the redemption chat names the refund");
+  &&lastChat->mPacket.texts[0]=="@msg.redeem.ziv|mana=750","the redemption chat names the refund");
 
  // Nothing is redeemed unless every condition holds, and nothing is removed then either
  removedBefore=GameEntity::removed;
@@ -471,6 +471,8 @@ print('WIRING OK: redemption on the server drop, per second mana on the HUD, tra
 
 with tempfile.TemporaryDirectory(prefix='odp-heart-mana-') as directory:
     work = Path(directory)
+    # The messages are text references (utils/Translation.h); the probe has no language system
+    probe = probe.replace('#include <algorithm>', '#include <algorithm>\n#include <map>\n' + (Path(__file__).resolve().parent / 'translation_probe_stub.h').read_text(), 1)
     (work / 'check.cpp').write_text(probe)
     subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17', 'check.cpp', '/Fecheck.exe'], cwd=work, check=True)
     subprocess.run([str(work / 'check.exe')], cwd=work, check=True)

@@ -282,7 +282,8 @@ public:
     //! Should be called on the server game map
     void notifyCreatureKilled(Creature& creature);
 
-    //! \brief Sends an owner creature notice whose name is resolved from the client profile; suffix keeps existing wording.
+    //! \brief Sends an owner creature notice whose name is resolved from the client profile; the suffix is a text
+    //! reference (Translation::makeReference) whose text goes after the name.
     void notifyCreatureEvent(Creature& creature, const std::string& suffix);
     //! \brief Tells a human keeper that an infirmary cannot heal because mana is missing.
     void notifyInfirmaryEvent();
@@ -306,7 +307,8 @@ public:
     //! filthy.". At most one dirt notice is sent per DirtNoticeSeconds (global.cfg); the others are dropped.
     //! Should be called on the server game map.
     //! \param kind What happened.
-    //! \param roomName The readable name of the room for roomFilthy (not used for relieved).
+    //! \param roomName The name of the room for roomFilthy as a text reference, for example
+    //! RoomManager::getRoomNameReference() (not used for relieved).
     //! \param creature The creature for relieved (not used for roomFilthy), may be nullptr otherwise.
     void notifyDirtEvent(DirtEventKind kind, const std::string& roomName, Creature* creature);
 

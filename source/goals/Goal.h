@@ -35,6 +35,9 @@ public:
 
     // Functions which must be overridden by child classes
     virtual bool isMet(const Seat&, const GameMap&) = 0;
+    //! \brief The description, the success message and the failed message of the goal are text references
+    //! (Translation::makeReference, keys goal.<name>.<part>): the server sends them to the clients, which show them
+    //! with Translation::resolve in their own language.
     virtual std::string getDescription(const Seat&) = 0;
     virtual std::string getSuccessMessage(const Seat&) = 0;
     virtual std::string getFailedMessage(const Seat&) = 0;

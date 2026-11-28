@@ -269,9 +269,8 @@ class RoomSpaFactory : public RoomFactory
         if(!hasMinimumSize(gameMap, player->getSeat(), tiles))
         {
             ServerNotification* serverNotification = new ServerNotification(ServerNotificationType::chatServer, player);
-            std::string msg = "A lava spa needs at least " +
-                Helper::toString(ConfigManager::getSingleton().getRoomConfigUInt32("SpaMinRoomSide")) + "x" +
-                Helper::toString(ConfigManager::getSingleton().getRoomConfigUInt32("SpaMinRoomSide")) + " tiles.";
+            const std::string side = Helper::toString(ConfigManager::getSingleton().getRoomConfigUInt32("SpaMinRoomSide"));
+            const std::string msg = Translation::makeReference("msg.spa.size", {{"width", side}, {"height", side}});
             serverNotification->mPacket << msg << EventShortNoticeType::genericGameInfo;
             ODServer::getSingleton().queueServerNotification(serverNotification);
             return false;

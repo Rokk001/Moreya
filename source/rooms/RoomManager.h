@@ -126,6 +126,10 @@ public:
     //! \brief Gets the room name shown to the player, in the chosen language
     static std::string getRoomReadableName(RoomType type);
 
+    //! \brief The readable name of the room type as a text reference (key room.<identification name in lowercase>.name,
+    //! the readable name as fallback) for the texts that the server sends to the clients.
+    static std::string getRoomNameReference(RoomType type);
+
     static RoomType getRoomTypeFromRoomName(const std::string& name);
 
     //! \brief Called on client side. It should check if there are room tiles to sell according

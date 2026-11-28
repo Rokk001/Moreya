@@ -96,9 +96,9 @@ check("std::max<uint32_t>(gameSpeedPercent, SKIRMISH_SPEED_MIN), SKIRMISH_SPEED_
 # When the game time runs out every seat with a player loses (no winner), through the shared defeat path
 duration = gamemap[gamemap.index("void GameMap::checkGameDuration"):]
 duration = duration[:duration.index("\nvoid GameMap::")]
-check('"Time is up!' in duration, "the time-out message is gone")
+check('"msg.time.level"' in duration, "the time-out message is gone")
 check("getPlayer()->notifyTimeUp()" in duration, "checkGameDuration does not defeat the seats")
-check(duration.index("Time is up!") < duration.index("notifyTimeUp"), "the message must come before the defeat")
+check(duration.index('"msg.time.level"') < duration.index("notifyTimeUp"), "the message must come before the defeat")
 player = (root / "source/game/Player.cpp").read_text(encoding="utf-8")
 time_up = player[player.index("void Player::notifyTimeUp"):]
 time_up = time_up[:time_up.index("\nvoid Player::")]

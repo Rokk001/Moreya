@@ -64,7 +64,7 @@ check = function(gamemap, 'void GameMap::checkGameDuration()')
 assert 'mLevelScript->getTimeLimitSeconds()' in check
 assert 'sendTimeLimit(' in check
 assert check.index('sendTimeLimit(') < check.index('notifyTimeUp')
-assert 'Time is up!' in check
+assert '"msg.time.level"' in check
 set_limit = function(gamemap, 'void GameMap::setScriptTimeLimit(')
 assert 'mGameDurationAnnounced = false' in set_limit
 assert 'TIME_LIMIT_REMOVED' in set_limit

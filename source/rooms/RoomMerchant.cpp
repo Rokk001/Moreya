@@ -930,8 +930,16 @@ void RoomMerchant::announceDeal(Creature& creature, const ItemInstance& item, ui
 {
     const std::string name = item.getDisplayName(creature.getGameMap());
     creature.setLastItemDeal(deal, name);
+    // The notice shows the item name in the language of each client: the keys potion.<id>.name and
+    // item.<id>.<quality>.name, with the English name as fallback
+    std::string itemName = name;
+    if(!item.mPotionId.empty())
+        itemName = Translation::makeNameReference("potion." + Translation::toKeyPart(item.mPotionId) + ".name", name);
+    else if(!item.mDefinitionId.empty())
+        itemName = Translation::makeNameReference("item." + Translation::toKeyPart(item.mDefinitionId) + "." +
+            Translation::toKeyPart(qualityName(item.mQuality)) + ".name", name);
     Player* player = creature.getSeat() == nullptr ? nullptr : creature.getSeat()->getPlayer();
     if(item.mQuality != Quality::epic || player == nullptr || !player->getIsHuman() || deal == 4) return;
-    if(deal == 5) player->notifyCreatureEvent(creature, " found " + name + "!");
-    else player->notifyCreatureEvent(creature, " bought " + name);
+    if(deal == 5) player->notifyCreatureEvent(creature, Translation::makeReference("msg.merchant.found", {{"item", itemName}}));
+    else player->notifyCreatureEvent(creature, Translation::makeReference("msg.merchant.bought", {{"item", itemName}}));
 }

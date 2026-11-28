@@ -451,7 +451,7 @@ void RoomPortalWave::warnHeroesComing()
 
         ServerNotification* serverNotification = new ServerNotification(
             ServerNotificationType::chatServer, player);
-        std::string msg = "Heroes are coming!";
+        const std::string msg = Translation::makeReference("msg.heroes.coming");
         serverNotification->mPacket << msg << EventShortNoticeType::majorGameEvent;
         ODServer::getSingleton().queueServerNotification(serverNotification);
     }
@@ -509,7 +509,7 @@ void RoomPortalWave::handleAttack()
                 ServerNotification *serverNotification = new ServerNotification(
                     ServerNotificationType::chatServer, tileSeat->getPlayer());
 
-                std::string msg = "Your evil presence has soiled this holy land for too long. You shall be crushed by our blessed swords !";
+                const std::string msg = Translation::makeReference("msg.heroes.crush");
                 serverNotification->mPacket << msg << EventShortNoticeType::majorGameEvent;
                 ODServer::getSingleton().queueServerNotification(serverNotification);
             }

@@ -19,6 +19,7 @@
 
 #include "game/Player.h"
 #include "game/Seat.h"
+#include "utils/Translation.h"
 
 #include <sstream>
 #include <iostream>
@@ -34,26 +35,22 @@ bool GoalMineNGold::isMet(const Seat &s, const GameMap&)
     return (s.getGoldMined() >= mGoldToMine);
 }
 
+//! \brief The text reference goal.minegold.description with the mined gold and the gold to mine.
 std::string GoalMineNGold::getDescription(const Seat &s)
 {
-    std::stringstream tempSS;
-    tempSS << "Mined " << s.getGoldMined() << " of " << mGoldToMine
-            << " gold coins.";
-    return tempSS.str();
+    return Translation::makeReference("goal.minegold.description",
+        {{"mined", std::to_string(s.getGoldMined())}, {"gold", std::to_string(mGoldToMine)}});
 }
 
+//! \brief The text reference goal.minegold.success with the gold to mine.
 std::string GoalMineNGold::getSuccessMessage(const Seat &s)
 {
-    std::stringstream tempSS;
-    tempSS << "You have mined more than " << mGoldToMine << " gold coins.";
-    return tempSS.str();
+    return Translation::makeReference("goal.minegold.success", {{"gold", std::to_string(mGoldToMine)}});
 }
 
+//! \brief The text reference goal.minegold.failed with the gold to mine.
 std::string GoalMineNGold::getFailedMessage(const Seat &s)
 {
-    std::stringstream tempSS;
-    tempSS << "You have failed to mine more than " << mGoldToMine
-            << " gold coins.";
-    return tempSS.str();
+    return Translation::makeReference("goal.minegold.failed", {{"gold", std::to_string(mGoldToMine)}});
 }
 

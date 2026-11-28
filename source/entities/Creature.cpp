@@ -10438,9 +10438,9 @@ void Creature::fireChatMsgTookFee(int goldTaken)
     std::string suffix;
     // We don't display the same message if we have taken all our fee or only a part of it
     if(getGoldFee() <= 0)
-        suffix = " took its fee: " + Helper::toString(goldTaken);
+        suffix = Translation::makeReference("msg.creature.fee.all", {{"gold", Helper::toString(goldTaken)}});
     else
-        suffix = " took " + Helper::toString(goldTaken) + " from its fee";
+        suffix = Translation::makeReference("msg.creature.fee.part", {{"gold", Helper::toString(goldTaken)}});
 
     getSeat()->getPlayer()->notifyCreatureEvent(*this, suffix);
 }
@@ -10460,7 +10460,7 @@ void Creature::fireChatMsgLeftDungeon()
         return;
     }
 
-    getSeat()->getPlayer()->notifyCreatureEvent(*this, " left your dungeon");
+    getSeat()->getPlayer()->notifyCreatureEvent(*this, Translation::makeReference("msg.creature.left"));
 }
 
 //! \brief Reports the creature notice to its human keeper or queues the matching AI event.
@@ -10478,7 +10478,7 @@ void Creature::fireChatMsgLeavingDungeon()
         return;
     }
 
-    getSeat()->getPlayer()->notifyCreatureEvent(*this, " is leaving your dungeon");
+    getSeat()->getPlayer()->notifyCreatureEvent(*this, Translation::makeReference("msg.creature.leaving"));
 }
 
 //! \brief Reports the creature notice to its human keeper or queues the matching AI event.
@@ -10496,7 +10496,7 @@ void Creature::fireChatMsgBecameRogue()
         return;
     }
 
-    getSeat()->getPlayer()->notifyCreatureEvent(*this, " is not under your control anymore !");
+    getSeat()->getPlayer()->notifyCreatureEvent(*this, Translation::makeReference("msg.creature.uncontrolled"));
 }
 
 //! \brief Reports the rampage of the creature to its human keeper.
@@ -10509,7 +10509,7 @@ void Creature::fireChatMsgRampaging()
     if(!getSeat()->getPlayer()->getIsHuman())
         return;
 
-    getSeat()->getPlayer()->notifyCreatureEvent(*this, " is rampaging in your dungeon !");
+    getSeat()->getPlayer()->notifyCreatureEvent(*this, Translation::makeReference("msg.creature.rampaging"));
 }
 
 //! \brief Reports the creature notice to its human keeper or queues the matching AI event.
@@ -10527,7 +10527,7 @@ void Creature::fireChatMsgUnhappy()
         return;
     }
 
-    getSeat()->getPlayer()->notifyCreatureEvent(*this, " is unhappy !");
+    getSeat()->getPlayer()->notifyCreatureEvent(*this, Translation::makeReference("msg.creature.unhappy"));
 }
 
 //! \brief Reports the creature notice to its human keeper or queues the matching AI event.
@@ -10545,7 +10545,7 @@ void Creature::fireChatMsgFurious()
         return;
     }
 
-    getSeat()->getPlayer()->notifyCreatureEvent(*this, " is furious !");
+    getSeat()->getPlayer()->notifyCreatureEvent(*this, Translation::makeReference("msg.creature.furious"));
 }
 
 //! \brief Resolves the definition and builds authoritative server stats while preserving received client summaries.
@@ -13971,7 +13971,7 @@ void Creature::dismissChampion()
     {
         ServerNotification* serverNotification = new ServerNotification(
             ServerNotificationType::chatServer, getSeat()->getPlayer());
-        std::string msg = "The champion leaves your dungeon";
+        const std::string msg = Translation::makeReference("msg.champion.leaves");
         serverNotification->mPacket << msg << EventShortNoticeType::aboutCreatures;
         ODServer::getSingleton().queueServerNotification(serverNotification);
     }

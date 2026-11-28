@@ -460,7 +460,7 @@ void RoomTemple::giveSacrificeResult(const std::string& result, uint32_t average
         giftBox->createMesh();
         giftBox->setPosition(Ogre::Vector3(static_cast<Ogre::Real>(tile.getX()),
             static_cast<Ogre::Real>(tile.getY()), 0.0f));
-        message = "The gods accepted your sacrifice and send you a special";
+        message = Translation::makeReference("msg.temple.special");
     }
     else
     {

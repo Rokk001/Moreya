@@ -395,7 +395,8 @@ class GameMode final : public GameEditorModeBase, public InputCommand
     bool toggleControlPanel(const CEGUI::EventArgs& = {});
 
     void toggleAllowTileDebugWindow(){ showTileDebugWindow = !showTileDebugWindow ;};
-    //! \brief Refreshes the player current goals.
+    //! \brief Refreshes the player current goals. The text holds one text or text reference per line (Translation::
+    //! resolveLines); it is kept and shown again when the language changes.
     void refreshPlayerGoals(const std::string& goalsDisplayString);
 
     //! \brief Refreshed the main ui data, such as mana, gold, ...
@@ -610,6 +611,10 @@ private:
     //! \brief What the sandbox score and room timer of the HUD show, to set the text only on a change
     std::string mSandboxScoreShown;
     std::string mSandboxRoomShown;
+
+    //! \brief The goals text as received from the server (with text references) and the language it is shown in
+    std::string mPlayerGoalsRaw;
+    std::string mPlayerGoalsLanguage;
 
     //! \brief Skills pending (Client side). This is copied from the seat for temporary changes while the
     //! player clicks on the skill tree window

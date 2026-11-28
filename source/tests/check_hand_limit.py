@@ -339,9 +339,9 @@ def display_seconds(cooldown_left):
 def refusal_message(reason, cooldown_left):
     """Mirror of HandLimitRules::refusalMessage."""
     if reason == "handFull":
-        return "Your hand cannot hold another fighting creature."
+        return "@msg.hand.full"
     if reason == "cooldown":
-        return "You can pick up the next fighting creature in %d s." % display_seconds(cooldown_left)
+        return "@msg.hand.cooldown|seconds=%d" % display_seconds(cooldown_left)
     return ""
 
 
@@ -365,13 +365,12 @@ def icon_place(cx, cy, icon, number_w, number_h, screen_w, screen_h):
 
 
 # The C++ texts are the ones of the model (short plain English)
-for text in ("Your hand cannot hold another fighting creature.",
-             "You can pick up the next fighting creature in "):
-    check('"' + text + '"' in RULES, "HL2: text " + repr(text))
+for text in ("msg.hand.full", "msg.hand.cooldown"):
+    check('"' + text + '"' in RULES, "HL2: text key " + repr(text))
 check(refusal(True, True, 1, MAX, 0.0) == "handFull" and refusal(True, True, 1, MAX, COOLDOWN) == "handFull",
       "HL2: a full hand is named first")
 check(refusal(True, True, 0, MAX, 2.1) == "cooldown"
-      and refusal_message("cooldown", 2.1) == "You can pick up the next fighting creature in 3 s.",
+      and refusal_message("cooldown", 2.1) == "@msg.hand.cooldown|seconds=3",
       "HL2: the cooldown message names the whole seconds left")
 check(refusal(True, False, 1, MAX, COOLDOWN) == "none" and refusal(False, True, 1, MAX, COOLDOWN) == "none",
       "HL2: no message for Zivs, skirmish and multiplayer")
@@ -515,7 +514,8 @@ if content_packages.unchecked("check_hand_limit", [name for name in HAND_FILES
 # ------------------------------------------------------------------------------------------------ build and tests
 check("${SRC}/game/HandLimitRules.cpp" in CMAKE, "C2: HandLimitRules.cpp is in the source list of the game")
 check(re.search(r"add_boost_test\(00-HandLimitRules\s+SOURCES\s+test_HandLimitRules\.cpp\s+\$\{SRC\}/game/"
-                r"HandLimitRules\.h\s+\$\{SRC\}/game/HandLimitRules\.cpp\)", TESTS_CMAKE) is not None,
+                r"HandLimitRules\.h\s+\$\{SRC\}/game/HandLimitRules\.cpp\s+\$\{SRC\}/utils/Translation\.h\s+"
+                r"\$\{SRC\}/utils/Translation\.cpp\s+\$\{SRC\}/utils/LogManager\.cpp\s+LIBRARIES\s", TESTS_CMAKE) is not None,
       "the Boost test 00-HandLimitRules is built")
 cases = re.findall(r"(.*)\n(BOOST_AUTO_TEST_CASE\((\w+)\))", BOOST_TEST)
 check(sorted(name for _, _, name in cases) == sorted(["test_fightingCreature", "test_secondFighterRefused",

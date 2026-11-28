@@ -20,6 +20,7 @@
 #include "game/Seat.h"
 #include "gamemap/GameMap.h"
 #include "rooms/RoomType.h"
+#include "utils/Translation.h"
 
 #include <vector>
 #include <iostream>
@@ -44,18 +45,21 @@ bool GoalProtectDungeonTemple::isFailed(const Seat& s, const GameMap& gameMap)
     return !isMet(s, gameMap);
 }
 
-//! \brief Describes the objective as a short player-facing instruction.
+//! \brief Describes the objective as a short player-facing instruction (the text reference
+//! goal.protecttemple.description).
 std::string GoalProtectDungeonTemple::getDescription(const Seat&)
 {
-    return "Protect your heart.";
+    return Translation::makeReference("goal.protecttemple.description");
 }
 
+//! \brief The text reference goal.protecttemple.success.
 std::string GoalProtectDungeonTemple::getSuccessMessage(const Seat&)
 {
-    return "Your dungeon temple is intact";
+    return Translation::makeReference("goal.protecttemple.success");
 }
 
+//! \brief The text reference goal.protecttemple.failed.
 std::string GoalProtectDungeonTemple::getFailedMessage(const Seat&)
 {
-    return "Your dungeon temple has been destroyed";
+    return Translation::makeReference("goal.protecttemple.failed");
 }

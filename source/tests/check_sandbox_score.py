@@ -56,7 +56,7 @@ portal = (root / "source/rooms/RoomPortal.cpp").read_text(encoding="utf-8")
 check("++getSeat()->getStatistics().mCreaturesEntered;" in portal, "a portal spawn must count mCreaturesEntered")
 
 # The wave reward is announced
-check("Reward: " in code and "mWaveHeroPoints" in code, "a beaten wave must announce its reward")
+check('"msg.sandbox.beaten.reward"' in code and "mWaveHeroPoints" in code, "a beaten wave must announce its reward")
 
 # The notifications are appended after the existing ones and named
 names = re.findall(r"^\s*(\w+),?\s*$", notification_h[notification_h.index("enum class ServerNotificationType"):notification_h.index("};")], re.M)

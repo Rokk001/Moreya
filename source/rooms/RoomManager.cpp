@@ -564,6 +564,13 @@ std::string RoomManager::getRoomReadableName(RoomType type)
     return factory.getNameReadable();
 }
 
+//! \brief The key room.<id>.name with the readable name as the text for a language without the key.
+std::string RoomManager::getRoomNameReference(RoomType type)
+{
+    return Translation::makeNameReference("room." + Translation::toKeyPart(getRoomNameFromRoomType(type)) + ".name",
+        getRoomReadableName(type));
+}
+
 RoomType RoomManager::getRoomTypeFromRoomName(const std::string& name)
 {
     std::vector<const RoomFactory*>& factories = getFactories();

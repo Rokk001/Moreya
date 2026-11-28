@@ -501,7 +501,7 @@ Command::Result cList(const Command::ArgumentList_t& args, ConsoleInterface& c, 
             Seat* s = gameMap->getLocalPlayer()->getSeat();
             Goal* tempGoal = s->getUncompleteGoal(i);
             stringStr << tempGoal->getName() << ":\t"
-                    << tempGoal->getDescription(*s) << "\n";
+                    << Translation::resolve(tempGoal->getDescription(*s)) << "\n";
         }
 
         // Loop over the list of completed goals for the seat we are sitting in an print them.
@@ -511,7 +511,7 @@ Command::Result cList(const Command::ArgumentList_t& args, ConsoleInterface& c, 
             Seat* seat = gameMap->getLocalPlayer()->getSeat();
             Goal* tempGoal = seat->getCompletedGoal(i);
             stringStr << tempGoal->getName() << ":\t"
-                    << tempGoal->getSuccessMessage(*seat) << "\n";
+                    << Translation::resolve(tempGoal->getSuccessMessage(*seat)) << "\n";
         }
     }
     // else if (args[1].compare("lights") == 0)

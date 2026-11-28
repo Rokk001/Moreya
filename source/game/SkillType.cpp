@@ -197,6 +197,13 @@ std::string toString(SkillType type)
     }
 }
 
+//! \brief The key skill.<type id>.name with the player-visible string as the text for a language without it.
+std::string skillTypeToReference(SkillType type)
+{
+    return Translation::makeNameReference("skill." + Translation::toKeyPart(toString(type)) + ".name",
+        skillTypeToPlayerVisibleString(type));
+}
+
 //! \brief Returns the player-visible name of a research type.
 //! \brief Returns the approved player-facing research entry name, in the chosen language.
 std::string skillTypeToPlayerVisibleString(SkillType type)

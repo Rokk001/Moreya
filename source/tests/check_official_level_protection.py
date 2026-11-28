@@ -481,7 +481,7 @@ check('getGameValue(EDIT_OFFICIAL_LEVELS_KEY, "0", false)' in enabled
 save = function(server, 'case ClientNotificationType::askSaveMap:')
 check('MapHandler::resolveEditorSaveTarget(levelSave.string(), saveAs, mEditOfficialLevels)' in save
       and before(save, 'resolveEditorSaveTarget(', 'SafeSave::replaceFile(')
-      and 'Shipped levels cannot be changed. Your own copy was saved as: ' in save
+      and '"msg.map.copy"' in save
       and 'gameMap->setLevelFileName(levelSaveText)' in save,
       'P4 every editor save (quick save, Save As, options) goes through the save target rule, with a notice for a copy')
 may_open = function(maphandler, 'bool checkEditorMayOpen(')

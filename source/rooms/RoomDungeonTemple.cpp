@@ -235,8 +235,8 @@ void giveDestroyedHeartReward(GameMap* gameMap, Seat* loserSeat, Seat* winnerSea
     {
         ServerNotification* serverNotification = new ServerNotification(
             ServerNotificationType::chatServer, winner);
-        serverNotification->mPacket << "The enemy dungeon heart is destroyed, you gain " + Helper::toString(mana)
-            + " mana" << EventShortNoticeType::majorGameEvent;
+        serverNotification->mPacket << Translation::makeReference("msg.heart.enemydestroyed",
+            {{"mana", Helper::toString(mana)}}) << EventShortNoticeType::majorGameEvent;
         ODServer::getSingleton().queueServerNotification(serverNotification);
     }
 }
@@ -516,7 +516,7 @@ double RoomDungeonTemple::takeHeartDamage(GameEntity* attacker, double absoluteD
         {
             ServerNotification* serverNotification = new ServerNotification(
                 ServerNotificationType::chatServer, owner);
-            serverNotification->mPacket << "Your dungeon heart is in critical condition!"
+            serverNotification->mPacket << Translation::makeReference("msg.heart.critical")
                 << EventShortNoticeType::majorGameEvent;
             ODServer::getSingleton().queueServerNotification(serverNotification);
         }
@@ -1141,7 +1141,8 @@ void RoomDungeonTemple::notifyCarryingStateChanged(Creature* carrier, GameEntity
                 {
                     ServerNotification* serverNotification = new ServerNotification(
                         ServerNotificationType::chatServer, owner);
-                    std::string msg = "You received the special: " + GiftBoxBonus::getDisplayName(bonus->getGiftBoxType()) + ".";
+                    const std::string msg = Translation::makeReference("msg.special.received",
+                        {{"special", GiftBoxBonus::getDisplayNameReference(bonus->getGiftBoxType())}});
                     serverNotification->mPacket << msg << EventShortNoticeType::majorGameEvent;
                     ODServer::getSingleton().queueServerNotification(serverNotification);
                 }

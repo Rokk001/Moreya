@@ -146,3 +146,56 @@ BOOST_AUTO_TEST_CASE(test_LoadAndFallback)
     BOOST_CHECK_EQUAL(calls, 2u);
     boost::filesystem::remove_all(root);
 }
+
+//! Checks R5: the same text reference of the server is shown in German on one client and in English on another,
+//! with values that are references themselves resolved in the language of the client; plain texts (player chat,
+//! old saves), unknown keys and a '@' in a plain text stay unchanged; values keep '|', backslashes and line breaks.
+BOOST_AUTO_TEST_CASE(test_ResolveReferences)
+{
+    const boost::filesystem::path root = boost::filesystem::temp_directory_path() / "od_test_translation_refs";
+    std::vector<std::string> folders = makeLanguagePackages(root);
+    writeFile(root / "lang-de" / "texts" / "msg.txt",
+        "msg.claimed=Du hast {room} erobert ({count} Felder)\nmsg.room.arena=Arena\nmsg.pair=[{a}|{b}]\n");
+    writeFile(root / "lang-en" / "texts" / "msg.txt",
+        "msg.claimed=You have claimed a {room} ({count} tiles)\nmsg.room.arena=arena room\nmsg.pair=[{a}|{b}]\n");
+    Translation::loadLanguages(folders);
+
+    std::map<std::string, std::string> values;
+    values["room"] = Translation::makeReference("msg.room.arena");
+    values["count"] = "12";
+    const std::string reference = Translation::makeReference("msg.claimed", values);
+    BOOST_CHECK_EQUAL(reference, "@msg.claimed|count=12|room=@msg.room.arena");
+
+    Translation::setLanguage("de");
+    BOOST_CHECK_EQUAL(Translation::resolve(reference), "Du hast Arena erobert (12 Felder)");
+    Translation::setLanguage("en");
+    BOOST_CHECK_EQUAL(Translation::resolve(reference), "You have claimed a arena room (12 tiles)");
+
+    // A nested reference with values travels escaped inside the value and still resolves
+    std::map<std::string, std::string> inner;
+    inner["room"] = "Arena";
+    inner["count"] = "3";
+    std::map<std::string, std::string> outer;
+    outer["a"] = Translation::makeReference("msg.claimed", inner);
+    outer["b"] = "x|y\\z\nw";
+    BOOST_CHECK_EQUAL(Translation::resolve(Translation::makeReference("msg.pair", outer)),
+        "[You have claimed a Arena (3 tiles)|x|y\\z\nw]");
+
+    // A name reference shows its key when a language has it, else its fallback text
+    BOOST_CHECK_EQUAL(Translation::resolve(Translation::makeNameReference("msg.room.arena", "Fallback")), "arena room");
+    BOOST_CHECK_EQUAL(Translation::resolve(Translation::makeNameReference("msg.room.none", "Fallback")), "Fallback");
+
+    // Plain texts, unknown keys and texts that only contain a '@' are shown as they are
+    BOOST_CHECK_EQUAL(Translation::resolve("You lost the game"), "You lost the game");
+    BOOST_CHECK_EQUAL(Translation::resolve("@unknown.key"), "@unknown.key");
+    BOOST_CHECK_EQUAL(Translation::resolve("@bob says hi"), "@bob says hi");
+    BOOST_CHECK_EQUAL(Translation::resolve(""), "");
+    BOOST_CHECK_EQUAL(Translation::toKeyPart("Dwarf Worker2"), "dwarf_worker2");
+    BOOST_CHECK(Translation::isReference("@menu.quit"));
+    BOOST_CHECK(!Translation::isReference("@Menu quit"));
+
+    // One reference per line, with the picture tag of the objectives window kept
+    BOOST_CHECK_EQUAL(Translation::resolveLines("[image='GoalStatus/Open'] @menu.quit\nplain\n@menu.quit\n"),
+        "[image='GoalStatus/Open'] Quit\nplain\nQuit\n");
+    boost::filesystem::remove_all(root);
+}

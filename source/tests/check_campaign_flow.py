@@ -92,7 +92,7 @@ for state in ('Open', 'Reached', 'Failed'):
     assert "[image='GoalStatus/" + state + "'] " in goals, state
 for old_label in ('Open: ', 'Done: ', 'Failed: '):
     assert old_label not in goals, old_label
-assert 'Victory!\\n' in goals
+assert 'Translation::makeReference("goal.victory") << "\\n"' in goals
 assert 'script.getTriggers()' in goals and 'LevelScriptActionType::objective' in goals
 assert 'action.mSeatId >= 0 && action.mSeatId != seat->getId()' in goals
 assert 'Script objectives:' not in goals and 'scriptObjectives.push_back(action.mText)' in goals
