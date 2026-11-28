@@ -4547,19 +4547,25 @@ bool GameMode::toggleHelpWindow(const CEGUI::EventArgs& e)
 }
 
 //! \brief Sets the tooltips of the buttons of the worker and the fighter creature group; the tooltip of the layout stays
-//! as the context help.
+//! as the context help. After a language change Gui::translateAll has written the layout tooltip of the new language
+//! (its listener runs first): a tooltip that is no longer the group tooltip set here becomes the context help again.
 void GameMode::setCreatureGroupTooltips()
 {
     const std::string workerKey = "mode.game.group.workers";
     const std::string fighterKey = "mode.game.group.fighters";
+    const CEGUI::String groupTooltipString = "CreatureGroupTooltip";
     const std::pair<std::string, std::string> groups[2] = {std::make_pair(Gui::BUTTON_CREATURE_WORKER, workerKey),
         std::make_pair(Gui::BUTTON_CREATURE_FIGHTER, fighterKey)};
     for(uint32_t index = 0; index < 2; ++index)
     {
         CEGUI::Window* button = mRootWindow->getChild(groups[index].first);
-        if(!button->isUserStringDefined(Gui::USER_STRING_CONTEXT_HELP))
+        if(!button->isUserStringDefined(Gui::USER_STRING_CONTEXT_HELP) ||
+           !button->isUserStringDefined(groupTooltipString) ||
+           (button->getTooltipText() != button->getUserString(groupTooltipString)))
             button->setUserString(Gui::USER_STRING_CONTEXT_HELP, button->getTooltipText());
-        button->setTooltipText(Gui::trCegui(groups[index].second));
+        const CEGUI::String groupTooltip = Gui::trCegui(groups[index].second);
+        button->setTooltipText(groupTooltip);
+        button->setUserString(groupTooltipString, groupTooltip);
     }
 }
 
