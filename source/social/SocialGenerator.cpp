@@ -124,7 +124,7 @@ CreatureProfile SocialGenerator::makeProfile(const SocialData& data, const std::
     profile.mGender = genderNames[genderIndex];
 
     // First name: the pool of the gender, or the first non-empty pool
-    static const std::string nameFallback = "Nameless";
+    const std::string nameFallback = getSocialCodeText("social.code.fallback.name", "Nameless");
     std::string variantSuffix;
     if(nameVariant > 0)
         variantSuffix = "#" + numberToString(static_cast<int32_t>(nameVariant));
@@ -147,7 +147,9 @@ CreatureProfile SocialGenerator::makeProfile(const SocialData& data, const std::
             (!group.mTitles.empty()))
     {
         Rng titleRng = makeFieldRng(creatureName, "title" + variantSuffix);
-        profile.mTitle = pickFrom(titleRng, group.mTitles, emptyText);
+        // The same entry in every language, only its text comes from the language files
+        std::size_t titleIndex = titleRng.below(static_cast<uint32_t>(group.mTitles.size()));
+        profile.mTitle = group.getDisplayTitle(titleIndex);
     }
     if(nameVariant > MAX_NAME_VARIANT)
     {
@@ -162,7 +164,10 @@ CreatureProfile SocialGenerator::makeProfile(const SocialData& data, const std::
     profile.mAgeText = numberToString(profile.mAge);
     Rng ageJokeRng = makeFieldRng(creatureName, "agejoke");
     if((!group.mAgeJokes.empty()) && (ageJokeRng.below(100) < AGE_JOKE_PERCENT))
-        profile.mAgeText = pickFrom(ageJokeRng, group.mAgeJokes, profile.mAgeText);
+    {
+        std::size_t ageJokeIndex = ageJokeRng.below(static_cast<uint32_t>(group.mAgeJokes.size()));
+        profile.mAgeText = group.getDisplayAgeJoke(ageJokeIndex);
+    }
 
     // Texts: everything below only reads the tables
     std::vector<std::string> scopesAll;
@@ -173,13 +178,16 @@ CreatureProfile SocialGenerator::makeProfile(const SocialData& data, const std::
     std::vector<std::string> specificCandidates;
 
     data.getTexts("Relation", scopesAll, candidates);
-    static const std::string relationFallback = "Single";
+    const std::string relationFallback = getSocialCodeText("social.code.fallback.relation", "Single");
     Rng relationRng = makeFieldRng(creatureName, "relationship");
     profile.mRelationship = pickFrom(relationRng, candidates, relationFallback);
 
-    static const std::string hometownFallback = "Somewhere";
+    const std::string hometownFallback = getSocialCodeText("social.code.fallback.hometown", "Somewhere");
     Rng hometownRng = makeFieldRng(creatureName, "hometown");
-    profile.mHometown = pickFrom(hometownRng, group.mHometowns, hometownFallback);
+    if(group.mHometowns.empty())
+        profile.mHometown = hometownFallback;
+    else
+        profile.mHometown = group.getDisplayHometown(hometownRng.below(static_cast<uint32_t>(group.mHometowns.size())));
 
     // The class job first, then the generic job of workers or fighters
     std::vector<std::string> classScope(1, className);
@@ -189,23 +197,23 @@ CreatureProfile SocialGenerator::makeProfile(const SocialData& data, const std::
         std::vector<std::string> typeScope(1, isWorker ? "worker" : "fighter");
         data.getTexts("Job", typeScope, candidates);
     }
-    static const std::string jobFallback = "Dungeon Resident";
+    const std::string jobFallback = getSocialCodeText("social.code.fallback.job", "Dungeon Resident");
     Rng jobRng = makeFieldRng(creatureName, "job");
     profile.mJob = pickFrom(jobRng, candidates, jobFallback);
 
-    static const std::string likeFallback = "quiet days";
+    const std::string likeFallback = getSocialCodeText("social.code.fallback.like", "quiet days");
     data.getTexts("Like", scopesAll, candidates);
     data.getTexts("Like", scopesSpecific, specificCandidates);
     Rng likeRng = makeFieldRng(creatureName, "like");
     pickPair(likeRng, specificCandidates, candidates, likeFallback, profile.mLikes);
 
-    static const std::string dislikeFallback = "loud noises";
+    const std::string dislikeFallback = getSocialCodeText("social.code.fallback.dislike", "loud noises");
     data.getTexts("Dislike", scopesAll, candidates);
     data.getTexts("Dislike", scopesSpecific, specificCandidates);
     Rng dislikeRng = makeFieldRng(creatureName, "dislike");
     pickPair(dislikeRng, specificCandidates, candidates, dislikeFallback, profile.mDislikes);
 
-    static const std::string quirkFallback = "daydreaming";
+    const std::string quirkFallback = getSocialCodeText("social.code.fallback.quirk", "daydreaming");
     data.getTexts("Quirk", scopesAll, candidates);
     Rng quirkRng = makeFieldRng(creatureName, "quirk");
     profile.mQuirk = pickFrom(quirkRng, candidates, quirkFallback);
@@ -220,7 +228,7 @@ CreatureProfile SocialGenerator::makeProfile(const SocialData& data, const std::
     slots["quirk"] = profile.mQuirk;
     data.getTexts("Bio", scopesAll, candidates);
     if(candidates.empty())
-        candidates.push_back("A mysterious minion from {hometown}.");
+        candidates.push_back(getSocialCodeText("social.code.fallback.bio", "A mysterious minion from {hometown}."));
     Rng bioRng = makeFieldRng(creatureName, "bio");
     uint32_t bioStart = bioRng.below(static_cast<uint32_t>(candidates.size()));
     std::string bio;
@@ -231,7 +239,13 @@ CreatureProfile SocialGenerator::makeProfile(const SocialData& data, const std::
             break;
     }
     if(bio.size() > MAX_BIO_LENGTH)
-        bio.erase(MAX_BIO_LENGTH);
+    {
+        // The cut must not split a UTF-8 character of a translated text: step back to the start of one
+        std::size_t cut = MAX_BIO_LENGTH;
+        while((cut > 0) && ((static_cast<unsigned char>(bio[cut]) & 0xC0) == 0x80))
+            --cut;
+        bio.erase(cut);
+    }
     profile.mBio = bio;
 
     return profile;

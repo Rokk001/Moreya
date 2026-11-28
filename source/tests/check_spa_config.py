@@ -31,6 +31,7 @@ import sys
 root = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(root / 'scripts'))
 import content_packages  # noqa: E402
+import language_package_texts  # noqa: E402
 
 #: True when the content packages are present (the data tables come with their own rows)
 WITH_CONTENT = content_packages.has_content(root)
@@ -138,7 +139,10 @@ if WITH_CONTENT:
 assert re.search(r'createSkill\(mSkills, SkillType::roomSpa, std::vector<SkillType>\{SkillType::roomTavern\}\)', skill_manager)
 assert re.search(r'new SkillDefRoom\(TREE_PREFIX_ROOMS, "SpaButton", skill, 2, RoomType::spa\)', skill_manager)
 assert '{SkillType::roomSpa, "RelaxTime", ResearchBaseSource::rooms, "SpaRelaxTurns", ""}' in skill_manager
-assert 'texts[ResearchEffect::RelaxTime] = "Relaxation time";' in skill_manager
+# The effect text is the English entry research.effect.relaxtime of the language package, found by its key
+assert '"research.effect." + lowerText(effect)' in skill_manager
+if WITH_CONTENT:
+    assert language_package_texts.english(root).get('research.effect.relaxtime') == 'Relaxation time'
 assert 'static const std::string RelaxTime = "RelaxTime";' in read('source/game/SkillManager.h')
 # The spa button sits directly after the beer button of the tier II block
 assert skill_manager.index('"BeerButton"') < skill_manager.index('"SpaButton"') < skill_manager.index('// Rooms tab, tier III')

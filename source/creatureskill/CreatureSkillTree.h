@@ -18,6 +18,8 @@
 #ifndef CREATURESKILLTREE_H
 #define CREATURESKILLTREE_H
 
+#include "utils/DisplayText.h"
+
 #include <cstdint>
 #include <iosfwd>
 #include <map>
@@ -63,8 +65,18 @@ struct SkillDef
 
     //! \brief Config id, e.g. BLK_C3.
     std::string mId;
-    //! \brief Display name.
+    //! \brief Display name (English; the player reads getDisplayText()).
     std::string mName;
+    //! \brief The key of the language files that holds the display name, e.g. "skill.tnk_a1.name".
+    std::string getNameKey() const
+    {
+        return DisplayText::makeKey("skill", mId);
+    }
+    //! \brief The display name in the chosen language (the English name while the language files have none).
+    std::string getDisplayText() const
+    {
+        return DisplayText::translated(getNameKey(), mName);
+    }
     //! \brief Kind token, e.g. PASSIVE_dmg%, BUFF_SELF_StrengthChange, EXPLOSION.
     std::string mKind;
     //! \brief Group name (blocker, blitzer, ...) or empty for a family skill.
@@ -100,8 +112,18 @@ struct TierFourDef
 {
     //! \brief The creature type (class name).
     std::string mCreature;
-    //! \brief Display name.
+    //! \brief Display name (English; the player reads getDisplayText()).
     std::string mName;
+    //! \brief The key of the language files that holds the display name, e.g. "skill.t4_kobold.name".
+    std::string getNameKey() const
+    {
+        return DisplayText::makeKey("skill", "T4_" + mCreature);
+    }
+    //! \brief The display name in the chosen language (the English name while the language files have none).
+    std::string getDisplayText() const
+    {
+        return DisplayText::translated(getNameKey(), mName);
+    }
     //! \brief Kind token.
     std::string mKind;
     //! \brief The value as written (a number or "p/s").
@@ -127,7 +149,18 @@ struct TemplateDef
     std::string mGroup;
     //! \brief 1-based index of the template in the group.
     uint32_t mIndex;
+    //! \brief Name of the template (English; the player reads getDisplayText()).
     std::string mName;
+    //! \brief The key of the language files that holds the name, e.g. "skill.template.tank.1.name".
+    std::string getNameKey() const
+    {
+        return DisplayText::makeKey("skill.template", mGroup, std::to_string(mIndex));
+    }
+    //! \brief The name in the chosen language (the English name while the language files have none).
+    std::string getDisplayText() const
+    {
+        return DisplayText::translated(getNameKey(), mName);
+    }
     //! \brief Name of the primary path (15 points).
     std::string mPrimary;
     //! \brief Name of the path that deviating points go to.

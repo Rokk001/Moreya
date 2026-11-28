@@ -70,8 +70,8 @@ def main():
     equipment = {value(block, "Name"): block for block in blocks(read("config/equipments.cfg"), "Equipment")}
     creatures = blocks(read("config/creatures.cfg"), "Creature")
     effects_source = read("source/entities/ItemEffects.cpp")
-    effect_table = effects_source.split("EFFECT_NAMES[]", 1)[1].split("};", 1)[0]
-    effects = set(re.findall(r'\{"([^"]+)",\s*"[^"]+"\}', effect_table))
+    effect_table = effects_source.split("EFFECT_IDS[]", 1)[1].split("};", 1)[0]
+    effects = set(re.findall(r'"([^"]+)"', effect_table))
     group_paths, family_paths = set(), {}
     for skill in blocks(read("config/creatureSkills.cfg"), "Skill"):
         if values(skill, "Group"):

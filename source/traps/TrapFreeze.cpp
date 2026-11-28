@@ -29,10 +29,11 @@
 #include "traps/TrapManager.h"
 #include "utils/ConfigManager.h"
 #include "utils/LogManager.h"
+#include "utils/Translation.h"
 
 
 const std::string TrapFreezeName = "Freeze";
-const std::string TrapFreezeNameDisplay = "Freeze trap";
+const std::string TrapFreezeNameKey = "trap.freeze.name";
 const TrapType TrapFreeze::mTrapType = TrapType::freeze;
 
 namespace
@@ -45,8 +46,9 @@ class TrapFreezeFactory : public TrapFactory
     const std::string& getName() const override
     { return TrapFreezeName; }
 
-    const std::string& getNameReadable() const override
-    { return TrapFreezeNameDisplay; }
+    //! \brief The name shown to the player, in the chosen language.
+    std::string getNameReadable() const override
+    { return Translation::tr(TrapFreezeNameKey); }
 
     int getCostPerTile() const override
     { return ConfigManager::getSingleton().getTrapConfigInt32("FreezeCostPerTile"); }

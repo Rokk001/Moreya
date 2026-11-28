@@ -10,7 +10,7 @@
 <!--#@own 2-->
         <Window type="OD/StaticText" name="LoadingText" >
 <!--#@own 3-->
-            <Property name="Text" value="Loading..." />
+            <Property name="Text" value="@layout.menu_master_server_join.loading_text.text" />
             <Property name="MaxSize" value="{{1,0},{1,0}}" />
             <Property name="FrameEnabled" value="False" />
 <!--#@own 4-->
@@ -39,7 +39,7 @@
 <!--#@own 10-->
                 <Property name="MousePassThroughEnabled" value="True" />
 <!--#@own 11-->
-                <Property name="Text" value="Join Game" />
+                <Property name="Text" value="@layout.menu_master_server_join.level_window_frame.page_title.text" />
 <!--#@own 12-->
             </Window>
             <Window type="OD/StaticText" name="MapDescriptionText" >
@@ -51,13 +51,13 @@
                 <Property name="BackgroundEnabled" value="False" />
             </Window>
 <!--#@own 14-->
-                <Property name="Text" value="Join Game" />
+                <Property name="Text" value="@layout.menu_master_server_join.level_window_frame.client_button.text" />
             </Window>
 <!--#@own 15-->
             </Window>
             <Window type="OD/StaticText" name="NickText" >
 <!--#@own 16-->
-                <Property name="Text" value="Nickname:" />
+                <Property name="Text" value="@layout.menu_master_server_join.level_window_frame.nick_text.text" />
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
                 <Property name="FrameEnabled" value="False" />
                 <Property name="BackgroundEnabled" value="False" />

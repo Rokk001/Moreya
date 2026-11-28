@@ -11,6 +11,7 @@ from pathlib import Path
 repo = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(repo / "scripts"))
 import content_packages  # noqa: E402
+import language_package_texts  # noqa: E402
 
 #: The mixed tables of config/ come with their own rows only with the content (scripts/content_packages.py)
 WITH_CONTENT = content_packages.has_content(repo)
@@ -290,17 +291,30 @@ texts = {"GoldPerTile": "Storage per tile", "SleepRecovery": "Sleep recovery", "
          "PortalCooldown": "Portal cooldown", "RelaxTime": "Relaxation time", "GrowTime": "Growth time", "BrewTime": "Brewing time", "CrackTime": "Cracking effort",
          "MoodLoss": "Prisoner mood loss", "BetrayChance": "Betrayal chance", "MoodGain": "Mood gain over time"}
 assert set(texts) == effect_names, "the plan names a text for every effect"
+# The effect names and the keeper sentences are the entries research.effect.<effect> and research.keeper.<skill>.description
+# of the English language package; the code asks for them by key
+HAS_TEXTS = content_packages.has_content(repo)
+english = language_package_texts.english(repo) if HAS_TEXTS else {}
+if not HAS_TEXTS:
+    content_packages.unchecked("check_world_balance_effects", ["the English effect names and keeper sentences"])
+assert '"research.effect." + lowerText(effect)' in manager, "the effect text is looked up by its key"
 for effect, text in texts.items():
-    text_key = ('"' + effect + '"') if effect in {"GrowTime", "BrewTime", "CrackTime"} else ("ResearchEffect::" + effect)
-    assert 'texts[%s] = "%s";' % (text_key, text) in manager, effect
-for sentence in ("More creatures in your dungeon.", "Your dungeon heart has more health.",
-                 "Your dungeon heart heals faster.", "Your dungeon heart gives more mana."):
-    assert '"%s"' % sentence in manager, sentence
+    if HAS_TEXTS:
+        assert english.get("research.effect." + effect.lower()) == text, effect
+for key, sentence in (("dominion", "More creatures in your dungeon."), ("heartfortitude", "Your dungeon heart has more health."),
+                      ("heartmending", "Your dungeon heart heals faster."), ("manaflow", "Your dungeon heart gives more mana.")):
+    assert '"research.keeper.%s.description"' % key in manager, key
+    if HAS_TEXTS:
+        assert english.get("research.keeper.%s.description" % key) == sentence, key
 description = manager[manager.index("std::string SkillManager::getResearchDescription("):manager.index("void SkillManager::buildRandomPendingSkillsForSeat(")]
-assert 'getResearchEffectText(line.first) + ": " + value' in description, "every line prints <effect text>: <value at that level>"
+assert '"research.effect.line", {{"name", getResearchEffectText(line.first)}, {"value", value}}' in description, "every line prints <effect text>: <value at that level>"
+if HAS_TEXTS:
+    assert english.get("research.effect.line") == "{name}: {value}"
 # The Curse spell shares the effect name MoodLoss with the prison and names its own line
 assert '(type == SkillType::spellCurse) && (line.first == ResearchEffect::MoodLoss)' in description
-assert '"Mood loss over time: " + value' in description
+assert '"research.effect.curse_moodloss"' in description
+if HAS_TEXTS:
+    assert english.get("research.effect.curse_moodloss") == "Mood loss over time"
 assert "getResearchValue(type, level," in description, "the tooltip uses the same call as the game"
 # every effect line has a base value for the tooltip
 bases = manager[manager.index("static const ResearchBase RESEARCH_BASES[]"):manager.index("//! \\brief Reads the base value")]

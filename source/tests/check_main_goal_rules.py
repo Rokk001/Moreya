@@ -3,6 +3,9 @@
 The C++ parser/state/save cases are in test_LevelScript.cpp; this check does not compile them.
 """
 from pathlib import Path
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from language_texts import english  # noqa: E402
 ROOT = Path(__file__).resolve().parents[2]
 
 
@@ -39,7 +42,10 @@ assert 'script.areMainObjectivesReached(seat->getId())' in turn
 assert '!player->getHasLost()' in turn
 for name in ('source/gamemap/GameMap.cpp', 'source/modes/MenuModeCampaign.cpp'):
     text = read(name)
-    assert '"Main goals' in text and 'Optional goals' in text
+    assert '"goal.main"' in text and '"goal.optional"' in text
+    if name.endswith('MenuModeCampaign.cpp'):
+        assert english('goal.main') == 'Main goals'
+        assert english('goal.optional') == 'Optional goals'
     assert 'LevelScriptObjectiveGroup::optional' in text
     assert 'GoalStatus/Open' in text
 unit = read('source/tests/test_LevelScript.cpp')

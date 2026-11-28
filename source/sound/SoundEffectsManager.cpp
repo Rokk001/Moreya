@@ -24,6 +24,8 @@
 #include "utils/LogManager.h"
 #include "rooms/RoomPackages.h"
 #include "utils/ContentPackages.h"
+#include "utils/Translation.h"
+#include "sound/VoiceLanguage.h"
 #include "network/ODPacket.h"
 
 #include <OgreQuaternion.h>
@@ -119,7 +121,8 @@ void GameSound::play(float x, float y, float z)
 template<> SoundEffectsManager* Ogre::Singleton<SoundEffectsManager>::msSingleton = nullptr;
 
 //! \brief Loads the normal sound families and the named infirmary recordings, from the game data and from the sounds
-//! folder of every found room package and content package (the same layout as the game data).
+//! folder of every found room package and content package (the same layout as the game data), and the voice lines
+//! of every language from the game data and from the language packages.
 SoundEffectsManager::SoundEffectsManager() :
     mNextLoopHandle(1)
 {
@@ -170,10 +173,33 @@ SoundEffectsManager::SoundEffectsManager() :
             mSpatialSounds[family].push_back(sound);
     }
 
-    // We read the relative sound directory
+    // We read the relative sound directory. The recordings of a language lie in the language folder of a voice
+    // ("Relative/<voice>/<language>/...", key "<voice>/<language>/<family>"); the recordings below the voice folder
+    // are English. The language packages bring their recordings without a language folder.
+    std::map<std::string, std::vector<std::string>> relativeFiles;
     for(const std::string& keeper : ConfigManager::getSingleton().getKeeperVoices())
     {
-        readSounds(mRelativeSounds, soundFolderPath + "Relative/" + keeper, keeper, false);
+        if(!VoiceLanguage::collectFiles(soundFolderPath + "Relative/" + keeper, keeper, relativeFiles))
+            OD_LOG_INF("Could not find sounds in directory=" + soundFolderPath + "Relative/" + keeper);
+    }
+    for(const Translation::LanguageInfo& language : Translation::getLanguages())
+        VoiceLanguage::collectPackageFiles(language.mDirectory, language.mCode, relativeFiles);
+    for(std::map<std::string, std::vector<std::string>>::const_iterator files = relativeFiles.begin();
+        files != relativeFiles.end(); ++files)
+    {
+        std::vector<GameSound*>& sounds = mRelativeSounds[files->first];
+        for(const std::string& soundFilename : files->second)
+        {
+            GameSound* gm = getGameSound(soundFilename, false);
+            if(gm == nullptr)
+            {
+                OD_LOG_ERR("Cannot load sound=" + soundFilename);
+                continue;
+            }
+
+            OD_LOG_INF("Sound loaded family=" + files->first + ", filename=" + soundFilename);
+            sounds.push_back(gm);
+        }
     }
 }
 
@@ -337,22 +363,28 @@ void SoundEffectsManager::stopSpatialLoop(uint32_t handle)
     mSpatialLoops.erase(it);
 }
 
+//! \brief Plays a voice line in the chosen language: the recording of the chosen voice in the chosen language, else
+//! its English recording, else the same for the default voice. The language is read at every call, so a language
+//! change applies to the next line.
 void SoundEffectsManager::playRelativeSound(const std::string& family)
 {
     // We search for the selected sound in the currently selected voice group. If we cannot
     // find it, we fall down to the default group. That allows to create new voice groups that
     // do not have to have sound for every event
     std::string keeperVoice = ConfigManager::getSingleton().getGameValue(Config::KEEPERVOICE);
-    std::map<std::string, std::vector<GameSound*>>::iterator it = mRelativeSounds.find(keeperVoice + "/" + family);
-    if(it == mRelativeSounds.end())
-    {
-        it = mRelativeSounds.find(ConfigManager::DEFAULT_KEEPER_VOICE + "/" + family);
-        if(it == mRelativeSounds.end())
+    const std::vector<std::string> keys = VoiceLanguage::getLookupKeys(keeperVoice, ConfigManager::DEFAULT_KEEPER_VOICE,
+        Translation::getLanguage(), family);
+    std::function<bool(const std::string&)> hasKey = [this](const std::string& key) -> bool
         {
-            OD_LOG_ERR("Couldn't find sound family=" + family);
-            return;
-        }
+            return mRelativeSounds.find(key) != mRelativeSounds.end();
+        };
+    const std::string key = VoiceLanguage::chooseKey(keys, hasKey);
+    if(key.empty())
+    {
+        OD_LOG_ERR("Couldn't find sound family=" + family);
+        return;
     }
+    std::map<std::string, std::vector<GameSound*>>::iterator it = mRelativeSounds.find(key);
 
     std::vector<GameSound*>& sounds = it->second;
     if(sounds.empty())

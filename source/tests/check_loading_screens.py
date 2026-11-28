@@ -78,7 +78,7 @@ def main():
     for token in ('addRenderQueueListener(&overlaySystem)', 'createLoadingText("StartupLoadingFont", "StartupLoading")', 'createLoadingRing(*startupScene, "StartupLoading")', "ringPass->setFragmentProgram("):
         assert token in constructor, f"missing startup loading text or ring: {token}"
     text = source.split("void createLoadingText(", 1)[1].split("void destroyLoadingIndicator(", 1)[0]
-    for token in ('setCaption("Loading...")', "loadingOverlay->show()", "GMM_RELATIVE", "setCharHeight(LOADING_TEXT_HEIGHT)"):
+    for token in ('setCaption(Translation::tr("ui.loading"))', "loadingOverlay->show()", "GMM_RELATIVE", "setCharHeight(LOADING_TEXT_HEIGHT)"):
         assert token in text, f"missing overlay text setup: {token}"
     height = float(re.search(r"LOADING_TEXT_HEIGHT = ([0-9.]+)f", source).group(1))
     assert height >= 0.06, "the loading text must be at least 6 percent of the window height (65 px at 1080p, 130 px at 4K)"
@@ -159,7 +159,7 @@ def main():
     assert reset.index("scene->activate(") < reset.index("LoadingScreen::presentStartup(") < reset.index("++mIndexScene;"), "refresh between synchronous menu commands"
     update = source.split("void LoadingScreen::update()", 1)[1]
     fallback = update.split("if(loadingText == nullptr)", 1)[1].split("previousRootAlpha", 1)[0]
-    assert 'createWindow("OD/StaticText")' in fallback and 'setText("Loading...")' in fallback, "missing fallback loading text"
+    assert 'createWindow("OD/StaticText")' in fallback and 'setText(getLoadingStatusText())' in fallback, "missing fallback loading text"
     assert "root->addChild(temporaryLoadingText);" in fallback and "loadingText = temporaryLoadingText;" in fallback, "fallback text must be attached and shown"
     restore = source.split("void restoreLoadingInterface()", 1)[1].split("bool loadingRootDestroyed", 1)[0]
     assert "destroyWindow(temporaryLoadingText);" in restore, "temporary loading text must be removed"

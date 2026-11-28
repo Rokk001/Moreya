@@ -50,6 +50,7 @@
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 #include "utils/Random.h"
+#include "utils/Translation.h"
 
 #include <algorithm>
 #include <cmath>
@@ -58,7 +59,7 @@
 #include <set>
 
 const std::string RoomDungeonTempleName = "DungeonTemple";
-const std::string RoomDungeonTempleNameDisplay = "Dungeon temple room";
+const std::string RoomDungeonTempleNameKey = "room.dungeontemple.name";
 const RoomType RoomDungeonTemple::mRoomType = RoomType::dungeonTemple;
 const TileVisual RoomDungeonTemple::mRoomVisual = TileVisual::dungeonTempleRoom;
 
@@ -234,8 +235,8 @@ void giveDestroyedHeartReward(GameMap* gameMap, Seat* loserSeat, Seat* winnerSea
     {
         ServerNotification* serverNotification = new ServerNotification(
             ServerNotificationType::chatServer, winner);
-        serverNotification->mPacket << "The enemy dungeon heart is destroyed, you gain " + Helper::toString(mana)
-            + " mana" << EventShortNoticeType::majorGameEvent;
+        serverNotification->mPacket << Translation::makeReference("msg.heart.enemydestroyed",
+            {{"mana", Helper::toString(mana)}}) << EventShortNoticeType::majorGameEvent;
         ODServer::getSingleton().queueServerNotification(serverNotification);
     }
 }
@@ -288,8 +289,9 @@ class RoomDungeonTempleFactory : public RoomFactory
     const std::string& getName() const override
     { return RoomDungeonTempleName; }
 
-    const std::string& getNameReadable() const override
-    { return RoomDungeonTempleNameDisplay; }
+    //! \brief The name shown to the player, in the chosen language.
+    std::string getNameReadable() const override
+    { return Translation::tr(RoomDungeonTempleNameKey); }
 
     int getCostPerTile() const override
     { return 0; }
@@ -514,7 +516,7 @@ double RoomDungeonTemple::takeHeartDamage(GameEntity* attacker, double absoluteD
         {
             ServerNotification* serverNotification = new ServerNotification(
                 ServerNotificationType::chatServer, owner);
-            serverNotification->mPacket << "Your dungeon heart is in critical condition!"
+            serverNotification->mPacket << Translation::makeReference("msg.heart.critical")
                 << EventShortNoticeType::majorGameEvent;
             ODServer::getSingleton().queueServerNotification(serverNotification);
         }
@@ -1139,7 +1141,8 @@ void RoomDungeonTemple::notifyCarryingStateChanged(Creature* carrier, GameEntity
                 {
                     ServerNotification* serverNotification = new ServerNotification(
                         ServerNotificationType::chatServer, owner);
-                    std::string msg = "You received the special: " + GiftBoxBonus::getDisplayName(bonus->getGiftBoxType()) + ".";
+                    const std::string msg = Translation::makeReference("msg.special.received",
+                        {{"special", GiftBoxBonus::getDisplayNameReference(bonus->getGiftBoxType())}});
                     serverNotification->mPacket << msg << EventShortNoticeType::majorGameEvent;
                     ODServer::getSingleton().queueServerNotification(serverNotification);
                 }

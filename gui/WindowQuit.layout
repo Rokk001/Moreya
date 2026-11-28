@@ -2,22 +2,22 @@
 
 <GUILayout version="4" >
 <!--#@own 1-->
-        <Property name="Text" value="Do you really want to leave the underworld?" />
+        <Property name="Text" value="@layout.window_quit.confirm_exit.text" />
 <!--#@own 2-->
         <Property name="AlwaysOnTop" value="True" />
 <!--#@own 3-->
-            <Property name="Text" value="Yes" />
-            <Property name="TooltipText" value="Confirm exit" />
+            <Property name="Text" value="@layout.window_quit.confirm_exit.yes_option.text" />
+            <Property name="TooltipText" value="@layout.window_quit.confirm_exit.yes_option.tooltip" />
             <Property name="InheritsAlpha" value="False" />
         </Window>
 <!--#@own 4-->
-            <Property name="Text" value="No" />
-            <Property name="TooltipText" value="Cancel exit" />
+            <Property name="Text" value="@layout.window_quit.confirm_exit.no_option.text" />
+            <Property name="TooltipText" value="@layout.window_quit.confirm_exit.no_option.tooltip" />
             <Property name="InheritsAlpha" value="False" />
         </Window>
         <Window type="OD/Checkbox" name="SaveReplayCheckbox" >
 <!--#@own 5-->
-            <Property name="Text" value="Save the game replay?" />
+            <Property name="Text" value="@layout.window_quit.confirm_exit.save_replay_checkbox.text" />
         </Window>
     </Window>
 </GUILayout>

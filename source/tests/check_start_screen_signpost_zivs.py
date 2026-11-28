@@ -29,6 +29,9 @@ import os
 import math
 import re
 import sys
+from pathlib import Path as _LangPath
+sys.path.insert(0, str(_LangPath(__file__).resolve().parent))
+from language_texts import english  # noqa: E402
 import time
 
 import numpy as np
@@ -37,8 +40,10 @@ from PIL import Image, ImageFilter
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import check_menu_sky_below_horizon as scene  # noqa: E402  (numpy mesh reader of the menu scene check)
+from lang_texts import english_texts  # noqa: E402
 sys.path.insert(0, os.path.join(ROOT, "scripts"))
 import content_packages  # noqa: E402
+import language_package_texts  # noqa: E402
 
 CHECK = "check_start_screen_signpost_zivs"
 #: The game data of the scene part that lies in the public tree or in a content package
@@ -109,7 +114,7 @@ def read(relative):
     interface file comes with its own rows of the content (scripts/content_packages.py)."""
     with open(data(relative), encoding="utf-8", errors="replace") as handle:
         text = handle.read()
-    return content_packages.read_text(ROOT, relative) if "#@own " in text else text
+    return content_packages.read_layout_text(ROOT, relative) if ("#@own " in text or '"@layout.' in text) else text
 
 
 def data(relative):
@@ -456,6 +461,22 @@ SOURCE_IDENTIFIERS = {
     ("source/social/SocialGenerator.cpp", '"worker"'): 2,
     ("source/render/WorkerExtras.cpp", '"Creatures/Worker/"'): 1,
     ("source/utils/RunLevelTest.cpp", '" workers="'): 1,
+    ("source/render/WorkersWindow.cpp", '"ui.workers.carry.corpses"'): 1,
+    ("source/render/WorkersWindow.cpp", '"ui.workers.carry.enemyknockedout"'): 1,
+    ("source/render/WorkersWindow.cpp", '"ui.workers.carry.giftboxes"'): 1,
+    ("source/render/WorkersWindow.cpp", '"ui.workers.carry.gold"'): 1,
+    ("source/render/WorkersWindow.cpp", '"ui.workers.carry.items"'): 1,
+    ("source/render/WorkersWindow.cpp", '"ui.workers.carry.ownknockedout"'): 1,
+    ("source/render/WorkersWindow.cpp", '"ui.workers.carry.trapsdoors"'): 1,
+    ("source/render/WorkersWindow.cpp", '"ui.workers.job.carry"'): 1,
+    ("source/render/WorkersWindow.cpp", '"ui.workers.job.claimground"'): 1,
+    ("source/render/WorkersWindow.cpp", '"ui.workers.job.claimwall"'): 1,
+    ("source/render/WorkersWindow.cpp", '"ui.workers.job.clean"'): 1,
+    ("source/render/WorkersWindow.cpp", '"ui.workers.job.dig"'): 1,
+    ("source/render/WorkersWindow.cpp", '"ui.workers.job.reload"'): 1,
+    ("source/render/WorkersWindow.cpp", '"ui.workers.working"'): 1,
+    # The key of the Ziv group tooltip text (the shown text is checked below through the language file)
+    ("source/modes/GameMode.cpp", '"mode.game.group.workers"'): 1,
 }
 #: Player-facing config text that keeps the word by the owner's decision: the display name "Dwarf Worker" of the hero
 #: class DwarfWorker stays (it names a hero class, not the keeper's Ziv). Only this exact line is excepted, and it must
@@ -551,16 +572,35 @@ def check_ziv_names(failures):
         "gui/ModeGame.layout": ('value="Zivs (J)"', 'value="Zivs: fixed Zivs per job, free Zivs, priority and carry order (J)"'),
         "gui/WindowWorkers.layout": ('<Property name="Text" value="Zivs" />', '<Property name="Text" value="Free Zivs" />'),
         "gui/WindowSkillTree.layout": ('value="Spell: Summon Ziv"',),
-        "source/game/SkillType.cpp": ('"The \'Summon Ziv\' Spell"',),
-        "source/spells/SpellSummonWorker.cpp": ('SpellSummonWorkerNameDisplay = "Summon Ziv";', '"Summon Zivs on your claimed ground."'),
-        "source/giftboxes/GiftBoxBonus.cpp": ('"Stun Zivs"', '"Receive Zivs"'),
-        "source/render/SocialWindow.cpp": ('{"All", "Zivs", "Fighters", "Unhappy"}',),
-        "source/render/CreaturePanel.cpp": ('count->setTooltipText("Zivs");',),
-        "source/modes/GameMode.cpp": ('std::make_pair(Gui::BUTTON_CREATURE_WORKER, "Zivs")',),
-        "source/game/Player.cpp": ('"You redeemed your Ziv into "', '"You have no Ziv to fulfill your dark wishes."'),
-        "source/gamemap/GameMap.cpp": ('"Your Zivs vanished because the mana ran out"',),
-        "source/spells/SpellPlague.cpp": ('"Zivs and champions never get sick."',),
+        "source/render/SocialWindow.cpp": ('"ui.dungeonbook.filter.zivs"',),
+        "source/render/CreaturePanel.cpp": ('"ui.panel.zivs"',),
+        "source/modes/GameMode.cpp": ('std::make_pair(Gui::BUTTON_CREATURE_WORKER, workerKey)', '"mode.game.group.workers"'),
+        "source/game/Player.cpp": ('"msg.redeem.ziv"', '"msg.ziv.none"'),
+        "source/gamemap/GameMap.cpp": ('"msg.ziv.vanished"',),
     }
+    # The names and hints of the code are entries of the English language package, found by their keys
+    shown_in_language = {
+        "research.spellsummonworker.name": "The 'Summon Ziv' Spell",
+        "spell.summonworker.name": "Summon Ziv",
+        "spell.hint.summon_on_claimed_ground": "Summon Zivs on your claimed ground.",
+        "gift.stunworkers.name": "Stun Zivs",
+        "gift.receiveworkers.name": "Receive Zivs",
+        "spell.hint.no_plague_on_ziv": "Zivs and champions never get sick.",
+    }
+    if content_packages.has_content(ROOT):
+        package_texts = language_package_texts.english(ROOT)
+        for key, expected in shown_in_language.items():
+            if package_texts.get(key) != expected:
+                failures.append("the English entry %s is not %r" % (key, expected))
+    else:
+        content_packages.unchecked(CHECK, sorted(shown_in_language))
+    # The texts of these language keys say Zivs (the language file lang-en holds the English texts of the code)
+    lang_en = english_texts(ROOT)
+    for key, expected in (("ui.dungeonbook.filter.zivs", "Zivs"), ("ui.panel.zivs", "Zivs")):
+        if lang_en is not None and lang_en.get(key) != expected:
+            failures.append("lang-en says %r for %s, expected %r" % (lang_en.get(key), key, expected))
+    if english('mode.game.group.workers') != 'Zivs':
+        failures.append('the language file does not show Zivs for the worker group tooltip')
     for path, texts in shown.items():
         if missing_data(path) or missing_own_rows(path):
             content_packages.unchecked(CHECK, [path])
@@ -569,6 +609,18 @@ def check_ziv_names(failures):
         for expected in texts:
             if expected not in text:
                 failures.append("%s does not show %s" % (path, expected))
+
+    # The texts of these messages are in the language package lang-en (texts/messages.txt)
+    lang_en = content_packages.packages(ROOT).get("lang-en")
+    if lang_en is None:
+        content_packages.unchecked(CHECK, ["lang-en texts of the Ziv messages"])
+    else:
+        messages = (lang_en / "texts" / "messages.txt").read_text(encoding="utf-8")
+        for expected in ("msg.redeem.ziv=You redeemed your Ziv into {mana} mana",
+                         "msg.ziv.none=You have no Ziv to fulfill your dark wishes.",
+                         "msg.ziv.vanished=Your Zivs vanished because the mana ran out"):
+            if expected not in messages:
+                failures.append("lang-en texts/messages.txt does not show %s" % expected)
 
     # Identifiers of saves, network, config and scripts stay unchanged.
     kept = {

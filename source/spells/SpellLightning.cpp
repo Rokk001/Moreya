@@ -35,11 +35,12 @@
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
+#include "utils/Translation.h"
 
 #include <cmath>
 
 const std::string SpellLightningName = "lightning";
-const std::string SpellLightningNameDisplay = "Lightning";
+const std::string SpellLightningNameKey = "spell.lightning.name";
 const std::string SpellLightningCooldownKey = "LightningCooldown";
 const SpellType SpellLightning::mSpellType = SpellType::lightning;
 
@@ -56,8 +57,9 @@ class SpellLightningFactory : public SpellFactory
     const std::string& getCooldownKey() const override
     { return SpellLightningCooldownKey; }
 
-    const std::string& getNameReadable() const override
-    { return SpellLightningNameDisplay; }
+    //! \brief The name shown to the player, in the chosen language.
+    std::string getNameReadable() const override
+    { return Translation::tr(SpellLightningNameKey); }
 
     virtual void checkSpellCast(GameMap* gameMap, const InputManager& inputManager, InputCommand& inputCommand) const override
     { SpellLightning::checkSpellCast(gameMap, inputManager, inputCommand); }

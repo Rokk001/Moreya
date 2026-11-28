@@ -35,9 +35,10 @@
 #include "game/SkillType.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
+#include "utils/Translation.h"
 
 const std::string SpellCreatureStrengthName = "creatureStrength";
-const std::string SpellCreatureStrengthNameDisplay = "Creature Strength";
+const std::string SpellCreatureStrengthNameKey = "spell.creaturestrength.name";
 const std::string SpellCreatureStrengthCooldownKey = "CreatureStrengthCooldown";
 const SpellType SpellCreatureStrength::mSpellType = SpellType::creatureStrength;
 
@@ -54,8 +55,9 @@ class SpellCreatureStrengthFactory : public SpellFactory
     const std::string& getCooldownKey() const override
     { return SpellCreatureStrengthCooldownKey; }
 
-    const std::string& getNameReadable() const override
-    { return SpellCreatureStrengthNameDisplay; }
+    //! \brief The name shown to the player, in the chosen language.
+    std::string getNameReadable() const override
+    { return Translation::tr(SpellCreatureStrengthNameKey); }
 
     virtual void checkSpellCast(GameMap* gameMap, const InputManager& inputManager, InputCommand& inputCommand) const override
     { SpellCreatureStrength::checkSpellCast(gameMap, inputManager, inputCommand); }
@@ -82,7 +84,7 @@ void SpellCreatureStrength::checkSpellCast(GameMap* gameMap, const InputManager&
     Tile* tileSelected = gameMap->getTile(inputManager.mXPos, inputManager.mYPos);
     if(tileSelected == nullptr)
     {
-        inputCommand.displayText(Ogre::ColourValue::Red, "Point at a tile inside the map.");
+        inputCommand.displayText(Ogre::ColourValue::Red, Translation::tr("spell.hint.point_at_tile"));
         return;
     }
 
@@ -98,20 +100,19 @@ void SpellCreatureStrength::checkSpellCast(GameMap* gameMap, const InputManager&
 
     if(closestCreature == nullptr)
     {
-        inputCommand.displayText(Ogre::ColourValue::Red, "Select a living allied creature.");
+        inputCommand.displayText(Ogre::ColourValue::Red, Translation::tr("spell.hint.select_allied_creature"));
         return;
     }
 
     Tile* targetTile = closestCreature->getPositionTile();
     if(targetTile == nullptr || !targetTile->isClaimedForSeat(player->getSeat()))
     {
-        inputCommand.displayText(Ogre::ColourValue::Red, "The creature must stand on your claimed ground.");
+        inputCommand.displayText(Ogre::ColourValue::Red, Translation::tr("spell.hint.creature_on_claimed_ground"));
         return;
     }
     if(playerMana < pricePerTarget)
     {
-        inputCommand.displayText(Ogre::ColourValue::Red, "Not enough mana. " +
-            formatCastSpell(SpellType::creatureStrength, pricePerTarget));
+        inputCommand.displayText(Ogre::ColourValue::Red, Translation::tr("spell.hint.not_enough_mana", {{"text", formatCastSpell(SpellType::creatureStrength, pricePerTarget)}}));
         return;
     }
 

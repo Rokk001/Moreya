@@ -39,6 +39,9 @@ Exclusions (each one is a documented limit of the game, not a layout fault, and 
 * KNOWN_LIMITS: the developer widget gallery, which is not an in-game window; its
   findings are counted and printed, not hidden.
 
+Captions written as "@<key>" (localization plan R6) are read from the language packages and measured once per language
+(English and German, LANGUAGES): a German text that does not fit its window is a fault like an English one (plan R3.2).
+
 Layouts, imagesets, fonts and font files that moved into the content packages are found there
 (scripts/content_packages.py). Without the content only the public layouts are checked: a public layout that imports a
 moved layout, or that needs a moved font or imageset, is named as not checked.
@@ -56,6 +59,11 @@ sys.path.insert(0, str(repo / 'scripts'))
 import content_packages  # noqa: E402
 
 WITH_CONTENT = content_packages.has_content(repo)
+
+#: The languages whose layout texts are measured (the language packages en and de, plan D1)
+LANGUAGES = ('en', 'de')
+#: The language that the caption of a window is read in while a language is measured
+current_language = [LANGUAGES[0]]
 
 
 def gui_file(name):
@@ -109,6 +117,33 @@ DENSITY = {'OpenDungeonsSkin/': float(re.search(r'SKIN_IMAGE_PIXEL_DENSITY = ([0
            'OpenDungeonsIcons/': float(re.search(r'ICON_IMAGE_PIXEL_DENSITY = ([0-9.]+)f', gui_cpp)[1]),
            'OpenDungeonsNavigation/': float(re.search(r'ICON_IMAGE_PIXEL_DENSITY = ([0-9.]+)f', gui_cpp)[1]),
            'ODMenuTemplate/': float(re.search(r'MENU_SHEET_IMAGE_PIXEL_DENSITY = ([0-9.]+)f', gui_cpp)[1])}
+
+
+def read_language_texts(code):
+    """The texts of a language package as {key: text}, from its texts/*.txt files ("<key>=<text>" lines)."""
+    texts = {}
+    for root in content_packages.package_roots(repo):
+        definition = (Path(root) / 'Package.cfg').read_text(encoding='utf-8', errors='replace')
+        if ('Language=' + code) not in definition.replace('\r', '').split('\n'):
+            continue
+        for path in sorted((Path(root) / 'texts').glob('*.txt')):
+            for line in path.read_text(encoding='utf-8-sig').replace('\r', '').split('\n'):
+                if '=' in line and not line.strip().startswith('#'):
+                    key, value = line.split('=', 1)
+                    texts[key.strip()] = value
+    return texts
+
+
+language_texts = {code: read_language_texts(code) for code in LANGUAGES}
+
+
+def caption_of(node):
+    """The caption of a window in the language that is measured: a text "@<key>" is read from the language package,
+    a key that has no text is not measured (check_localization.py reports it); any other text is the caption."""
+    value = node.props.get('Text')
+    if value and value.startswith('@'):
+        return language_texts[current_language[0]].get(value[1:])
+    return value
 
 
 def udims(value):
@@ -445,7 +480,7 @@ captions = {}
 
 
 def check_text(node, rect, screen, user, s, problems):
-    caption = node.props.get('Text')
+    caption = caption_of(node)
     if not caption or node.type not in TEXT_TYPES:
         return
     caption = strip_markup(caption.replace(BACKSLASH_N, NEWLINE))
@@ -496,7 +531,7 @@ def default_vertical(node):
 def check_title(node, rect, screen, user, problems):
     if node.type not in FRAME_TYPES:
         return
-    caption = node.props.get('Text')
+    caption = caption_of(node)
     if not caption or not strip_markup(caption).strip():
         return
     font = node.props.get('TitlebarFont', FRAME_TITLE_FONT)
@@ -638,15 +673,17 @@ if not WITH_CONTENT:
 
 all_problems = {}
 stats = {'windows': 0}
-for screen in SCREENS:
-    for user in USER_SCALES:
-        for sheet in sheets:
-            problems = []
-            walk(sheet, (0.0, 0.0, float(screen[0]), float(screen[1])), (0.0, 0.0, float(screen[0]), float(screen[1])),
-                 screen, user, 1.0, problems, stats)
-            for node, kind, got, limit in problems:
-                key = (node.layout, node.path, kind)
-                all_problems.setdefault(key, []).append((screen, user, got, limit))
+for language in LANGUAGES:
+    current_language[0] = language
+    for screen in SCREENS:
+        for user in USER_SCALES:
+            for sheet in sheets:
+                problems = []
+                walk(sheet, (0.0, 0.0, float(screen[0]), float(screen[1])), (0.0, 0.0, float(screen[0]), float(screen[1])),
+                     screen, user, 1.0, problems, stats)
+                for node, kind, got, limit in problems:
+                    key = (node.layout, node.path, kind + ' (' + language + ')')
+                    all_problems.setdefault(key, []).append((screen, user, got, limit))
 
 known = {key: cases for key, cases in all_problems.items() if known_limit(key[0], key[1])}
 all_problems = {key: cases for key, cases in all_problems.items() if key not in known}
@@ -666,7 +703,8 @@ for layout, entries in per_layout.items():
 for layout in layouts:
     ratio, path = tightest.get(layout, (0.0, '-'))
     print('  %-34s %4d captions measured, tightest %3.0f%% of its box (%s)' % (
-        layout, captions.get(layout, 0) // (len(SCREENS) * len(USER_SCALES)), ratio * 100, path.split('/')[-1]))
+        layout, captions.get(layout, 0) // (len(SCREENS) * len(USER_SCALES) * len(LANGUAGES)), ratio * 100,
+        path.split('/')[-1]))
 print('%d layouts, %d window evaluations, %d faults' % (len(layouts), stats['windows'], len(all_problems)))
 if all_problems:
     sys.exit(1)

@@ -29,9 +29,10 @@
 #include "utils/ConfigManager.h"
 #include "utils/Random.h"
 #include "utils/LogManager.h"
+#include "utils/Translation.h"
 
 const std::string TrapBoulderName = "Boulder";
-const std::string TrapBoulderNameDisplay = "Boulder trap";
+const std::string TrapBoulderNameKey = "trap.boulder.name";
 const TrapType TrapBoulder::mTrapType = TrapType::boulder;
 
 namespace
@@ -44,8 +45,9 @@ class TrapBoulderFactory : public TrapFactory
     const std::string& getName() const override
     { return TrapBoulderName; }
 
-    const std::string& getNameReadable() const override
-    { return TrapBoulderNameDisplay; }
+    //! \brief The name shown to the player, in the chosen language.
+    std::string getNameReadable() const override
+    { return Translation::tr(TrapBoulderNameKey); }
 
     int getCostPerTile() const override
     { return ConfigManager::getSingleton().getTrapConfigInt32("BoulderCostPerTile"); }

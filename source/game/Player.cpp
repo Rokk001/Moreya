@@ -51,6 +51,7 @@
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 #include "utils/Random.h"
+#include "utils/Translation.h"
 #include "ODApplication.h"
 
 #include <cmath>
@@ -630,7 +631,7 @@ bool Player::redemWorkerInHeart(GameEntity* entity, Tile* tile)
     ServerNotification* serverNotification = new ServerNotification(
         ServerNotificationType::chatServer, this);
     serverNotification->mPacket
-        << "You redeemed your Ziv into " + Helper::toString(refund) + " mana"
+        << Translation::makeReference("msg.redeem.ziv", {{"mana", Helper::toString(refund)}})
         << EventShortNoticeType::majorGameEvent;
     ODServer::getSingleton().queueServerNotification(serverNotification);
 
@@ -744,7 +745,7 @@ void Player::notifyDefeat(bool hasTeamLost)
 
             ServerNotification *serverNotification = new ServerNotification(
                 ServerNotificationType::chatServer, seat->getPlayer());
-            serverNotification->mPacket << "You lost the game" << EventShortNoticeType::majorGameEvent;
+            serverNotification->mPacket << Translation::makeReference("msg.lost.game") << EventShortNoticeType::majorGameEvent;
             ODServer::getSingleton().queueServerNotification(serverNotification);
         }
         mGameMap->fireRelativeSound(seats, SoundRelativeKeeperStatements::Lost);
@@ -766,7 +767,7 @@ void Player::notifyDefeat(bool hasTeamLost)
                 // For the current player, we send the defeat message
                 ServerNotification *serverNotification = new ServerNotification(
                     ServerNotificationType::chatServer, seat->getPlayer());
-                serverNotification->mPacket << "You lost" << EventShortNoticeType::majorGameEvent;
+                serverNotification->mPacket << Translation::makeReference("msg.lost") << EventShortNoticeType::majorGameEvent;
                 ODServer::getSingleton().queueServerNotification(serverNotification);
 
                 mGameMap->fireRelativeSound(seats, SoundRelativeKeeperStatements::Defeat);
@@ -777,7 +778,7 @@ void Player::notifyDefeat(bool hasTeamLost)
 
             ServerNotification *serverNotification = new ServerNotification(
                 ServerNotificationType::chatServer, seat->getPlayer());
-            serverNotification->mPacket << "An ally has lost" << EventShortNoticeType::majorGameEvent;
+            serverNotification->mPacket << Translation::makeReference("msg.lost.ally") << EventShortNoticeType::majorGameEvent;
             ODServer::getSingleton().queueServerNotification(serverNotification);
         }
         mGameMap->fireRelativeSound(seats, SoundRelativeKeeperStatements::AllyDefeated);
@@ -900,7 +901,7 @@ void Player::notifyNoSkillInQueue()
             return;
         }
 
-        std::string chatMsg = "Warning: your library has nothing to research. Choose the next research in the research tree.";
+        const std::string chatMsg = Translation::makeReference("msg.research.nothing");
         ServerNotification *serverNotification = new ServerNotification(
             ServerNotificationType::chatServer, this);
         serverNotification->mPacket << chatMsg << EventShortNoticeType::aboutSkills;
@@ -927,7 +928,7 @@ void Player::notifyNoWorker()
         return;
     }
 
-    std::string chatMsg = "You have no Ziv to fulfill your dark wishes.";
+    const std::string chatMsg = Translation::makeReference("msg.ziv.none");
     ServerNotification *serverNotification = new ServerNotification(
         ServerNotificationType::chatServer, this);
     serverNotification->mPacket << chatMsg << EventShortNoticeType::genericGameInfo;
@@ -952,7 +953,7 @@ void Player::notifyNoTreasuryAvailable()
             return;
         }
 
-        std::string chatMsg = "No treasury available. You should build a bigger one.";
+        const std::string chatMsg = Translation::makeReference("msg.treasury.none");
         ServerNotification *serverNotification = new ServerNotification(
             ServerNotificationType::chatServer, this);
         serverNotification->mPacket << chatMsg << EventShortNoticeType::genericGameInfo;
@@ -978,7 +979,7 @@ void Player::notifyCreatureCannotFindBed(Creature& creature)
             return;
         }
 
-        notifyCreatureEvent(creature, " cannot find room for a bed. Build or enlarge a Dormitory.", EventShortNoticeType::genericGameInfo);
+        notifyCreatureEvent(creature, Translation::makeReference("msg.creature.nobed"), EventShortNoticeType::genericGameInfo);
 
         std::vector<Seat*> seats;
         seats.push_back(getSeat());
@@ -1004,7 +1005,7 @@ void Player::notifyCreatureCannotFindFood(Creature& creature)
             return;
         }
 
-        notifyCreatureEvent(creature, " cannot find food. Build a Hatchery.", EventShortNoticeType::genericGameInfo);
+        notifyCreatureEvent(creature, Translation::makeReference("msg.creature.nofood"), EventShortNoticeType::genericGameInfo);
 
         std::vector<Seat*> seats;
         seats.push_back(getSeat());
@@ -1031,7 +1032,7 @@ void Player::notifyNotEnoughGold()
         return;
     }
 
-    std::string chatMsg = "You do not have enough gold for that.";
+    const std::string chatMsg = Translation::makeReference("msg.gold.notenough");
     ServerNotification *serverNotification = new ServerNotification(
         ServerNotificationType::chatServer, this);
     serverNotification->mPacket << chatMsg << EventShortNoticeType::genericGameInfo;
@@ -1057,7 +1058,7 @@ void Player::notifyCreatureKilled(Creature& creature)
         return;
     }
 
-    notifyCreatureEvent(creature, " has been killed");
+    notifyCreatureEvent(creature, Translation::makeReference("msg.creature.killed"));
 }
 
 //! \brief Sends identity and existing message text without generating a competing server-side profile.
@@ -1090,7 +1091,7 @@ void Player::notifyInfirmaryEvent()
     }
 
     ServerNotification* notification = new ServerNotification(ServerNotificationType::chatServer, this);
-    notification->mPacket << std::string("Your infirmary has no mana to heal.") << EventShortNoticeType::aboutCreatures;
+    notification->mPacket << Translation::makeReference("msg.infirmary.nomana") << EventShortNoticeType::aboutCreatures;
     ODServer::getSingleton().queueServerNotification(notification);
 }
 
@@ -1102,7 +1103,9 @@ void Player::notifyNewCreatureType(const std::string& creatureClassName)
     if(!getIsHuman())
         return;
 
-    std::string chatMsg = "A new kind of creature is attracted to your dungeon: " + creatureClassName;
+    const std::string chatMsg = Translation::makeReference("msg.creature.new",
+        {{"creature", Translation::makeNameReference("creature." + Translation::toKeyPart(creatureClassName) + ".name",
+            creatureClassName)}});
     ServerNotification *serverNotification = new ServerNotification(
         ServerNotificationType::chatServer, this);
     serverNotification->mPacket << chatMsg << EventShortNoticeType::aboutCreatures;
@@ -1133,7 +1136,7 @@ void Player::notifyDirtEvent(DirtEventKind kind, const std::string& roomName, Cr
             return;
         }
 
-        notifyCreatureEvent(*creature, " found no toilet and relieved itself.", EventShortNoticeType::aboutCreatures);
+        notifyCreatureEvent(*creature, Translation::makeReference("msg.creature.relieved"), EventShortNoticeType::aboutCreatures);
         return;
     }
 
@@ -1146,7 +1149,7 @@ void Player::notifyDirtEvent(DirtEventKind kind, const std::string& roomName, Cr
         return;
     }
 
-    std::string chatMsg = "Your " + roomName + " is filthy.";
+    const std::string chatMsg = Translation::makeReference("msg.room.filthy", {{"room", roomName}});
     ServerNotification *serverNotification = new ServerNotification(
         ServerNotificationType::chatServer, this);
     serverNotification->mPacket << chatMsg << EventShortNoticeType::aboutCreatures;
@@ -1176,7 +1179,7 @@ void Player::notifyTavernEvent()
         return;
     }
 
-    std::string chatMsg = "Your creatures are thirsty and you have no tavern.";
+    const std::string chatMsg = Translation::makeReference("msg.tavern.none");
     ServerNotification *serverNotification = new ServerNotification(
         ServerNotificationType::chatServer, this);
     serverNotification->mPacket << chatMsg << EventShortNoticeType::aboutCreatures;

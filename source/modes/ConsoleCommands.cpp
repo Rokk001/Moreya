@@ -23,6 +23,7 @@
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
+#include "utils/Translation.h"
 
 
 #include <CEGUI/widgets/Editbox.h>
@@ -40,8 +41,10 @@
 
  
 
+//! \brief Adds the Python cheat function name to the module m; it runs the console command of the same name with the
+//! arguments turned into text by cmdStrFunc. Named apart from ConsoleInterface::addCommand.
 template<typename M, typename Ret, typename... Args>
-void addCommand(M &&m, const char *name, Ret (*cmdStrFunc)(Args...)) {
+void addPythonCommand(M &&m, const char *name, Ret (*cmdStrFunc)(Args...)) {
 	m.def(
 		name, 
 		[cmdStrFunc, name](Args... args) {
@@ -50,14 +53,15 @@ void addCommand(M &&m, const char *name, Ret (*cmdStrFunc)(Args...)) {
 				GameEditorModeConsole::getSingletonPtr()->mModeManager->getCurrentModeType(),
 				*(GameEditorModeConsole::getSingletonPtr()->mModeManager)); 
 		}, 
-		getDocString().at(name)
+		getDocString(name).c_str()
 	);
 }
 
+//! \brief Adds the Python cheat function name without arguments to the module m.
 template<typename M>
-void addCommand(M &&m, const char *name)
+void addPythonCommand(M &&m, const char *name)
 {
-	addCommand(m, name, +[]() { return ""; });
+	addPythonCommand(m, name, +[]() { return ""; });
         
 }
  
@@ -66,41 +70,41 @@ void addCommand(M &&m, const char *name)
  
 PYBIND11_EMBEDDED_MODULE(cheats, m)
 {
-    addCommand(m, "addcreature",  +[](int seat, std::string creatureName,  std::string meshName, float x, float y, float z, std::string creatureDefinitionString, int level, int exp, std::string hpString, int wakeFullness, int hunger, int goldCarried, std::string weaponLeft, std::string weaponRight, std::string skillsList, int weaponDropDeath  ){ return Helper::toString(seat) + " " + creatureName + " " + meshName + " " +  Helper::toString(x) + " " +  Helper::toString(y) + " " +  Helper::toString(z) + " "  + creatureDefinitionString + " " + Helper::toString(level) + " " +  Helper::toString(exp) + " " + hpString + " " +  Helper::toString(wakeFullness) + " " +  Helper::toString(hunger) + " " +  Helper::toString(goldCarried) + " " + weaponLeft + " " + weaponRight + " " + skillsList + " " +  Helper::toString(weaponDropDeath) ;});    
-    addCommand(m, "addgold", +[](int seat, int gold){ return Helper::toString(seat)+ " " +Helper::toString(gold); });
-    addCommand(m, "addmana", +[](int seat, int mana){ return Helper::toString(seat)+ " " +Helper::toString(mana); });
-    addCommand(m, "catmullspline", +[](std::vector<double> points){ return Helper::toString(points);  });    
-    addCommand(m, "circlearound",  +[](double x, double y, double radious){ return Helper::toString(x) + " " +  Helper::toString(y) + " " + Helper::toString(radious);      });
-    addCommand(m, "creaturevisdebug", +[](std::string subject){ return subject; });
-    addCommand(m, "enableZPrePass");
-    addCommand(m, "farclip",+[](float distance){ return Helper::toString(distance); });
-    addCommand(m, "fps", +[](int frames){ return Helper::toString(frames); });
-    addCommand(m, "getposition");
-    addCommand(m, "getshadowtexturecount"); 
-    addCommand(m, "helpmessage");
-    addCommand(m, "keys"); 
-    addCommand(m, "light", +[](float r, float g, float b){ return Helper::toString(r) + " " + Helper::toString(g) + " " + Helper::toString(b) ;});    
-    addCommand(m, "list", +[](std::string subject){ return subject; });
-    addCommand(m, "listmeshanims", +[](std::string name){ return name;});
-    addCommand(m, "logfloodfill");
-    addCommand(m, "maxtime",  +[](int time){ return Helper::toString(time);});
-    addCommand(m, "nearclip",+[](float distance){ return Helper::toString(distance); });
-    addCommand(m, "printentities");
-    addCommand(m, "printnodes");    
-    addCommand(m, "seatvisdebug",  +[](int seat){ return Helper::toString(seat); });
-    addCommand(m, "setShadowFarClipDistance",   +[](float distance){ return Helper::toString(distance); });
-    addCommand(m, "setShadowNearClipDistance",   +[](float distance){ return Helper::toString(distance); });    
-    addCommand(m, "setcamerafovy",  +[](double fovy){ return Helper::toString(fovy);});
-    addCommand(m, "setcameralightdirectionthreshold",  +[](double threshold){ return Helper::toString(threshold);});    
-    addCommand(m, "setcreaturedest",  +[](std::string name, int x, int y){  return name + " " +  Helper::toString(x)+ " " +Helper::toString(y);     });
-    addCommand(m, "setcreaturelevel",  +[](std::string name, int level){ return name + " " + Helper::toString(level);});
-    addCommand(m, "setloglevel",  +[](int level){ return Helper::toString(level);});
-    addCommand(m, "setoptimaladjustfactor",  +[](float factor){ return Helper::toString(factor);});
-    addCommand(m, "setshadowcamerafovy",  +[](double fovy){ return Helper::toString(fovy);});
-    addCommand(m, "termwidth", +[](int width){ return Helper::toString(width); });
-    addCommand(m, "togglefow");        
-    addCommand(m, "triggercompositor", +[](std::string name){ return name;});
-    addCommand(m, "unlockskills");
+    addPythonCommand(m, "addcreature",  +[](int seat, std::string creatureName,  std::string meshName, float x, float y, float z, std::string creatureDefinitionString, int level, int exp, std::string hpString, int wakeFullness, int hunger, int goldCarried, std::string weaponLeft, std::string weaponRight, std::string skillsList, int weaponDropDeath  ){ return Helper::toString(seat) + " " + creatureName + " " + meshName + " " +  Helper::toString(x) + " " +  Helper::toString(y) + " " +  Helper::toString(z) + " "  + creatureDefinitionString + " " + Helper::toString(level) + " " +  Helper::toString(exp) + " " + hpString + " " +  Helper::toString(wakeFullness) + " " +  Helper::toString(hunger) + " " +  Helper::toString(goldCarried) + " " + weaponLeft + " " + weaponRight + " " + skillsList + " " +  Helper::toString(weaponDropDeath) ;});    
+    addPythonCommand(m, "addgold", +[](int seat, int gold){ return Helper::toString(seat)+ " " +Helper::toString(gold); });
+    addPythonCommand(m, "addmana", +[](int seat, int mana){ return Helper::toString(seat)+ " " +Helper::toString(mana); });
+    addPythonCommand(m, "catmullspline", +[](std::vector<double> points){ return Helper::toString(points);  });    
+    addPythonCommand(m, "circlearound",  +[](double x, double y, double radious){ return Helper::toString(x) + " " +  Helper::toString(y) + " " + Helper::toString(radious);      });
+    addPythonCommand(m, "creaturevisdebug", +[](std::string subject){ return subject; });
+    addPythonCommand(m, "enableZPrePass");
+    addPythonCommand(m, "farclip",+[](float distance){ return Helper::toString(distance); });
+    addPythonCommand(m, "fps", +[](int frames){ return Helper::toString(frames); });
+    addPythonCommand(m, "getposition");
+    addPythonCommand(m, "getshadowtexturecount"); 
+    addPythonCommand(m, "helpmessage");
+    addPythonCommand(m, "keys"); 
+    addPythonCommand(m, "light", +[](float r, float g, float b){ return Helper::toString(r) + " " + Helper::toString(g) + " " + Helper::toString(b) ;});    
+    addPythonCommand(m, "list", +[](std::string subject){ return subject; });
+    addPythonCommand(m, "listmeshanims", +[](std::string name){ return name;});
+    addPythonCommand(m, "logfloodfill");
+    addPythonCommand(m, "maxtime",  +[](int time){ return Helper::toString(time);});
+    addPythonCommand(m, "nearclip",+[](float distance){ return Helper::toString(distance); });
+    addPythonCommand(m, "printentities");
+    addPythonCommand(m, "printnodes");    
+    addPythonCommand(m, "seatvisdebug",  +[](int seat){ return Helper::toString(seat); });
+    addPythonCommand(m, "setShadowFarClipDistance",   +[](float distance){ return Helper::toString(distance); });
+    addPythonCommand(m, "setShadowNearClipDistance",   +[](float distance){ return Helper::toString(distance); });    
+    addPythonCommand(m, "setcamerafovy",  +[](double fovy){ return Helper::toString(fovy);});
+    addPythonCommand(m, "setcameralightdirectionthreshold",  +[](double threshold){ return Helper::toString(threshold);});    
+    addPythonCommand(m, "setcreaturedest",  +[](std::string name, int x, int y){  return name + " " +  Helper::toString(x)+ " " +Helper::toString(y);     });
+    addPythonCommand(m, "setcreaturelevel",  +[](std::string name, int level){ return name + " " + Helper::toString(level);});
+    addPythonCommand(m, "setloglevel",  +[](int level){ return Helper::toString(level);});
+    addPythonCommand(m, "setoptimaladjustfactor",  +[](float factor){ return Helper::toString(factor);});
+    addPythonCommand(m, "setshadowcamerafovy",  +[](double fovy){ return Helper::toString(fovy);});
+    addPythonCommand(m, "termwidth", +[](int width){ return Helper::toString(width); });
+    addPythonCommand(m, "togglefow");        
+    addPythonCommand(m, "triggercompositor", +[](std::string name){ return name;});
+    addPythonCommand(m, "unlockskills");
     
 }
 
@@ -109,39 +113,27 @@ PYBIND11_EMBEDDED_MODULE(cheats, m)
 namespace
 {
 
-const std::string HELPMESSAGE =
-        "The console is a way of interacting with the underlying game engine directly."
-        "Commands given to the the are made up of two parts: a \'command name\' and one or more \'arguments\'."
-        "For information on how to use a particular command, type help followed by the command name."
-        "\n\nThe following commands are available:"
-        "\n\n==General=="
-        "\n\thelp - Displays this help message."
-        "\n\thelp keys - Shows the keyboard controls."
-        "\n\tlist/ls - Prints out lists of creatures, classes, etc..."
-        "\n\tmaxtime - Sets or displays the max time for event messages to be displayed."
-        "\n\ttermwidth - Sets the terminal width."
-        "\n\n==Cheats=="
-        "\n\taddcreature - Adds a creature."
-        "\n\tsetcreaturelevel - Sets the level of a given creature."
-        "\n\taddgold - Gives gold to one player."
-        "\n\taddmana - Gives mana to one player."
-        "\n\ticanseedeadpeople - Toggles on/off fog of war for every connected player."
-        "\n\n==Developer\'s options=="
-        "\n\tfps - Sets the maximum framerate cap."
-        "\n\tambientlight - Sets the ambient light color."
-        "\n\tnearclip - Sets the near clipping distance."
-        "\n\tfarclip - Sets the far clipping distance."
-        "\n\tcreaturevisdebug - Turns on visual debugging for a given creature."    
-        "\n\tseatvisdebug - Turns on visual debugging for a given seat."
-        "\n\tsetcreaturedest - Sets the creature destination/"
-        "\n\tlistmeshanims - Lists all the animations for the given mesh."
-        "\n\treaction - Shows a creature reaction: reaction <event> [creature|all|group], reaction list, reaction reload."
-        "\n\troomambience - Room ambience: roomambience list, reload, mode <full|reduced|off>, <event> [x y]."
-        "\n\ttriggercompositor - Starts the given Ogre Compositor."
-        "\n\tcatmullspline - Triggers the catmullspline camera movement type."
-        "\n\tcirclearound - Triggers the circle camera movement type."
-        "\n\tsetcamerafovy - Sets the camera vertical field of view aspect ratio value."
-        "\n\tlogfloodfill - Displays the FloodFillValues of all the Tiles in the GameMap.";
+//! \brief The help message of the console in the chosen language: the introduction and the commands by group.
+std::string getHelpMessage()
+{
+    std::string message = Translation::tr("console.help.intro");
+    message += "\n\n" + Translation::tr("console.help.available");
+    message += "\n\n" + Translation::tr("console.help.general");
+    const char* const GENERAL[] = {"help", "helpkeys", "list", "maxtime", "termwidth"};
+    const char* const CHEATS[] = {"addcreature", "setcreaturelevel", "addgold", "addmana", "icanseedeadpeople"};
+    const char* const DEVELOPER[] = {"fps", "ambientlight", "nearclip", "farclip", "creaturevisdebug", "seatvisdebug",
+        "setcreaturedest", "listmeshanims", "reaction", "roomambience", "triggercompositor", "catmullspline",
+        "circlearound", "setcamerafovy", "logfloodfill"};
+    for(const char* command : GENERAL)
+        message += "\n\t" + Translation::tr(std::string("console.help.cmd.") + command);
+    message += "\n\n" + Translation::tr("console.help.cheats");
+    for(const char* command : CHEATS)
+        message += "\n\t" + Translation::tr(std::string("console.help.cmd.") + command);
+    message += "\n\n" + Translation::tr("console.help.developer");
+    for(const char* command : DEVELOPER)
+        message += "\n\t" + Translation::tr(std::string("console.help.cmd.") + command);
+    return message;
+}
 
 //! \brief Template function to get/set a variable from the ODFrameListener object
 template<typename ValType, typename Getter, typename Setter>
@@ -153,13 +145,13 @@ Command::Result cSetFrameListenerVar(Getter getter,
 {
     if(args.size() < 2)
     {
-        c.print("Value " + name + " is: " + Helper::toString(getter(fl)));
+        c.print(Translation::tr("console.var.is", {{"name", Translation::tr(name)}, {"value", Helper::toString(getter(fl))}}));
     }
     else
     {
         ValType v = Helper::stringToT<ValType>(args[1]);
         setter(fl, v);
-        c.print("Value " + name + " set to " + Helper::toString(v));
+        c.print(Translation::tr("console.var.set", {{"name", Translation::tr(name)}, {"value", Helper::toString(v)}}));
     }
     return Command::Result::SUCCESS;
 }
@@ -169,13 +161,13 @@ Command::Result cSendCmdToServer(const Command::ArgumentList_t& args, ConsoleInt
     // If we should send a console command, we do it
     if(!ODClient::getSingleton().isConnected())
     {
-        c.print("Trying to send a console command while not connected");
+        c.print(Translation::tr("console.send.notconnected"));
         return Command::Result::FAILED;
     }
 
     if(args.empty())
     {
-        c.print("Trying to send an empty console command");
+        c.print(Translation::tr("console.send.empty"));
         return Command::Result::INVALID_ARGUMENT;
     }
 
@@ -198,7 +190,7 @@ Command::Result cAmbientLight(const Command::ArgumentList_t& args, ConsoleInterf
     {
         // Display the current ambient light values.
         Ogre::ColourValue curLight = mSceneMgr->getAmbientLight();
-        c.print("Current ambient light is:" + Helper::toString(curLight));
+        c.print(Translation::tr("console.ambient.current", {{"value", Helper::toString(curLight)}}));
         return Command::Result::SUCCESS;
     }
     else if(args.size() >= 4)
@@ -207,12 +199,11 @@ Command::Result cAmbientLight(const Command::ArgumentList_t& args, ConsoleInterf
         Ogre::ColourValue v(Helper::toFloat(args[1]), Helper::toFloat(args[2]), Helper::toFloat(args[3]));
 
         mSceneMgr->setAmbientLight(v);
-        c.print("\nAmbient light set to:\n" +
-                Helper::toString(v));
+        c.print(Translation::tr("console.ambient.set", {{"value", Helper::toString(v)}}));
     }
     else
     {
-        c.print("To set a colour value, 3 colour values are needed");
+        c.print(Translation::tr("console.ambient.needvalues"));
         return Command::Result::INVALID_ARGUMENT;
     }
     return Command::Result::SUCCESS;
@@ -223,12 +214,12 @@ Command::Result cShadowFarClipDistance(const Command::ArgumentList_t& args, Cons
     if (args.size() < 2)
     {
         // Display the current shadow far clip distance
-        c.print("Current shadow far clip distance is" + Helper::toString(RenderManager::getSingletonPtr()->mHandLight->getShadowFarClipDistance()));
+        c.print(Translation::tr("console.shadow.farcurrent", {{"value", Helper::toString(RenderManager::getSingletonPtr()->mHandLight->getShadowFarClipDistance())}}));
     }
     else if(args.size() >= 2)
     {
         RenderManager::getSingletonPtr()->mHandLight->setShadowFarClipDistance(Helper::toFloat(args[1]));
-        c.print("Shadow far clip distance is equal to " + Helper::toString(RenderManager::getSingletonPtr()->mHandLight->getShadowFarClipDistance()));
+        c.print(Translation::tr("console.shadow.farset", {{"value", Helper::toString(RenderManager::getSingletonPtr()->mHandLight->getShadowFarClipDistance())}}));
   
     }
         return Command::Result::SUCCESS;
@@ -239,13 +230,13 @@ Command::Result cShadowNearClipDistance(const Command::ArgumentList_t& args, Con
     if (args.size() < 2)
     {
         // Display the current shadow near clip distance
-        c.print("Current shadow near clip distance is" + Helper::toString(RenderManager::getSingletonPtr()->mHandLight->getShadowNearClipDistance()));
+        c.print(Translation::tr("console.shadow.nearcurrent", {{"value", Helper::toString(RenderManager::getSingletonPtr()->mHandLight->getShadowNearClipDistance())}}));
         return Command::Result::SUCCESS;
     }
     else if(args.size() >= 2)
     {
         RenderManager::getSingletonPtr()->mHandLight->setShadowNearClipDistance(Helper::toFloat(args[1]));
-        c.print("Shadow near clip distance is equal to " + Helper::toString(RenderManager::getSingletonPtr()->mHandLight->getShadowNearClipDistance()));
+        c.print(Translation::tr("console.shadow.nearset", {{"value", Helper::toString(RenderManager::getSingletonPtr()->mHandLight->getShadowNearClipDistance())}}));
 
     }
         return Command::Result::SUCCESS;  
@@ -257,7 +248,7 @@ Command::Result cSetOptimalAdjustFactor(const Command::ArgumentList_t& args, Con
     if (args.size() < 2)
     {
         // Display the current shadow near clip distance
-        c.print("Current optimal adjust factor parameter n is " + Helper::toString(dynamic_cast<Ogre::LiSPSMShadowCameraSetup*>(RenderManager::getSingletonPtr()->getSceneManager()->getShadowCameraSetup().get())->getOptimalAdjustFactor() ));
+        c.print(Translation::tr("console.shadow.adjustfactor", {{"value", Helper::toString(dynamic_cast<Ogre::LiSPSMShadowCameraSetup*>(RenderManager::getSingletonPtr()->getSceneManager()->getShadowCameraSetup().get())->getOptimalAdjustFactor() )}}));
         return Command::Result::SUCCESS;
     }
     else if(args.size() >= 2)
@@ -274,7 +265,7 @@ Command::Result cSetUseSimpleOptimalAdjust(const Command::ArgumentList_t& args, 
 {
     if (args.size() < 2)
     {
-        c.print("Current usage of simple optimal adjust is " + Helper::toString(dynamic_cast<Ogre::LiSPSMShadowCameraSetup*>(RenderManager::getSingletonPtr()->getSceneManager()->getShadowCameraSetup().get())->getUseSimpleOptimalAdjust() )) ;
+        c.print(Translation::tr("console.shadow.simpleadjust", {{"value", Helper::toString(dynamic_cast<Ogre::LiSPSMShadowCameraSetup*>(RenderManager::getSingletonPtr()->getSceneManager()->getShadowCameraSetup().get())->getUseSimpleOptimalAdjust() )}})) ;
         return Command::Result::SUCCESS;        
     }
     else
@@ -290,7 +281,7 @@ Command::Result cSetCameraLightDirectionThreshold(const Command::ArgumentList_t&
 
     if (args.size() < 2)
     {
-        c.print("Current camera light direction threshold is " + Helper::toString(dynamic_cast<Ogre::LiSPSMShadowCameraSetup*>(RenderManager::getSingletonPtr()->getSceneManager()->getShadowCameraSetup().get())->getCameraLightDirectionThreshold().valueDegrees())) ;
+        c.print(Translation::tr("console.shadow.lightthreshold", {{"value", Helper::toString(dynamic_cast<Ogre::LiSPSMShadowCameraSetup*>(RenderManager::getSingletonPtr()->getSceneManager()->getShadowCameraSetup().get())->getCameraLightDirectionThreshold().valueDegrees())}})) ;
         return Command::Result::SUCCESS;        
     }
     else
@@ -305,7 +296,7 @@ Command::Result cSetCameraLightDirectionThreshold(const Command::ArgumentList_t&
 Command::Result cGetShadowTextureCount(const Command::ArgumentList_t& args, ConsoleInterface& c, AbstractModeManager&)
 {
 
-        c.print("Current shadow texture's number is  " + Helper::toString(RenderManager::getSingletonPtr()->getSceneManager()->getShadowTextureCount())) ;
+        c.print(Translation::tr("console.shadow.texturecount", {{"value", Helper::toString(RenderManager::getSingletonPtr()->getSceneManager()->getShadowTextureCount())}})) ;
         return Command::Result::SUCCESS;        
 }
 
@@ -322,7 +313,7 @@ Command::Result cSetShadowCameraFovY(const Command::ArgumentList_t& args, Consol
     if (args.size() < 2)
     {
 
-        c.print("Current shadow light camera FOVy is " + Helper::toString(mShadowCam->getFOVy().valueDegrees())) ;
+        c.print(Translation::tr("console.shadow.fovy", {{"value", Helper::toString(mShadowCam->getFOVy().valueDegrees())}})) ;
         return Command::Result::SUCCESS;        
     }
     else
@@ -338,15 +329,14 @@ Command::Result cFPS(const Command::ArgumentList_t& args, ConsoleInterface& c, A
 {
     if(args.size() < 2)
     {
-        c.print("\nCurrent maximum framerate is "
-                + Helper::toString(ODFrameListener::getSingleton().getMaxFPS())
-                + "\n");
+        c.print(Translation::tr("console.fps.current",
+                {{"value", Helper::toString(ODFrameListener::getSingleton().getMaxFPS())}}));
     }
     else if(args.size() >= 2)
     {
         int fps = Helper::toInt(args[1]);
         ODFrameListener::getSingleton().setMaxFPS(fps);
-        c.print("\nMaximum framerate set to: " + Helper::toString(fps));
+        c.print(Translation::tr("console.fps.set", {{"value", Helper::toString(fps)}}));
     }
     return Command::Result::SUCCESS;
 }
@@ -355,7 +345,8 @@ Command::Result cFPS(const Command::ArgumentList_t& args, ConsoleInterface& c, A
 Command::Result cGetPosition(const Command::ArgumentList_t& args, ConsoleInterface& c, AbstractModeManager& am)
 {
     InputManager& inputManager = InputManager::getSingleton();
-    c.print("X: " + Helper::toString(inputManager.mXPos)+ " Y: " + Helper::toString(inputManager.mYPos));
+    c.print(Translation::tr("console.position",
+        {{"x", Helper::toString(inputManager.mXPos)}, {"y", Helper::toString(inputManager.mYPos)}}));
     return Command::Result::SUCCESS;
 }
 
@@ -396,7 +387,7 @@ Command::Result cSrvAddCreature(const Command::ArgumentList_t& args, ConsoleInte
 {
     if (args.size() < 6)
     {
-        c.print("Invalid number of arguments\n");
+        c.print(Translation::tr("console.addcreature.invalidargs"));
         return Command::Result::INVALID_ARGUMENT;
     }
 
@@ -428,7 +419,7 @@ Command::Result cList(const Command::ArgumentList_t& args, ConsoleInterface& c, 
 
     if (args.size() < 2)
     {
-        c.print("lists available:\n\t\tclasses\tcreatures\tplayers\n\t\tnetwork\trooms\tcolors\n\t\tgoals\n");
+        c.print(Translation::tr("console.list.available"));
         return Command::Result::SUCCESS;
     }
 
@@ -436,7 +427,7 @@ Command::Result cList(const Command::ArgumentList_t& args, ConsoleInterface& c, 
 
     if (args[1].compare("creatures") == 0)
     {
-        stringStr << "Class:\tCreature name:\tLocation:\tColor:\tLHand:\tRHand\n\n";
+        stringStr << Translation::tr("console.list.creatures");
         for (Creature* creature : gameMap->getCreatures())
         {
             GameEntity::exportToStream(creature, stringStr);
@@ -445,7 +436,7 @@ Command::Result cList(const Command::ArgumentList_t& args, ConsoleInterface& c, 
     }
     else if (args[1].compare("classes") == 0)
     {
-        stringStr << "Class:\tMesh:\tHP:\tMana:\tSightRadius:\tDigRate:\tMovespeed:\n\n";
+        stringStr << Translation::tr("console.list.classes");
         for (unsigned int i = 0; i < gameMap->numClassDescriptions(); ++i)
         {
             const CreatureDefinition* currentClassDesc = gameMap->getClassDescription(i);
@@ -454,12 +445,12 @@ Command::Result cList(const Command::ArgumentList_t& args, ConsoleInterface& c, 
     }
     else if (args[1].compare("players") == 0)
     {
-        stringStr << "Local player:\tNick:\tSeatId\tTeamId:\n\n"
-                  << "me\t\t" << gameMap->getLocalPlayer()->getNick() << "\t"
+        stringStr << Translation::tr("console.list.localplayer")
+                  << Translation::tr("console.list.me") << "\t\t" << gameMap->getLocalPlayer()->getNick() << "\t"
                   << gameMap->getLocalPlayer()->getSeat()->getId() << "\t"
                   << gameMap->getLocalPlayer()->getSeat()->getTeamId() << "\n\n";
 
-        stringStr << "Player:\tNick:\tSeatId\tTeamId:\n\n";
+        stringStr << Translation::tr("console.list.player");
 
         for (Player* player : gameMap->getPlayers())
         {
@@ -472,20 +463,20 @@ Command::Result cList(const Command::ArgumentList_t& args, ConsoleInterface& c, 
     {
         if (mm.getCurrentModeType() == AbstractModeManager::EDITOR)
         {
-            stringStr << "You are currently in the map editor.";
+            stringStr << Translation::tr("console.list.network.editor");
         }
         else if (ODServer::getSingleton().isConnected())
         {
-            stringStr << "You are currently acting as a server.";
+            stringStr << Translation::tr("console.list.network.server");
         }
         else
         {
-            stringStr << "You are currently connected to a server.";
+            stringStr << Translation::tr("console.list.network.client");
         }
     }
     else if (args[1].compare("rooms") == 0)
     {
-        stringStr << "Name:\tSeat Id:\tNum tiles:\n\n";
+        stringStr << Translation::tr("console.list.rooms");
         for (Room* room : gameMap->getRooms())
         {
             stringStr << room->getName() << "\t" << room->getSeat()->getId()
@@ -494,7 +485,7 @@ Command::Result cList(const Command::ArgumentList_t& args, ConsoleInterface& c, 
     }
     else if (args[1].compare("colors") == 0 || args[1].compare("colours") == 0)
     {
-        stringStr << "Number:\tRed:\tGreen:\tBlue:\n";
+        stringStr << Translation::tr("console.list.colors");
         const std::vector<Seat*> seats = gameMap->getSeats();
         for (Seat* seat : seats)
         {
@@ -507,23 +498,23 @@ Command::Result cList(const Command::ArgumentList_t& args, ConsoleInterface& c, 
     else if (args[1].compare("goals") == 0)
     {
         // Loop over the list of unmet goals for the seat we are sitting in an print them.
-        stringStr << "Unfinished Goals:\nGoal Name:\tDescription\n----------\t-----------\n";
+        stringStr << Translation::tr("console.list.goals.unfinished");
         for (unsigned int i = 0; i < gameMap->getLocalPlayer()->getSeat()->numUncompleteGoals(); ++i)
         {
             Seat* s = gameMap->getLocalPlayer()->getSeat();
             Goal* tempGoal = s->getUncompleteGoal(i);
             stringStr << tempGoal->getName() << ":\t"
-                    << tempGoal->getDescription(*s) << "\n";
+                    << Translation::resolve(tempGoal->getDescription(*s)) << "\n";
         }
 
         // Loop over the list of completed goals for the seat we are sitting in an print them.
-        stringStr << "\n\nCompleted Goals:\nGoal Name:\tDescription\n----------\t-----------\n";
+        stringStr << Translation::tr("console.list.goals.completed");
         for (unsigned int i = 0; i < gameMap->getLocalPlayer()->getSeat()->numCompletedGoals(); ++i)
         {
             Seat* seat = gameMap->getLocalPlayer()->getSeat();
             Goal* tempGoal = seat->getCompletedGoal(i);
             stringStr << tempGoal->getName() << ":\t"
-                    << tempGoal->getSuccessMessage(*seat) << "\n";
+                    << Translation::resolve(tempGoal->getSuccessMessage(*seat)) << "\n";
         }
     }
     // else if (args[1].compare("lights") == 0)
@@ -547,7 +538,7 @@ Command::Result cList(const Command::ArgumentList_t& args, ConsoleInterface& c, 
     
     else
     {
-        stringStr << "ERROR:  Unrecognized list.  Type \"list\" with no arguments to see available lists.";
+        stringStr << Translation::tr("console.list.unknown");
     }
 
     c.print("+\n" + stringStr.str() + "\n");
@@ -596,8 +587,7 @@ Command::Result cCircleAround(const Command::ArgumentList_t& args, ConsoleInterf
 {
     if(args.size() < 4)
     {
-        c.print("\nERROR:  You need to specify an circle center "
-                          "(two coordinates) and circle radius\n");
+        c.print(Translation::tr("console.circlearound.args"));
         return Command::Result::INVALID_ARGUMENT;
     }
 
@@ -617,7 +607,7 @@ Command::Result cHermiteCatmullSpline(const Command::ArgumentList_t& args, Conso
     //TODO: only works on larger maps with coordinates > 10
     if(args.size() < 5)
     {
-        c.print("\nERROR:  You need to specify at least two coordinate's pair.\n");
+        c.print(Translation::tr("console.catmullspline.args"));
         return Command::Result::INVALID_ARGUMENT;
     }
 
@@ -632,7 +622,7 @@ Command::Result cHermiteCatmullSpline(const Command::ArgumentList_t& args, Conso
         int b = Helper::toInt(args[i + 1]);
         //TODO: Why are the points specified as integers?
         cm->addHCSNodes(a, b);
-        c.print("Adding nodes: " + args[i] + ", " + args[i + 1]);
+        c.print(Translation::tr("console.catmullspline.node", {{"a", args[i]}, {"b", args[i + 1]}}));
     }
 
     cm->setCatmullSplineMode(true);
@@ -684,7 +674,7 @@ Command::Result cSetCameraFOVy(const Command::ArgumentList_t& args, ConsoleInter
     Ogre::Camera* cam = ODFrameListener::getSingleton().getCameraManager()->getActiveCamera();
     if(args.size() < 2)
     {
-        c.print("Camera FOVy :" + Helper::toString(cam->getFOVy().valueDegrees()));
+        c.print(Translation::tr("console.camera.fovy", {{"value", Helper::toString(cam->getFOVy().valueDegrees())}}));
     }
     else
     {
@@ -697,7 +687,7 @@ Command::Result cEnableZPrePass(const Command::ArgumentList_t& args, ConsoleInte
 {
     ODFrameListener::getSingleton().mRenderManager->setup();
     ODFrameListener::getSingleton().mRenderManager->m_ZPrePassEnabled = true;    
-    c.print("\nsetting up mRenderManager setup() \n ZPreePass enabled, to see it press CapsLock");
+    c.print(Translation::tr("console.zprepass"));
     return Command::Result::SUCCESS;
 }
 
@@ -705,11 +695,11 @@ Command::Result cListMeshAnims(const Command::ArgumentList_t& args, ConsoleInter
 {
     if(args.size() < 2)
     {
-        c.print("\nERROR : Need to specify name of mesh");
+        c.print(Translation::tr("console.meshanims.needname"));
         return Command::Result::INVALID_ARGUMENT;
     }
     std::string anims = RenderManager::consoleListAnimationsForMesh(args[1]);
-    c.print("\nAnimations for " + args[1] + ": " + anims);
+    c.print(Translation::tr("console.meshanims.result", {{"mesh", args[1]}, {"anims", anims}}));
     return Command::Result::SUCCESS;
 }
 
@@ -720,14 +710,14 @@ Command::Result cCreatureReaction(const Command::ArgumentList_t& args, ConsoleIn
     CreatureReactions* reactions = CreatureReactions::getSingletonPtr();
     if(reactions == nullptr)
     {
-        c.print("\nCreature reactions are not available");
+        c.print(Translation::tr("console.reaction.unavailable"));
         return Command::Result::FAILED;
     }
 
     if((args.size() < 2) || (args[1] == "list"))
     {
-        c.print("\nCreature reactions mode: " + CreatureReactions::modeToString(reactions->getMode())
-            + ", running: " + Helper::toString(reactions->getNbRunning()));
+        c.print(Translation::tr("console.reaction.mode", {{"mode", CreatureReactions::modeToString(reactions->getMode())},
+            {"running", Helper::toString(reactions->getNbRunning())}}));
         const std::map<std::string, ReactionEvent>& events = reactions->getConfig().getEvents();
         for(std::map<std::string, ReactionEvent>::const_iterator it = events.begin(); it != events.end(); ++it)
         {
@@ -735,24 +725,25 @@ Command::Result cCreatureReaction(const Command::ArgumentList_t& args, ConsoleIn
             for(const ReactionVariant& variant : it->second.mVariants)
                 variantNames += " " + variant.mName;
 
-            c.print("\nEvent: " + it->first + " (" + CreatureReactionConfig::priorityToString(it->second.mPriority)
-                + ", " + Helper::toString(it->second.mVariants.size()) + " variants):" + variantNames);
+            c.print(Translation::tr("console.reaction.event", {{"event", it->first},
+                {"priority", CreatureReactionConfig::priorityToString(it->second.mPriority)},
+                {"count", Helper::toString(it->second.mVariants.size())}, {"variants", variantNames}}));
         }
-        c.print("\nUsage: reaction <event> [creature name | all | group] [variant]. Without a name, the creature under the pointer is used.");
+        c.print(Translation::tr("console.reaction.usage"));
         return Command::Result::SUCCESS;
     }
 
     if(args[1] == "reload")
     {
         bool loaded = reactions->reloadConfig();
-        c.print(loaded ? "\nCreature reactions reloaded" : "\nCreature reactions could not be loaded, see the log");
+        c.print(Translation::tr(loaded ? "console.reaction.reloaded" : "console.reaction.reloadfailed"));
         return loaded ? Command::Result::SUCCESS : Command::Result::FAILED;
     }
 
     const std::string& eventName = args[1];
     if(reactions->getConfig().getEvent(eventName) == nullptr)
     {
-        c.print("\nERROR : Unknown reaction event " + eventName + ". Type reaction list.");
+        c.print(Translation::tr("console.reaction.unknownevent", {{"event", eventName}}));
         return Command::Result::INVALID_ARGUMENT;
     }
 
@@ -772,7 +763,7 @@ Command::Result cCreatureReaction(const Command::ArgumentList_t& args, ConsoleIn
         Creature* creature = gameMap->getCreature(args[2]);
         if(creature == nullptr)
         {
-            c.print("\nERROR : Unknown creature " + args[2]);
+            c.print(Translation::tr("console.reaction.unknowncreature", {{"name", args[2]}}));
             return Command::Result::INVALID_ARGUMENT;
         }
         creatures.push_back(creature);
@@ -783,7 +774,7 @@ Command::Result cCreatureReaction(const Command::ArgumentList_t& args, ConsoleIn
     }
     else
     {
-        c.print("\nERROR : No creature under the pointer. Give a creature name, all or group.");
+        c.print(Translation::tr("console.reaction.nocreature"));
         return Command::Result::INVALID_ARGUMENT;
     }
 
@@ -795,7 +786,7 @@ Command::Result cCreatureReaction(const Command::ArgumentList_t& args, ConsoleIn
     if(asGroup)
     {
         reactions->triggerGroup(eventName, creatures, true);
-        c.print("\nGroup reaction " + eventName + " asked for " + Helper::toString(creatures.size()) + " creatures");
+        c.print(Translation::tr("console.reaction.group", {{"event", eventName}, {"count", Helper::toString(creatures.size())}}));
         return Command::Result::SUCCESS;
     }
 
@@ -805,8 +796,8 @@ Command::Result cCreatureReaction(const Command::ArgumentList_t& args, ConsoleIn
         if(reactions->trigger(creature, eventName, true, variantName))
             ++nbStarted;
     }
-    c.print("\nReaction " + eventName + " started on " + Helper::toString(nbStarted) + " of "
-        + Helper::toString(creatures.size()) + " creatures");
+    c.print(Translation::tr("console.reaction.started", {{"event", eventName}, {"started", Helper::toString(nbStarted)},
+        {"count", Helper::toString(creatures.size())}}));
     return Command::Result::SUCCESS;
 }
 
@@ -816,15 +807,15 @@ Command::Result cRoomAmbience(const Command::ArgumentList_t& args, ConsoleInterf
     RoomAmbience* ambience = RoomAmbience::getSingletonPtr();
     if(ambience == nullptr)
     {
-        c.print("\nRoom ambience is not available");
+        c.print(Translation::tr("console.ambience.unavailable"));
         return Command::Result::FAILED;
     }
 
     if((args.size() < 2) || (args[1] == "list"))
     {
-        c.print("\nRoom ambience mode: " + RoomAmbience::modeToString(ambience->getMode())
-            + ", particle systems: " + Helper::toString(ambience->getNbParticleSystems())
-            + ", moved objects: " + Helper::toString(ambience->getNbMovedObjects()));
+        c.print(Translation::tr("console.ambience.mode", {{"mode", RoomAmbience::modeToString(ambience->getMode())},
+            {"particles", Helper::toString(ambience->getNbParticleSystems())},
+            {"objects", Helper::toString(ambience->getNbMovedObjects())}}));
         std::set<std::string> events;
         const std::vector<AmbienceEffect>& effects = ambience->getConfig().getEffects();
         for(const AmbienceEffect& effect : effects)
@@ -832,17 +823,17 @@ Command::Result cRoomAmbience(const Command::ArgumentList_t& args, ConsoleInterf
             if(effect.mTarget == AmbienceTarget::event)
                 events.insert(effect.mEvent);
         }
-        c.print("\nEffects: " + Helper::toString(effects.size()));
+        c.print(Translation::tr("console.ambience.effects", {{"count", Helper::toString(effects.size())}}));
         for(const std::string& eventName : events)
-            c.print("\nEvent: " + eventName);
-        c.print("\nUsage: roomambience <event> [x y]. Without coordinates, the tile under the pointer is used.");
+            c.print(Translation::tr("console.ambience.event", {{"event", eventName}}));
+        c.print(Translation::tr("console.ambience.usage"));
         return Command::Result::SUCCESS;
     }
 
     if(args[1] == "reload")
     {
         bool loaded = ambience->reloadConfig();
-        c.print(loaded ? "\nRoom ambience reloaded" : "\nRoom ambience could not be loaded, see the log");
+        c.print(Translation::tr(loaded ? "console.ambience.reloaded" : "console.ambience.reloadfailed"));
         return loaded ? Command::Result::SUCCESS : Command::Result::FAILED;
     }
 
@@ -850,12 +841,12 @@ Command::Result cRoomAmbience(const Command::ArgumentList_t& args, ConsoleInterf
     {
         if(args.size() < 3)
         {
-            c.print("\nERROR : Give full, reduced or off.");
+            c.print(Translation::tr("console.ambience.needmode"));
             return Command::Result::INVALID_ARGUMENT;
         }
 
         ambience->setMode(RoomAmbience::modeFromString(args[2]));
-        c.print("\nRoom ambience mode: " + RoomAmbience::modeToString(ambience->getMode()));
+        c.print(Translation::tr("console.ambience.modeset", {{"mode", RoomAmbience::modeToString(ambience->getMode())}}));
         return Command::Result::SUCCESS;
     }
 
@@ -871,13 +862,13 @@ Command::Result cRoomAmbience(const Command::ArgumentList_t& args, ConsoleInterf
     Tile* tile = gameMap->getTile(x, y);
     if(tile == nullptr)
     {
-        c.print("\nERROR : No tile at " + Helper::toString(x) + "," + Helper::toString(y));
+        c.print(Translation::tr("console.ambience.notile", {{"x", Helper::toString(x)}, {"y", Helper::toString(y)}}));
         return Command::Result::INVALID_ARGUMENT;
     }
 
     uint32_t nbStarted = ambience->triggerEvent(args[1], tile->getPosition(), true);
-    c.print("\nRoom ambience event " + args[1] + " started " + Helper::toString(nbStarted) + " effects at "
-        + Helper::toString(x) + "," + Helper::toString(y));
+    c.print(Translation::tr("console.ambience.started", {{"event", args[1]}, {"count", Helper::toString(nbStarted)},
+        {"x", Helper::toString(x)}, {"y", Helper::toString(y)}}));
     return Command::Result::SUCCESS;
 }
 
@@ -885,7 +876,7 @@ Command::Result cSetLogLevel(const Command::ArgumentList_t& args, ConsoleInterfa
 {
     if(args.size() < 2)
     {
-        c.print("\nERROR : Need to specify log level or module + log level");
+        c.print(Translation::tr("console.loglevel.need"));
         return Command::Result::INVALID_ARGUMENT;
     }
 
@@ -893,7 +884,7 @@ Command::Result cSetLogLevel(const Command::ArgumentList_t& args, ConsoleInterfa
     {
         uint32_t val = Helper::toUInt32(args[1]);
         LogMessageLevel lml = static_cast<LogMessageLevel>(val);
-        c.print("\nSetting global log level to " + std::string(LogMessageLevelToString(lml)));
+        c.print(Translation::tr("console.loglevel.global", {{"level", std::string(LogMessageLevelToString(lml))}}));
         LogManager::getSingleton().setLevel(lml);
         return Command::Result::SUCCESS;
     }
@@ -901,7 +892,7 @@ Command::Result cSetLogLevel(const Command::ArgumentList_t& args, ConsoleInterfa
     const std::string& module = args[1];
     uint32_t val = Helper::toUInt32(args[2]);
     LogMessageLevel lml = static_cast<LogMessageLevel>(val);
-    c.print("\nSetting log for module '" + module + "' to " + LogMessageLevelToString(lml));
+    c.print(Translation::tr("console.loglevel.module", {{"module", module}, {"level", LogMessageLevelToString(lml)}}));
     LogManager::getSingleton().setModuleLevel(module.c_str(), lml);
     return Command::Result::SUCCESS;
 }
@@ -914,25 +905,7 @@ Command::Result cSrvUnlockSkills(const Command::ArgumentList_t& args, ConsoleInt
 
 Command::Result cKeys(const Command::ArgumentList_t&, ConsoleInterface& c, AbstractModeManager&)
 {
-    c.print("|| Action               || US Keyboard layout ||     Mouse      ||\n\
-             ==================================================================\n\
-             || Pan Left             || Left   -   A       || -              ||\n\
-             || Pan Right            || Right  -   D       || -              ||\n\
-             || Pan Forward          || Up     -   W       || -              ||\n\
-             || Pan Backward         || Down   -   S       || -              ||\n\
-             || Rotate Left          || Q                  || -              ||\n\
-             || Rotate right         || E                  || -              ||\n\
-             || Zoom In              || End                || Wheel Up       ||\n\
-             || Zoom Out             || Home               || Wheel Down     ||\n\
-             || Tilt Up              || Page Up            || -              ||\n\
-             || Tilt Down            || End                || -              ||\n\
-             || Change view mode     || V                  || -              ||\n\
-             || Select Tile/Creature || -                  || Left Click     ||\n\
-             || Drop Creature/Gold   || -                  || Right Click    ||\n\
-             || Toggle Debug Info    || F11                || -              ||\n\
-             || Toggle Console       || F12                || -              ||\n\
-             || Quit Game            || ESC                || -              ||\n\
-             || Take screenshot      || Printscreen        || -              ||\n");
+    c.print(Translation::tr("console.keys"));
     return Command::Result::SUCCESS;
 }
 
@@ -940,7 +913,7 @@ Command::Result cTriggerCompositor(const Command::ArgumentList_t& args, ConsoleI
 {
     if(args.size() < 2)
     {
-        c.print("ERROR: Needs name of compositor");
+        c.print(Translation::tr("console.compositor.need"));
         return Command::Result::INVALID_ARGUMENT;
     }
     RenderManager::getSingleton().triggerCompositor(args[1]);
@@ -996,7 +969,7 @@ namespace ConsoleCommands
                              return cSetFrameListenerVar<float>(std::mem_fn(&ODFrameListener::getActiveCameraFarClipDistance),
                                                                 std::mem_fn(&ODFrameListener::setActiveCameraFarClipDistance),
                                                                 ODFrameListener::getSingleton(),
-                                                                "far clip distance", args, c);
+                                                                "console.var.farclip", args, c);
                          },
                          Command::cStubServer,
                          {AbstractModeManager::ModeType::GAME, AbstractModeManager::ModeType::EDITOR });
@@ -1016,7 +989,7 @@ namespace ConsoleCommands
                          {AbstractModeManager::ModeType::GAME, AbstractModeManager::ModeType::EDITOR});    
         cl.addCommand("helpmessage",
                          [](const Command::ArgumentList_t&, ConsoleInterface& c, AbstractModeManager&) {
-                             c.print(HELPMESSAGE);
+                             c.print(getHelpMessage());
                              return Command::Result::SUCCESS;
                          },
                          Command::cStubServer,
@@ -1055,7 +1028,7 @@ namespace ConsoleCommands
                              return cSetFrameListenerVar<float>(std::mem_fn(&ODFrameListener::getEventMaxTimeDisplay),
                                                                 std::mem_fn(&ODFrameListener::setEventMaxTimeDisplay),
                                                                 ODFrameListener::getSingleton(),
-                                                                "event max time display", args, c);
+                                                                "console.var.maxtime", args, c);
                          },
                          Command::cStubServer,
                          {AbstractModeManager::ModeType::GAME, AbstractModeManager::ModeType::EDITOR });
@@ -1065,7 +1038,7 @@ namespace ConsoleCommands
                              return cSetFrameListenerVar<float>(std::mem_fn(&ODFrameListener::getActiveCameraNearClipDistance),
                                                                 std::mem_fn(&ODFrameListener::setActiveCameraNearClipDistance),
                                                                 ODFrameListener::getSingleton(),
-                                                                "near clip distance", args, c);
+                                                                "console.var.nearclip", args, c);
                          },
                          Command::cStubServer,
                          {AbstractModeManager::ModeType::GAME, AbstractModeManager::ModeType::EDITOR });

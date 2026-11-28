@@ -36,9 +36,10 @@
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 #include "utils/Random.h"
+#include "utils/Translation.h"
 
 const std::string SpellCreatureHealName = "creatureHeal";
-const std::string SpellCreatureHealNameDisplay = "Creature heal";
+const std::string SpellCreatureHealNameKey = "spell.creatureheal.name";
 const std::string SpellCreatureHealCooldownKey = "CreatureHealCooldown";
 const SpellType SpellCreatureHeal::mSpellType = SpellType::creatureHeal;
 
@@ -55,8 +56,9 @@ class SpellCreatureHealFactory : public SpellFactory
     const std::string& getCooldownKey() const override
     { return SpellCreatureHealCooldownKey; }
 
-    const std::string& getNameReadable() const override
-    { return SpellCreatureHealNameDisplay; }
+    //! \brief The name shown to the player, in the chosen language.
+    std::string getNameReadable() const override
+    { return Translation::tr(SpellCreatureHealNameKey); }
 
     virtual void checkSpellCast(GameMap* gameMap, const InputManager& inputManager, InputCommand& inputCommand) const override
     { SpellCreatureHeal::checkSpellCast(gameMap, inputManager, inputCommand); }
@@ -93,14 +95,13 @@ void SpellCreatureHeal::checkSpellCast(GameMap* gameMap, const InputManager& inp
     }
     if(targets.empty())
     {
-        inputCommand.displayText(Ogre::ColourValue::Red, "Select a hurt owned creature or hurt prisoner on your claimed ground.");
+        inputCommand.displayText(Ogre::ColourValue::Red, Translation::tr("spell.hint.select_hurt_creature"));
         return;
     }
 
     if(playerMana < pricePerTarget)
     {
-        inputCommand.displayText(Ogre::ColourValue::Red, "Not enough mana. " +
-            formatCastSpell(SpellType::creatureHeal, pricePerTarget));
+        inputCommand.displayText(Ogre::ColourValue::Red, Translation::tr("spell.hint.not_enough_mana", {{"text", formatCastSpell(SpellType::creatureHeal, pricePerTarget)}}));
         return;
     }
 

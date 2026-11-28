@@ -36,11 +36,12 @@
 #include "utils/LogManager.h"
 #include "utils/Random.h"
 #include "utils/MakeUnique.h"
+#include "utils/Translation.h"
 
 #include <cmath>
 
 const std::string RoomCryptName = "Crypt";
-const std::string RoomCryptNameDisplay = "Crypt room";
+const std::string RoomCryptNameKey = "room.crypt.name";
 const RoomType RoomCrypt::mRoomType = RoomType::crypt;
 const TileVisual RoomCrypt::mRoomVisual= TileVisual::cryptRoom;
 
@@ -59,8 +60,9 @@ class RoomCryptFactory : public RoomFactory
     const std::string& getName() const override
     { return RoomCryptName; }
 
-    const std::string& getNameReadable() const override
-    { return RoomCryptNameDisplay; }
+    //! \brief The name shown to the player, in the chosen language.
+    std::string getNameReadable() const override
+    { return Translation::tr(RoomCryptNameKey); }
 
     int getCostPerTile() const override
     { return ConfigManager::getSingleton().getRoomConfigInt32("CryptCostPerTile"); }

@@ -11,7 +11,7 @@ fixed (ODClient.cpp, ServerNotificationType::pickNick, ServerMode::ModeGameLoade
 Packet layout, as written by ODPacket (SFML sf::Packet):
   - each message is a frame: uint32 payload size, big-endian, then the payload;
   - int32 (also every enum class value): big-endian; string: uint32 length + UTF-8 bytes; bool: one byte 0/1.
-  - hello: int32 type + string "OpenDungeons V <VERSION> / wire-6" (NetworkProtocol::WIRE_SCHEMA_SUFFIX)
+  - hello: int32 type + string "OpenDungeons V <VERSION> / wire-7" (NetworkProtocol::WIRE_SCHEMA_SUFFIX)
     + uint32 count + the room package names (ContentPackageCheck::writeList); the test client names every packaged
     room (ROOM_NAMES of scripts/room_packages.py), so the server never refuses it for a missing room package
   - levelOK: int32 type
@@ -66,7 +66,7 @@ import content_packages  # noqa: E402  (the content folder the game needs)
 
 HERE = Path(__file__).resolve().parent
 SRC = HERE.parent
-WIRE_SUFFIX = " / wire-6"
+WIRE_SUFFIX = " / wire-7"
 PICK_NICK_FLAGS = 7
 
 

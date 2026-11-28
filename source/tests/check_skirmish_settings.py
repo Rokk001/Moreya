@@ -9,6 +9,9 @@ checked and the code is checked.
 from pathlib import Path
 import re
 import sys
+from pathlib import Path as _LangPath
+sys.path.insert(0, str(_LangPath(__file__).resolve().parent))
+from language_texts import english  # noqa: E402
 import xml.etree.ElementTree as ET
 
 root = Path(__file__).resolve().parents[2]
@@ -93,9 +96,9 @@ check("std::max<uint32_t>(gameSpeedPercent, SKIRMISH_SPEED_MIN), SKIRMISH_SPEED_
 # When the game time runs out every seat with a player loses (no winner), through the shared defeat path
 duration = gamemap[gamemap.index("void GameMap::checkGameDuration"):]
 duration = duration[:duration.index("\nvoid GameMap::")]
-check('"Time is up!' in duration, "the time-out message is gone")
+check('"msg.time.level"' in duration, "the time-out message is gone")
 check("getPlayer()->notifyTimeUp()" in duration, "checkGameDuration does not defeat the seats")
-check(duration.index("Time is up!") < duration.index("notifyTimeUp"), "the message must come before the defeat")
+check(duration.index('"msg.time.level"') < duration.index("notifyTimeUp"), "the message must come before the defeat")
 player = (root / "source/game/Player.cpp").read_text(encoding="utf-8")
 time_up = player[player.index("void Player::notifyTimeUp"):]
 time_up = time_up[:time_up.index("\nvoid Player::")]
@@ -109,9 +112,12 @@ check("isHeartKnown()" in (root / "source/modes/GameMode.cpp").read_text(encodin
       "the defeat sequence must handle an unknown heart")
 
 # The destroyed heart reward of the skirmish setting: captions, specials around the heart, rooms and land
-check('"Gain mana", GameMap::SKIRMISH_HEART_REWARD_MANA' in mode
-      and '"Gain mana and specials", GameMap::SKIRMISH_HEART_REWARD_SPECIALS' in mode
-      and '"Gain mana, rooms and land", GameMap::SKIRMISH_HEART_REWARD_ROOMS_AND_LAND' in mode,
+check('Translation::tr("mode.menu.seats.reward_mana"), GameMap::SKIRMISH_HEART_REWARD_MANA' in mode
+      and 'Translation::tr("mode.menu.seats.reward_specials"), GameMap::SKIRMISH_HEART_REWARD_SPECIALS' in mode
+      and 'Translation::tr("mode.menu.seats.reward_rooms"), GameMap::SKIRMISH_HEART_REWARD_ROOMS_AND_LAND' in mode
+      and english('mode.menu.seats.reward_mana') == 'Gain mana'
+      and english('mode.menu.seats.reward_specials') == 'Gain mana and specials'
+      and english('mode.menu.seats.reward_rooms') == 'Gain mana, rooms and land',
       "the heart reward captions changed")
 # The three rewards are named; their values stay 0, 1 and 2 (they travel in the settings packet)
 check("SKIRMISH_HEART_REWARD_MANA = 0;" in header and "SKIRMISH_HEART_REWARD_SPECIALS = 1;" in header

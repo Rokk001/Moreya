@@ -201,7 +201,7 @@ seat_h = read("source/game/Seat.h")
 assert "mAutoWorkerTimer(0.0)" in seat_cpp, "the timer starts at zero"
 assert "double mAutoWorkerTimer;" in seat_h
 
-assert "You have no Ziv to fulfill your dark wishes." in player, "the no worker notice stays"
+assert '"msg.ziv.none"' in player, "the no worker notice stays"
 spell = read("source/spells/SpellSummonWorker.cpp")
 assert "getWorkerClassToSpawn()" in spell and "newCreature->addToGameMap();" in spell, \
     "summoning a worker by spell still works"

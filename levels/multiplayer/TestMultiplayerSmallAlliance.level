@@ -1,8 +1,8 @@
 OpenDungeons_Version:0.7.1  # The version of OpenDungeons which created this file (for compatibility reasons).
 
 [Info]
-Name	\[Test\] Small (2 vs 2)
-Description	A small test map for the multiplayer mode in 2v2, left against right side...
+Name	@level.testmultiplayersmallalliance.name
+Description	@level.testmultiplayersmallalliance.description
 Music	Searching_yd.ogg
 FightMusic	TheDarkAmulet_MP.ogg
 [/Info]

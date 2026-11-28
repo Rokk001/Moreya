@@ -39,11 +39,12 @@
 #include "utils/LogManager.h"
 #include "utils/MakeUnique.h"
 #include "utils/Random.h"
+#include "utils/Translation.h"
 
 #include <cmath>
 
 const std::string RoomTortureName = "Torture";
-const std::string RoomTortureNameDisplay = "Torture room";
+const std::string RoomTortureNameKey = "room.torture.name";
 const RoomType RoomTorture::mRoomType = RoomType::torture;
 const TileVisual RoomTorture::mRoomVisual= TileVisual::tortureRoom;
 
@@ -62,8 +63,9 @@ class RoomTortureFactory : public RoomFactory
     const std::string& getName() const override
     { return RoomTortureName; }
 
-    const std::string& getNameReadable() const override
-    { return RoomTortureNameDisplay; }
+    //! \brief The name shown to the player, in the chosen language.
+    std::string getNameReadable() const override
+    { return Translation::tr(RoomTortureNameKey); }
 
     int getCostPerTile() const override
     { return ConfigManager::getSingleton().getRoomConfigInt32("TortureCostPerTile"); }
@@ -399,7 +401,7 @@ void RoomTorture::revealEnemyInformation(Seat& keeperSeat, Creature& creature)
     {
         ServerNotification *serverNotification = new ServerNotification(
             ServerNotificationType::chatServer, keeperSeat.getPlayer());
-        std::string msg = "A tortured prisoner has given away an enemy room";
+        const std::string msg = Translation::makeReference("msg.torture.revealed");
         serverNotification->mPacket << msg << EventShortNoticeType::aboutCreatures;
         ODServer::getSingleton().queueServerNotification(serverNotification);
     }
@@ -423,7 +425,7 @@ void RoomTorture::convertVictim(Creature& creature)
     {
         ServerNotification *serverNotification = new ServerNotification(
             ServerNotificationType::chatServer, getSeat()->getPlayer());
-        std::string msg = "Your tormentors have convinced another creature how sweet it is to live under your rule";
+        const std::string msg = Translation::makeReference("msg.torture.converted");
         serverNotification->mPacket << msg << EventShortNoticeType::aboutCreatures;
         ODServer::getSingleton().queueServerNotification(serverNotification);
     }

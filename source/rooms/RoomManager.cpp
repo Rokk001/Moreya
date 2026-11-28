@@ -35,6 +35,7 @@
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
+#include "utils/Translation.h"
 
 static const std::string EMPTY_STRING;
 
@@ -50,7 +51,7 @@ namespace
 
 std::string RoomFactory::formatBuildRoom(RoomType type, uint32_t price) const
 {
-    return "Build " + RoomManager::getRoomReadableName(type) + " [" + Helper::toString(price)+ " gold]";
+    return Translation::tr("room.hint.build", {{"name", RoomManager::getRoomReadableName(type)}, {"price", Helper::toString(price)}});
 }
 
 void RoomFactory::checkBuildRoomDefault(GameMap* gameMap, RoomType type, const InputManager& inputManager, InputCommand& inputCommand) const
@@ -75,7 +76,7 @@ void RoomFactory::checkBuildRoomDefault(GameMap* gameMap, RoomType type, const I
     if(playerGold < priceTotal)
     {
         std::string txt = formatBuildRoom(type, priceTotal);
-        inputCommand.displayText(Ogre::ColourValue::Red, "Not enough gold. " + txt);
+        inputCommand.displayText(Ogre::ColourValue::Red, Translation::tr("room.hint.not_enough_gold", {{"text", txt}}));
         inputCommand.displayPointerText(Ogre::ColourValue::Red, "$" + Helper::toString(priceTotal));
         return;
     }
@@ -549,7 +550,7 @@ const std::string& RoomManager::getRoomNameFromRoomType(RoomType type)
     return factory.getName();
 }
 
-const std::string& RoomManager::getRoomReadableName(RoomType type)
+std::string RoomManager::getRoomReadableName(RoomType type)
 {
     std::vector<const RoomFactory*>& factories = getFactories();
     uint32_t index = static_cast<uint32_t>(type);
@@ -561,6 +562,13 @@ const std::string& RoomManager::getRoomReadableName(RoomType type)
 
     const RoomFactory& factory = *factories[index];
     return factory.getNameReadable();
+}
+
+//! \brief The key room.<id>.name with the readable name as the text for a language without the key.
+std::string RoomManager::getRoomNameReference(RoomType type)
+{
+    return Translation::makeNameReference("room." + Translation::toKeyPart(getRoomNameFromRoomType(type)) + ".name",
+        getRoomReadableName(type));
 }
 
 RoomType RoomManager::getRoomTypeFromRoomName(const std::string& name)
@@ -615,11 +623,11 @@ void RoomManager::checkSellRoomTiles(GameMap* gameMap, const InputManager& input
         inputCommand.unselectAllTiles();
         Tile* tile = gameMap->getTile(inputManager.mXPos, inputManager.mYPos);
         if(tile != nullptr && tile->getTileVisual() == TileVisual::dungeonTempleRoom)
-            inputCommand.displayText(Ogre::ColourValue::Red, "Dungeon hearts cannot be sold.");
+            inputCommand.displayText(Ogre::ColourValue::Red, Translation::tr("room.hint.heart_not_sellable"));
         else if(tile != nullptr && (tile->getTileVisual() == TileVisual::portalRoom || tile->getTileVisual() == TileVisual::portalWaveRoom))
-            inputCommand.displayText(Ogre::ColourValue::Red, "Portals cannot be sold.");
+            inputCommand.displayText(Ogre::ColourValue::Red, Translation::tr("room.hint.portal_not_sellable"));
         else
-            inputCommand.displayText(Ogre::ColourValue::Red, "Select a room owned by you to sell.");
+            inputCommand.displayText(Ogre::ColourValue::Red, Translation::tr("room.hint.select_room_to_sell"));
         return;
     }
 
@@ -751,12 +759,12 @@ void RoomManager::checkSellRoomTilesEditor(GameMap* gameMap, const InputManager&
         Tile* tile = gameMap->getTile(inputManager.mXPos, inputManager.mYPos);
         if((tile == nullptr) || (!tile->getIsRoom()))
         {
-            inputCommand.displayText(Ogre::ColourValue::White, "Remove tiles");
+            inputCommand.displayText(Ogre::ColourValue::White, Translation::tr("room.hint.remove_tiles"));
             inputCommand.selectSquaredTiles(inputManager.mXPos, inputManager.mYPos, inputManager.mXPos, inputManager.mYPos);
             return;
         }
 
-        inputCommand.displayText(Ogre::ColourValue::White, "Remove tiles");
+        inputCommand.displayText(Ogre::ColourValue::White, Translation::tr("room.hint.remove_tiles"));
         std::vector<Tile*> tiles;
         tiles.push_back(tile);
         inputCommand.selectTiles(tiles);
@@ -777,7 +785,7 @@ void RoomManager::checkSellRoomTilesEditor(GameMap* gameMap, const InputManager&
     if(inputManager.mCommandState == InputCommandState::building)
     {
         inputCommand.selectTiles(sellTiles);
-        inputCommand.displayText(Ogre::ColourValue::White, "Remove tiles");
+        inputCommand.displayText(Ogre::ColourValue::White, Translation::tr("room.hint.remove_tiles"));
         return;
     }
 

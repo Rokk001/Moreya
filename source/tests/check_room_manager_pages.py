@@ -18,6 +18,9 @@ the page contracts are named as not checked and only the code contracts run.
 """
 from pathlib import Path
 import math
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from language_texts import english  # noqa: E402
 import re
 import sys
 import xml.etree.ElementTree as ET
@@ -284,14 +287,14 @@ def check_page_data(images, placeholders, pages):
     """Assert the frame, the artwork and the elements, look and fit of every page; fills the images, the placeholder
     pictures and the pages and returns the number of fitted screen cases. The scheme and the imagesets are read with
     their own rows of the content (scripts/content_packages.py)."""
-    manager = ET.parse(data('gui/WindowRoomManager.layout')).getroot().find('Window')
+    manager = ET.ElementTree(ET.fromstring(content_packages.read_layout_text(ROOT, 'gui/WindowRoomManager.layout'))).getroot().find('Window')
     assert manager.get('type') == 'OD/SheetWindow', 'the Room Manager uses the window frame of the menu sheet'
     assert props(manager)['Area'] == '{{0.5,-%g},{0.5,-%g},{0.5,%g},{0.5,%g}}' % (
         WINDOW_W / 2, WINDOW_H / 2, WINDOW_W / 2, WINDOW_H / 2), 'fixed frame design dimensions'
     manager_windows = windows(manager)
-    scheme = ET.fromstring(content_packages.read_text(ROOT, 'gui/ODSkin.scheme'))
+    scheme = ET.fromstring(content_packages.read_layout_text(ROOT, 'gui/ODSkin.scheme'))
     for entry in scheme.findall('Imageset'):
-        root = ET.fromstring(content_packages.read_text(ROOT, 'gui/' + entry.get('filename')))
+        root = ET.fromstring(content_packages.read_layout_text(ROOT, 'gui/' + entry.get('filename')))
         for picture in root.findall('Image'):
             images[root.get('name') + '/' + picture.get('name')] = (root, picture)
     for name, (filename, size, placeholder) in ARTWORK.items():
@@ -308,7 +311,7 @@ def check_page_data(images, placeholders, pages):
             placeholders.append(filename)
     cases = 0
     for name, required in REQUIRED.items():
-        root = ET.parse(data('gui/RoomManager' + name + 'Page.layout')).getroot().find('Window')
+        root = ET.ElementTree(ET.fromstring(content_packages.read_layout_text(ROOT, 'gui/RoomManager' + name + 'Page.layout'))).getroot().find('Window')
         page = windows(root)
         pages[name] = page
         assert root.get('type') == 'DefaultWindow'
@@ -432,7 +435,9 @@ def main():
         contains(rel(alchemy, 'ModePanel'), rel(alchemy, 'ModeButton'), 'mode in its panel')
         assert props(alchemy['ModeButton']).get('Text', '') == ''
     body = function(lab, 'void GameMode::setLabModeShown(')
-    assert '{"Auto", "Healing/mana", "Combat potions"}' in body and 'button->getChild("Label")->setText(labels[mode]);' in body
+    assert ('{"mode.game.alchemy.auto", "mode.game.alchemy.healing", "mode.game.alchemy.combat"}' in body
+            and 'getChild("Label")->setText(' in body)
+    assert [english('mode.game.alchemy.' + key) for key in ('auto', 'healing', 'combat')] == ['Auto', 'Healing/mana', 'Combat potions']
     assert '{{true, true, true}, {true, true, false}, {false, false, true}}' in body
     print('PASS alchemy framed rows, herb panel, Auto mode with potion pictures')
 
@@ -477,7 +482,7 @@ def main():
     assert 'mMerchantPendingId' in merchant and 'getGold() >= price' in merchant
     assert 'mode == "profit"' in merchant and 'setVisible(mode == "profit")' in merchant
     # The full item card of every item tooltip (plan INGAME-QS-11 K6) with the box of the hovered cell (K11)
-    assert 'setTooltipText(Gui::describeItemTooltip(items[index].second, mGameMap, nullptr))' in merchant
+    assert 'setTooltipText(Gui::toCeguiText(Gui::describeItemTooltip(items[index].second, mGameMap, nullptr)))' in merchant
     assert 'positionSelf()' in merchant and 'merchantItemAtPointer(list, event.position, &cell)' in merchant
     assert 'historyText(' not in merchant and '/HistoryText' not in merchant
     assert 'setSelected(seat->getGhostRevive())' in game and 'mUpdatingGhost = true' in game

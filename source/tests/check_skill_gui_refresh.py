@@ -51,7 +51,8 @@ assert 'mIsSkillWindowOpen = true;' in function(game_mode, 'void GameMode::reset
 
 # The per-frame call and the forced refreshes stay
 assert function(game_mode, 'void GameMode::onFrameStarted(').count('refreshGuiSkill();') == 1
-assert game_mode.count('refreshGuiSkill(true);') == 4, 'the forced skill refreshes changed'
+# 5: the four forced refreshes of before and the one of the language change listener (texts of the research tooltips)
+assert game_mode.count('refreshGuiSkill(true);') == 5, 'the forced skill refreshes changed'
 
 print('skill gui refresh ok: progress refresh only with the tree open, tree refreshed on open')
 sys.exit(0)

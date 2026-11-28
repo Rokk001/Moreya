@@ -1,9 +1,12 @@
 """Check production construction validators and hand dispatch without a game."""
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import language_texts  # noqa: E402
 
 
 def function(path, signature):
@@ -20,6 +23,7 @@ def function(path, signature):
 probe = r'''
 #include <cstdint>
 #include <iostream>
+#include <map>
 #include <string>
 #include <vector>
 namespace Ogre { struct ColourValue { static const int Red=0,White=1; }; }
@@ -125,6 +129,6 @@ probe = probe.replace('DOOR', door.replace('virtual void checkBuildTrap(', 'void
 probe = probe.replace('DISPATCH', function('source/modes/GameMode.cpp', 'void GameMode::checkInputCommand('))
 with tempfile.TemporaryDirectory(prefix='odp-build-strike-') as directory:
     work = Path(directory)
-    (work / 'check.cpp').write_text(probe)
+    (work / 'check.cpp').write_text(language_texts.translation_stub() + probe)
     subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17', 'check.cpp', '/Fecheck.exe'], cwd=work, check=True)
     subprocess.run([str(work / 'check.exe')], cwd=work, check=True)

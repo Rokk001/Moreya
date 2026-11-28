@@ -29,11 +29,12 @@
 #include "utils/ConfigManager.h"
 #include "utils/LogManager.h"
 #include "utils/Random.h"
+#include "utils/Translation.h"
 
 #include <algorithm>
 
 const std::string RoomGuardRoomName = "GuardRoom";
-const std::string RoomGuardRoomNameDisplay = "Guard room";
+const std::string RoomGuardRoomNameKey = "room.guardroom.name";
 const RoomType RoomGuardRoom::mRoomType = RoomType::guardRoom;
 const TileVisual RoomGuardRoom::mRoomVisual = TileVisual::guardRoom;
 
@@ -50,8 +51,9 @@ class RoomGuardRoomFactory : public RoomFactory
     const std::string& getName() const override
     { return RoomGuardRoomName; }
 
-    const std::string& getNameReadable() const override
-    { return RoomGuardRoomNameDisplay; }
+    //! \brief The name shown to the player, in the chosen language.
+    std::string getNameReadable() const override
+    { return Translation::tr(RoomGuardRoomNameKey); }
 
     int getCostPerTile() const override
     { return ConfigManager::getSingleton().getRoomConfigInt32("GuardRoomCostPerTile"); }

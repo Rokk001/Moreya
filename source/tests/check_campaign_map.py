@@ -32,6 +32,7 @@ root = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(root / "scripts"))
 import campaign_packages  # noqa: E402
 import content_packages  # noqa: E402
+import language_package_texts  # noqa: E402
 
 #: The game data files of the content packages the map parts need; without one of them (no content) only the code
 #: parts are checked and the others are named as not checked
@@ -89,6 +90,18 @@ def check(condition, message):
     """Collects a failure message when the condition does not hold."""
     if not condition:
         failures.append(message)
+
+
+def language_text(key):
+    """The English text of a key of the language package lang-en (empty when the content is missing)."""
+    folder = campaign_packages.content_folder(root)
+    if folder is None:
+        return ""
+    for path in sorted((folder / "lang-en" / "texts").glob("*.txt")):
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if line.startswith(key + "="):
+                return line[len(key) + 1:].replace("\\n", "\n")
+    return ""
 
 
 def function(text, name):
@@ -241,18 +254,33 @@ check(hidden.split("\n", 2)[1].strip() == "continue;", "a hidden bonus cave is n
 check("getDefeatedInWing(campaign, wing.mNumber)" in fill and "mWingDefeated" in fill
       and "CampaignWorld::STORY_CAVES_PER_WING" in fill, "every wing shows its defeated levels and its seal")
 progress = function(mode, "void MenuModeCampaign::fillProgressPanel()")
+check("mode.menu.campaign.progress" in progress, "the progress panel text comes from the language files")
+progress_text_en = language_text("mode.menu.campaign.progress")
 for text in ("Levels defeated: ", "Wings defeated: ", "Heartstone shards: ", "Bonus caves cleared: "):
-    check(text in progress, "the progress panel must show " + text.strip(": "))
+    check(text in progress_text_en, "the progress panel must show " + text.strip(": "))
 check("getHeartstonePieces()" in progress and "getHeartstoneTotal()" in progress, "shards found of the shard total")
 check("levelsDefeated * PERCENT_FULL / levelTotal" in progress, "the bar shows the defeated story levels in percent")
 
 # ------------------------------------------------------------------------------------------------ CM2: guild panel
 guild_panel = function(mode, "void MenuModeCampaign::fillGuildPanel()")
-for token in ("findCurrentCave(", "guild.mBanner", "guild.mPortrait", "guild.mName", "getGuildDetailsText(guild)"):
+# The details are built from the guild whose names are shown in the chosen language (shownGuild is a copy of guild)
+for token in ("findCurrentCave(", "guild.mBanner", "guild.mPortrait", "guild.mName", "getGuildDetailsText(shownGuild)"):
     check(token in guild_panel, "the guild in front of the gate needs " + token)
 details = world_cpp[world_cpp.index("std::string CampaignWorld::getGuildDetailsText"):]
-for token in ('"Leader: "', '"Leaders: "', '"\\nRaid size: "', '"\\nOrigin: "'):
+# The words are the entries campaign.code.* of the English language package; the code asks for them by their keys
+for token in ('"campaign.code.leader"', '"campaign.code.leaders"', '"campaign.code.raid_size"', '"campaign.code.origin"',
+              '"\\n"'):
     check(token in details, "the guild details must contain " + token)
+if content_packages.has_content(root):
+    english = language_package_texts.english(root)
+    for key, text in (("campaign.code.leader", "Leader: {name}"), ("campaign.code.leaders", "Leaders: {first} and {second}"),
+                      ("campaign.code.raid_size", "Raid size: {text}"), ("campaign.code.origin", "Origin: {text}"),
+                      ("campaign.code.size_group_one", "one group of {size}"), ("campaign.code.size_group_two", "two groups of {size}"),
+                      ("campaign.code.size_group_many", "{count} groups of {size}"), ("campaign.code.size_raid_one", "one raid of {size}"),
+                      ("campaign.code.size_raid_two", "two raids of {size}"), ("campaign.code.size_raid_many", "{count} raids of {size}")):
+        check(english.get(key) == text, "the English entry %s must be %r" % (key, text))
+else:
+    content_packages.unchecked("check_campaign_map", ["the English texts campaign.code.*"])
 check("fillGuildPanel();" in fill, "the guild panel is drawn")
 if HAS_DATA:
     panel = world["guild_panel"]
@@ -303,7 +331,11 @@ check("findCaveAt(" in hover and "updateHover(" in hover and "updateTooltip(" in
 ring = function(mode, "void MenuModeCampaign::updateHover")
 check("CampaignCaveState::locked" in ring, "locked caves get a tooltip but no ring")
 tip = function(mode, "void MenuModeCampaign::updateTooltip")
-check("Guild: " in tip and "Difficulty: " not in tip and "State: " in tip and "Bonus cave of " in tip,
+tip_keys_en = " ".join(language_text(key) for key in ("mode.menu.campaign.guild", "mode.menu.campaign.state_locked",
+                                                      "mode.menu.campaign.bonus_cave"))
+check("mode.menu.campaign.guild" in tip and "mode.menu.campaign.state_locked" in tip
+      and "mode.menu.campaign.bonus_cave" in tip and "Difficulty: " not in tip + tip_keys_en
+      and "Guild: " in tip_keys_en and "State: " in tip_keys_en and "Bonus cave of " in tip_keys_en,
       "tooltip shows wing, guild and state, and no per-level difficulty")
 check("getLayoutScale()" in tip and "std::min(TOOLTIP_WIDTH * scale, mapRect.getWidth())" in tip,
       "the tooltip scales with the layout and never gets larger than the map")
@@ -407,9 +439,14 @@ titles = {f["File"]: f.get("Title", "") for f in levels}
 for wing in wings:
     for cave in wing["levels"]:
         titles.setdefault(cave["file"], campaign_packages.MISSING_WING_TEXT)
-check('MISSING_WING_TEXT = "%s"' % campaign_packages.MISSING_WING_TEXT
+check('Translation::tr("campaign.code.missing_wing")'
       in (root / "source/game/CampaignPackages.cpp").read_text(encoding="utf-8"),
-      "the game names a missing wing as the checks do")
+      "the game asks for the text of a missing wing by its key")
+if content_packages.has_content(root):
+    check(language_package_texts.english(root).get("campaign.code.missing_wing") == campaign_packages.MISSING_WING_TEXT,
+          "the English text of a missing wing is the one the checks use")
+else:
+    content_packages.unchecked("check_campaign_map", ["the English text campaign.code.missing_wing"])
 if HAS_DATA:
     map_texts = [("title", world["title_cartouche"], "FONT_TITLE", [constant("CAMPAIGN_TITLE")], False)]
     for wing in wings:

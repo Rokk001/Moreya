@@ -63,7 +63,7 @@ server = read('source/network/ODServer.cpp')
 launch = function(editor, editor.index('bool EditorMode::launchNewLevelPressed('))
 check('levelTitle.empty()' in launch and before(launch, 'levelTitle.empty()', 'stopTileCulling'),
       'A1 launchNewLevelPressed checks the title before stopTileCulling')
-check(before(launch, 'Invalid map size', 'stopTileCulling') and before(launch, 'exists(level)', 'stopTileCulling'),
+check(before(launch, 'editor.new.size_invalid_dialog', 'stopTileCulling') and before(launch, 'exists(level)', 'stopTileCulling'),
       'A1 launchNewLevelPressed checks the filename, existence and size before stopTileCulling')
 check(re.search(r'mMainCullingManager\s*!=\s*nullptr\s*\)\s*mMainCullingManager->stopTileCulling', launch) is not None,
       'A1 launchNewLevelPressed tests mMainCullingManager for nullptr before stopTileCulling')
@@ -120,7 +120,7 @@ check('catch' in safe and before(safe, 'try', 'writer(') and before(safe, 'write
       'A6 SafeSave catches an exception of the writer')
 check('catch' in ask and before(ask, 'try', 'levelSave =') and before(ask, 'levelSave =', 'catch'),
       'A6 askSaveMap catches an exception while it builds the path to save')
-check(before(ask, 'saveOk', "Couldn't not save") and 'chatServer' in ask,
+check(before(ask, 'saveOk', '"msg.map.failed"') and 'chatServer' in ask,
       'A6 a failed save tells the player in the chat')
 
 if failures:

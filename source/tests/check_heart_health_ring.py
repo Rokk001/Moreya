@@ -8,6 +8,9 @@ from pathlib import Path
 import re
 import subprocess
 import sys
+from pathlib import Path as _LangPath
+sys.path.insert(0, str(_LangPath(__file__).resolve().parent))
+from language_texts import english  # noqa: E402
 from combat_heart_checks import check_heart_configuration, configure_heart_probe
 import tempfile
 
@@ -31,7 +34,7 @@ game_mode = read('source/modes/GameMode.cpp')
 notification_header = read('source/network/ServerNotification.h')
 notification_source = read('source/network/ServerNotification.cpp')
 # The layout is a mixed file: as the game reads it only with its own rows from the content, else None
-layout = content_packages.read_text(repo, 'gui/ModeGame.layout') if content_packages.has_content(repo) else None
+layout = content_packages.read_layout_text(repo, 'gui/ModeGame.layout') if content_packages.has_content(repo) else None
 rules = repo / 'source/game/HeartHealthRing.h'
 
 
@@ -586,7 +589,8 @@ assert 'heartBadge.update(evt.timeSinceLastFrame);' in frame
 assert 'heartBadge.takeDirty()' in frame
 assert 'getGui().updateHeartBadge(heartBadge.mFraction, heartBadge.mGlow);' in frame
 assert 'HeartHealthRing::healthPercent(heartBadge.mHP, heartBadge.mMaxHP)' in frame
-assert '"Dungeon heart at "' in frame and '" %. Right-click moves the view to the heart."' in frame
+assert 'mode.game.heart.help' in frame
+assert english('mode.game.heart.help') == 'Dungeon heart at {percent} %. Right-click moves the view to the heart.'
 assert 'setTooltipText' not in frame and 'Dungeon Heart:' not in frame
 click = function(game_mode, 'bool GameMode::clickHeartBadge(')
 assert 'CEGUI::RightButton' in click and 'focusRoom(RoomType::dungeonTemple);' in click and 'cameraInputBlocked()' in click

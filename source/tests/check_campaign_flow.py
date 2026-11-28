@@ -29,7 +29,7 @@ def read_data(path):
         return None
     if not content_packages.has_content(repo) and '<!--#@own ' in found.read_text(encoding='utf-8'):
         return None
-    return content_packages.read_text(repo, path)
+    return content_packages.read_layout_text(repo, path)
 
 
 layout = read_data('gui/WindowCampaignSubMenu.layout')
@@ -92,7 +92,7 @@ for state in ('Open', 'Reached', 'Failed'):
     assert "[image='GoalStatus/" + state + "'] " in goals, state
 for old_label in ('Open: ', 'Done: ', 'Failed: '):
     assert old_label not in goals, old_label
-assert 'Victory!\\n' in goals
+assert 'Translation::makeReference("goal.victory") << "\\n"' in goals
 assert 'script.getTriggers()' in goals and 'LevelScriptActionType::objective' in goals
 assert 'action.mSeatId >= 0 && action.mSeatId != seat->getId()' in goals
 assert 'Script objectives:' not in goals and 'scriptObjectives.push_back(action.mText)' in goals

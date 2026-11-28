@@ -52,7 +52,7 @@ assert "The gods accepted your sacrifice and send you a new creature" not in rew
 assert reward.index("newCreature->addToGameMap();") < reward.index("notifyCreatureArrival(classToSpawn->getClassName())")
 assert reward.index("newCreature->setPosition(") < reward.index("notifyCreatureArrival(classToSpawn->getClassName())")
 assert 'if(!message.empty() &&' in reward
-assert 'message = "The gods accepted your sacrifice and send you a special";' in reward
+assert 'message = Translation::makeReference("msg.temple.special");' in reward
 print("Creature sacrifice rewards share first-arrival history; real special rewards remain announced: PASS (static only)")
 
 prison = (ROOT / "source/rooms/RoomPrison.cpp").read_text(encoding="utf-8")
@@ -60,7 +60,7 @@ prison_upkeep = function(prison, "void RoomPrison::doUpkeep()")
 assert prison_upkeep.count("notifyCreatureArrival(className)") == 1
 assert prison_upkeep.index("newCreature->addToGameMap();") < prison_upkeep.index("notifyCreatureArrival(className)")
 assert prison_upkeep.index("newCreature->setPosition(") < prison_upkeep.index("notifyCreatureArrival(className)")
-assert "A creature died starving in your prison" in prison_upkeep
+assert '"msg.prison.starved"' in prison_upkeep
 print("Prison offspring use shared first-arrival history while starvation losses remain visible: PASS (static only)")
 
 # Summoning announces only after the creature exists at its valid destination.
@@ -82,7 +82,7 @@ conversion = function(torture, "void RoomTorture::convertVictim(")
 notice = "notifyCreatureArrival(creature.getDefinition()->getClassName())"
 assert conversion.count(notice) == 1
 assert conversion.index("creature.changeSeat(getSeat());") < conversion.index(notice)
-assert "Your tormentors have convinced another creature" in conversion
+assert '"msg.torture.converted"' in conversion
 source = (ROOT / "source/spells/SpellDefector.cpp").read_text(encoding="utf-8")
 conversion = function(source, "bool SpellDefector::castSpell(")
 notice = "notifyCreatureArrival(creature->getDefinition()->getClassName())"

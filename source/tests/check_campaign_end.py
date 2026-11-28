@@ -16,6 +16,39 @@ import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / "scripts"))
+import content_packages  # noqa: E402
+import language_package_texts  # noqa: E402
+sys.path.insert(0, str(ROOT / "scripts"))
+import content_packages  # noqa: E402
+import language_package_texts  # noqa: E402
+sys.path.insert(0, str(ROOT / "scripts"))
+import content_packages  # noqa: E402
+import language_package_texts  # noqa: E402
+sys.path.insert(0, str(ROOT / "scripts"))
+import content_packages  # noqa: E402
+import language_package_texts  # noqa: E402
+sys.path.insert(0, str(ROOT / "scripts"))
+import content_packages  # noqa: E402
+import language_package_texts  # noqa: E402
+sys.path.insert(0, str(ROOT / "scripts"))
+import content_packages  # noqa: E402
+import language_package_texts  # noqa: E402
+sys.path.insert(0, str(ROOT / "scripts"))
+import content_packages  # noqa: E402
+import language_package_texts  # noqa: E402
+sys.path.insert(0, str(ROOT / "scripts"))
+import content_packages  # noqa: E402
+import language_package_texts  # noqa: E402
+sys.path.insert(0, str(ROOT / "scripts"))
+import content_packages  # noqa: E402
+import language_package_texts  # noqa: E402
+sys.path.insert(0, str(ROOT / "scripts"))
+import content_packages  # noqa: E402
+import language_package_texts  # noqa: E402
+sys.path.insert(0, str(ROOT / "scripts"))
+import content_packages  # noqa: E402
+import language_package_texts  # noqa: E402
 #: The end message decided by the owner, word for word.
 END_MESSAGE = "Moreya stands. The campaign is complete."
 
@@ -54,9 +87,15 @@ def main():
     main_menu = read("source/modes/MenuModeMain.cpp")
     tests = read("source/tests/test_CampaignLevels.cpp")
 
-    # The message text, once, in the campaign
-    check(campaign.count('"' + END_MESSAGE + '"') == 1, "Campaign.cpp must define the end message word for word once")
-    check("static const std::string CAMPAIGN_END_MESSAGE;" in header, "Campaign.h must declare CAMPAIGN_END_MESSAGE")
+    # The message text, once: the English entry campaign.code.end of the language package; the code asks for the key
+    if content_packages.has_content(ROOT):
+        check(language_package_texts.english(ROOT).get("campaign.code.end") == END_MESSAGE,
+              "the English entry campaign.code.end must be the end message word for word")
+    else:
+        content_packages.unchecked("check_campaign_end", ["the English text of campaign.code.end"])
+    check(campaign.count('Translation::tr("campaign.code.end")') == 1 and campaign.count(END_MESSAGE) == 0,
+          "Campaign.cpp must ask for the end message by its key once and hold no English text")
+    check("static std::string getEndMessage();" in header, "Campaign.h must declare getEndMessage")
     check("bool isPlayedLevelCampaignEnd() const;" in header, "Campaign.h must declare isPlayedLevelCampaignEnd")
     end = body(campaign, "bool Campaign::isPlayedLevelCampaignEnd(")
     complete = body(campaign, "bool Campaign::isCampaignCompleteNoLock(")
@@ -71,7 +110,7 @@ def main():
     check("campaign.isPlayedLevelCampaignEnd()" in activate, "activate must ask whether the campaign ended")
     end_start = activate.index("if(campaign.isPlayedLevelCampaignEnd())")
     end_block = body(activate[end_start:], "if(campaign.isPlayedLevelCampaignEnd())")
-    for token in ("mCampaignEnd = true;", "mResultText = Campaign::CAMPAIGN_END_MESSAGE;"):
+    for token in ("mCampaignEnd = true;", "mResultText = Campaign::getEndMessage();"):
         check(token in end_block, "the campaign end decision must contain " + token)
     check(re.search(r"\}\s*else if\(playedLevel < campaign\.getNumLevels\(\)\)", activate[end_start:]) is not None,
           "the end message must replace the debriefing of the last level")

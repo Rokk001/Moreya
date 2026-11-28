@@ -36,6 +36,7 @@
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 #include "utils/Random.h"
+#include "utils/Translation.h"
 
 #include <cmath>
 #include <iomanip>
@@ -54,7 +55,7 @@ const std::string LEGACY_SHIELD_2 = "WeaponShield2";
 }
 
 const std::string RoomTrainingHallName = "TrainingHall";
-const std::string RoomTrainingHallNameDisplay = "Training hall room";
+const std::string RoomTrainingHallNameKey = "room.traininghall.name";
 const RoomType RoomTrainingHall::mRoomType = RoomType::trainingHall;
 const TileVisual RoomTrainingHall::mRoomVisual= TileVisual::trainingHallRoom;
 
@@ -74,8 +75,9 @@ class RoomTrainingHallFactory : public RoomFactory
     const std::string& getName() const override
     { return RoomTrainingHallName; }
 
-    const std::string& getNameReadable() const override
-    { return RoomTrainingHallNameDisplay; }
+    //! \brief The name shown to the player, in the chosen language.
+    std::string getNameReadable() const override
+    { return Translation::tr(RoomTrainingHallNameKey); }
 
     int getCostPerTile() const override
     { return ConfigManager::getSingleton().getRoomConfigInt32("TrainHallCostPerTile"); }

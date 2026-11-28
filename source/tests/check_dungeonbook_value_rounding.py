@@ -48,9 +48,9 @@ steps = ('if(!std::isfinite(value))', 'stream.imbue(std::locale::classic());',
 positions = [rounded.index(step) for step in steps]
 assert positions == sorted(positions), 'formatRoundedNumber does its steps in another order than the replica'
 stats = function_of(creature_cpp, 'std::string Creature::getStatsText(const Seat* viewer)')
-for fragment in ('"Experience: " << formatRoundedNumber(mExp)',
-                 '"HP: " << formatRoundedNumber(getHP()) << " / " << formatRoundedNumber(mMaxHP)',
-                 '"Gold: " << formatRoundedNumber(mGoldCarried)'):
+for fragment in ('statsLabel("experience") << ": " << formatRoundedNumber(mExp)',
+                 'statsLabel("hp") << ": " << formatRoundedNumber(getHP()) << " / " << formatRoundedNumber(mMaxHP)',
+                 'statsLabel("gold") << ": " << formatRoundedNumber(mGoldCarried)'):
     assert fragment in stats, fragment
 for raw in ('<< mExp', '<< getHP()', '<< mMaxHP', '<< mGoldCarried'):
     assert raw not in stats, 'a raw value is written: ' + raw
@@ -67,8 +67,8 @@ assert 'parser.imbue(std::locale::classic());' in statistics
 assert '(isNumber ? formatProfileValue(number) : parts[i])' in statistics, 'the statistics numbers are rounded'
 values = function_of(social, 'void SocialWindow::refreshValues(')
 assert 'line.slots ? countFilledSlots(value) : formatStatisticsNumbers(value)' in values
-for window, label in (('Experience', 'Experience'), ('HitPoints', 'HP'), ('Gold', 'Gold'),
-                      ('DamagePerSecond', 'Raw damage per second')):
+for window, label in (('Experience', 'experience'), ('HitPoints', 'hp'), ('Gold', 'gold'),
+                      ('DamagePerSecond', 'damage_per_second')):
     assert '{"%s", "%s", false}' % (window, label) in values, window
 
 

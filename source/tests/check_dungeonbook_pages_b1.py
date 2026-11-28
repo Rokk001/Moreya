@@ -42,6 +42,7 @@ from PIL import Image, ImageFont
 repo = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(repo / 'scripts'))
 import content_packages  # noqa: E402
+from lang_texts import english_texts  # noqa: E402
 
 #: The content files the whole check computes on (core-gui and core-config packages): without them nothing of the
 #: pages can be measured, so the check names them as not checked and passes
@@ -58,9 +59,9 @@ item_cpp = (repo / 'source/entities/ItemInstance.cpp').read_text(encoding='utf-8
 weapon_cpp = (repo / 'source/entities/Weapon.cpp').read_text(encoding='utf-8')
 lines_h = (repo / 'source/entities/ItemValueLines.h').read_text(encoding='utf-8')
 placement_h = (repo / 'source/render/ItemTooltipPlacement.h').read_text(encoding='utf-8')
-layout_text = content_packages.read_text(repo, 'gui/WindowSocial.layout')
+layout_text = content_packages.read_layout_text(repo, 'gui/WindowSocial.layout')
 # The mixed interface files and data tables are read as the game reads them, with their own rows from the content
-look_text = content_packages.read_text(repo, 'gui/OD.looknfeel')
+look_text = content_packages.read_layout_text(repo, 'gui/OD.looknfeel')
 
 DESIGN_W, DESIGN_H = 1024.0, 768.0
 FONT_W, FONT_H = 800.0, 600.0
@@ -87,7 +88,7 @@ def udims(value):
 def parse_interface_file(path):
     if '.own.' in path.name:
         return None
-    return ET.fromstring(content_packages.read_text(repo, content_packages.relative_path(repo, path)))
+    return ET.fromstring(content_packages.read_layout_text(repo, content_packages.relative_path(repo, path)))
 
 
 fonts = {}
@@ -241,7 +242,7 @@ def text_fits(node, text, box, screen, user):
 
 # The longest values the code fills in. Names: every given name with every surname or title (config/social-names.cfg)
 names, hometowns, age_jokes = [], [], []
-for line in content_packages.read_text(repo, 'config/social-names.cfg').split('\n'):
+for line in content_packages.read_layout_text(repo, 'config/social-names.cfg').split('\n'):
     cells = line.rstrip('\r').split('\t')
     if cells[0] == '[NameGroup]':
         names.append(([], []))
@@ -256,15 +257,20 @@ for line in content_packages.read_text(repo, 'config/social-names.cfg').split('\
 full_names = [g + ((' ' + t) if t else '') for given, last in names for g in given for t in [''] + last]
 check(len(full_names) > 5000 and hometowns and age_jokes, 'names, hometowns and age jokes are read')
 texts = {'Relation': [], 'Job': [], 'Bio': []}
-for line in content_packages.read_text(repo, 'config/social-texts.cfg').split('\n'):
+for line in content_packages.read_layout_text(repo, 'config/social-texts.cfg').split('\n'):
     cells = line.rstrip('\r').split('\t')
     if cells[0] in texts:
         texts[cells[0]].append(cells[-1])
 check(all(texts.values()), 'relations, jobs and bios are read')
-statuses = re.findall(r'return "([A-Za-z\' ]+)";', (repo / 'source/social/CreaturePosts.cpp').read_text(encoding='utf-8')[
+# The statuses are entries of the language files (getSocialCodeText(key, English fallback)); the English text of the
+# key is used, the fallback stands in for it without the content
+status_keys = re.findall(r'getSocialCodeText\("(social\.code\.status\.[a-z]+)", "([A-Za-z\' ]+)"\)',
+                         (repo / 'source/social/CreaturePosts.cpp').read_text(encoding='utf-8')[
     (repo / 'source/social/CreaturePosts.cpp').read_text(encoding='utf-8').index('CreaturePosts::getRelationshipStatus'):][:600])
+english_statuses = english_texts(repo) or {}
+statuses = [english_statuses.get(key, fallback) for key, fallback in status_keys]
 check('Single' in statuses and 'In a relationship' in statuses, 'relationship statuses are read')
-paths = sorted(set(re.findall(r'^Path\s+(.+?)\s*$', content_packages.read_text(repo, 'config/creatureSkills.cfg'), re.M)))
+paths = sorted(set(re.findall(r'^Path\s+(.+?)\s*$', content_packages.read_layout_text(repo, 'config/creatureSkills.cfg'), re.M)))
 check(len(paths) >= 3, 'skill paths are read')
 handle_max = '@' + 'w' * 14 + '99'  # the handle: letters of the first name, at most 2 digits (Creature.cpp)
 check('PROFILE_HANDLE_NUMBER_COUNT' in (repo / 'source/entities/Creature.cpp').read_text(encoding='utf-8'), 'handle')
@@ -324,7 +330,7 @@ for key in ('Experience', 'HitPoints', 'Gold', 'SightRadius', 'Potions', 'Invent
     DYNAMIC['ValuesPage/%sValue' % key] = NUMBERS + PAIRS + ['-', '4 / 4']
 # The Skills page (INGAME-QS-12 K7): every path name of config/creatureSkills.cfg as a column title, every rank text of
 # a skill ("rank/most ranks" of CreatureSkillTreeView barText; SkillRanksPerSkill of config/global.cfg, 1 for tier 4)
-max_rank = int(re.search(r'^\s*SkillRanksPerSkill\s+(\d+)', content_packages.read_text(repo, 'config/global.cfg'),
+max_rank = int(re.search(r'^\s*SkillRanksPerSkill\s+(\d+)', content_packages.read_layout_text(repo, 'config/global.cfg'),
                          re.M).group(1))
 SKILL_NODES = ['TierFour'] + ['Column%dTier%d' % (c, t) for c in range(4) for t in (3, 2, 1)]
 for column in range(4):
@@ -345,27 +351,37 @@ check(social_cpp.count('setFittedText(page->getChild(rowWindows[i])') == 1 and
 fitted_body = social_cpp[social_cpp.index('void setFittedText('):]
 fitted_body = fitted_body[:fitted_body.index('\n}\n')]
 check('shortened = start + "...";' in fitted_body and
-      'window->setTooltipText(escapeMarkup(tooltip.empty() ? text : text + "\\n" + tooltip));' in fitted_body,
+      'window->setTooltipText(Gui::toCeguiText(escapeMarkup(tooltip.empty() ? text : text + "\\n" + tooltip)));'
+      in fitted_body,
       'a shortened text ends in "..." and its tooltip shows it whole with its explanation')
 
 # The social lines of the profile (owner decision 2026-11-18): the data of the former shared page, each with a hover
 # text that says what the line is, a buff or debuff with what it does and the time left
 social_lines = social_cpp[social_cpp.index('void SocialWindow::refreshProfileSocialLines('):]
 social_lines = social_lines[:social_lines.index('\n}\n')]
-for fragment in ('info = creature->getProfileSocialInfo();', '". What this creature enjoys, from its social profile."',
-                 '". What this creature cannot stand, from its social profile."',
-                 '". The creatures of your side this one gets along with best."',
-                 '". The creature of your side this one gets along with worst."',
-                 '"\\nWhat the creature says about its mood right now."',
-                 'info.mEffectTooltips[i]', '"Remarks that match the picture of this creature."'):
+for fragment in ('info = creature->getProfileSocialInfo();', 'info.mEffectTooltips[i]'):
     check(fragment in social_lines, 'refreshProfileSocialLines: ' + fragment)
+# The explaining texts are language entries: the code names the key, the English file says what the line said before
+EXPLANATIONS = (('ui.dungeonbook.likes.tooltip', '. What this creature enjoys, from its social profile.'),
+                ('ui.dungeonbook.dislikes.tooltip', '. What this creature cannot stand, from its social profile.'),
+                ('ui.dungeonbook.friends.tooltip', '. The creatures of your side this one gets along with best.'),
+                ('ui.dungeonbook.foe.tooltip', '. The creature of your side this one gets along with worst.'),
+                ('ui.dungeonbook.status.tooltip', '\\nWhat the creature says about its mood right now.'),
+                ('ui.dungeonbook.remarks.tooltip', 'Remarks that match the picture of this creature.'))
+english = english_texts(repo)
+for key, text in EXPLANATIONS:
+    check('"%s"' % key in social_lines, 'refreshProfileSocialLines: ' + key)
+    if english is not None:
+        check(text in english.get(key, ''), 'the language file explains %s as before' % key)
 creature_cpp = (repo / 'source/entities/Creature.cpp').read_text(encoding='utf-8')
 effects_fn = creature_cpp[creature_cpp.index('static std::string getProfileEffectsText('):]
 effects_fn = effects_fn[:effects_fn.index('\n}\n')]
 check(effects_fn.count('.push_back(getProfileEffectTooltip(') == 3, 'every buff and debuff line gets its own explanation')
 tooltip_fn = creature_cpp[creature_cpp.index('static std::string getProfileEffectTooltip('):]
 tooltip_fn = tooltip_fn[:tooltip_fn.index('\n}\n')]
-check('" Time left: "' in tooltip_fn and 'getProfileEffectTime(turns)' in tooltip_fn, 'the explanation names the time left')
+check('"ui.profile.effect.tooltip"' in tooltip_fn and 'getProfileEffectTime(turns)' in tooltip_fn and
+      (english is None or ' Time left: {time}.' in english.get('ui.profile.effect.tooltip', '')),
+      'the explanation names the time left')
 info_fn = creature_cpp[creature_cpp.index('Creature::ProfileSocialInfo Creature::getProfileSocialInfo('):]
 info_fn = info_fn[:info_fn.index('\n}\n')]
 for fragment in ('info.mLikes.push_back(profile.mLikes[i]);', 'DungeonbookQuirkLogic::formatRemarks(',
@@ -382,8 +398,8 @@ CODE_TIPS = {'ProfilePage/Portrait': 'page->getChild("Portrait")->setTooltipText
              'ValuesPage/Portrait/Image': 'page->getChild("Portrait")->setTooltipText(',
              'InventoryPage/Portrait': 'page->getChild("Portrait")->setTooltipText(',
              'FeedPage/FeedRows/Row0/Portrait': 'row->getChild("Portrait")->setTooltipText(',
-             'FeedPage/FeedRows/Row0/Picture': 'picture->setTooltipText(text);',
-             'ProfilePage/PostThumb0': 'thumb->setTooltipText(text + "  (" + formatAge(turnNow - it->mTurn) + ")");'}
+             'FeedPage/FeedRows/Row0/Picture': 'picture->setTooltipText(Gui::toCeguiText(text));',
+             'ProfilePage/PostThumb0': 'thumb->setTooltipText(Gui::toCeguiText(Translation::tr("ui.dungeonbook.withage", thumbValues)));'}
 for page_name in CREATURE_PAGES + ('NavBar', 'Header'):
     for node in book.child(page_name).walk():
         if node.type != 'OD/StaticImage' or 'Rule' in node.name:
@@ -399,8 +415,8 @@ for page_name in CREATURE_PAGES + ('NavBar', 'Header'):
             'page->getChild(std::string(tiles[i]) + "Icon")->setTooltipText(tooltip);' in social_cpp
         check(owner.props.get('TooltipText') or coded or slot or tiles,
               '%s has no hover text (%s takes the mouse)' % (node.path, owner.path))
-check('Gui::setPlainTooltip(slot, std::string(slot->getParent()->getChild("Label")->getText().c_str()) + ": empty");'
-      in social_cpp, 'an empty slot names itself')
+check('Gui::setPlainTooltip(slot, trWith("ui.dungeonbook.inventory.empty", "slot",' in social_cpp and
+      (english is None or english.get('ui.dungeonbook.inventory.empty') == '{slot}: empty'), 'an empty slot names itself')
 
 # ------------------------------------------------------------------------------------------------ 1. to 3. pages
 CREATURE_PAGES = ('FeedPage', 'ProfilePage', 'ValuesPage', 'InventoryPage', 'SkillsPage')
@@ -583,7 +599,9 @@ for needle in ('NAV_SKILLS_BUTTON = "NavSkills"', 'skills->setEnabled(hasSkillTr
 rows_fill = social_cpp[social_cpp.index('void SocialWindow::refreshListRows()'):]
 rows_fill = rows_fill[:rows_fill.index('\n}\n')]
 check('setFittedText(row->getChild("Keeper"), entry->keeper, false, "");' in rows_fill and
-      '"), keeper " + entry->keeper' in rows_fill, 'every list entry marks the keeper of its creature')
+      'rowValues["keeper"] = entry->keeper;' in rows_fill and '"ui.dungeonbook.row.tooltip"' in rows_fill and
+      (english is None or english.get('ui.dungeonbook.row.tooltip') == '{name} ({class}), keeper {keeper}'),
+      'every list entry marks the keeper of its creature')
 
 # 5. the single-creature view
 show =social_cpp[social_cpp.index('void SocialWindow::showPage(Page page)'):]
@@ -597,7 +615,7 @@ check(back_node.props.get('NonClient') == 'True' and back_node.props.get('Visibl
       'the back arrow is a hidden NonClient child of the book')
 
 # ------------------------------------------------------------------------------------------------ 6. the item tooltip
-equipment_text = content_packages.read_text(repo, 'config/equipments.cfg')
+equipment_text = content_packages.read_layout_text(repo, 'config/equipments.cfg')
 equipment_text = equipment_text[equipment_text.rindex('[EquipmentDefinitions]'):]
 blocks = re.findall(r'\[Equipment\](.*?)\[/Equipment\]', equipment_text, re.S)
 check(len(blocks) >= 30, 'equipment blocks are read')
@@ -624,8 +642,15 @@ LINE_LABELS = [('Physical damage', 'PhysicalDamageMin', 'PhysicalDamage'), ('Mag
                ('Elemental damage', 'ElementDamageMin', 'ElementDamage'), ('Physical defence', None, 'PhysicalDefense'),
                ('Magical defence', None, 'MagicalDefense'), ('Elemental defence', None, 'ElementDefense'),
                ('Attack rating', None, 'AttackRating'), ('Defence rating', None, 'DefenseRating')]
-for label, _, _ in LINE_LABELS:
-    check('"%s"' % label in lines_h, 'ItemValueLines.h names "%s"' % label)
+# The header holds the language keys of the labels; the language file holds the labels the tooltip showed before
+LABEL_KEYS = ['ui.item.value.physicaldamage', 'ui.item.value.magicaldamage', 'ui.item.value.elementaldamage',
+              'ui.item.value.physicaldefence', 'ui.item.value.magicaldefence', 'ui.item.value.elementaldefence',
+              'ui.item.value.attackrating', 'ui.item.value.defencerating']
+english = english_texts(repo)
+for (label, _, _), key in zip(LINE_LABELS, LABEL_KEYS):
+    check('"%s"' % key in lines_h, 'ItemValueLines.h names the key "%s"' % key)
+    if english is not None:
+        check(english.get(key) == label, 'the language file says "%s" for %s' % (label, key))
 check('if(value != 0.0)' in lines_h and 'if(minimum != 0.0 || maximum != 0.0)' in lines_h, 'a value of 0 has no line')
 
 

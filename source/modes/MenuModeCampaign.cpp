@@ -36,8 +36,10 @@
 #include "utils/ContentPackages.h"
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
+#include "utils/LevelText.h"
 #include "utils/LogManager.h"
 #include "utils/ResourceManager.h"
+#include "utils/Translation.h"
 #include "utils/RunLevelTest.h"
 
 #include <CEGUI/CEGUI.h>
@@ -230,7 +232,8 @@ bool readBriefingSeat(std::istream& level, Seat& player)
 }
 
 //! \brief Reads grouped main/optional goals or the legacy list using the gameplay parsers.
-//! \return True when level goal metadata was read; no game state or script action is executed.
+//! \return True when level goal metadata was read; no game state or script action is executed. The text holds one
+//! text reference or text of the level file per line; the caller shows it with Translation::resolveLines.
 bool readBriefingGoals(const std::string& path, std::string& descriptions)
 {
     std::stringstream level;
@@ -242,7 +245,7 @@ bool readBriefingGoals(const std::string& path, std::string& descriptions)
     std::string token;
     if(!(level >> token) || token != "[Goals]")
         return false;
-    descriptions = "Goals:";
+    descriptions = Translation::makeReference("goal.heading");
     while(level >> token)
     {
         if(token == "[/Goals]")
@@ -273,17 +276,17 @@ bool readBriefingGoals(const std::string& path, std::string& descriptions)
                    (action.mSeatId >= 0 && action.mSeatId != player.getId()))
                     continue;
                 if(action.mObjectiveGroup == LevelScriptObjectiveGroup::optional)
-                    optionalObjectives.push_back(action.mText);
+                    optionalObjectives.push_back(LevelText::display(action.mText));
                 else
-                    mainObjectives.push_back(action.mText);
+                    mainObjectives.push_back(LevelText::display(action.mText));
             }
         }
         if(!mainObjectives.empty() || !optionalObjectives.empty())
         {
-            descriptions = "Main goals";
+            descriptions = Translation::makeReference("goal.main");
             for(const std::string& objective : mainObjectives)
                 descriptions += "\n[image='GoalStatus/Open'] " + objective;
-            descriptions += "\n\nOptional goals";
+            descriptions += "\n\n" + Translation::makeReference("goal.optional");
             for(const std::string& objective : optionalObjectives)
                 descriptions += "\n[image='GoalStatus/Open'] " + objective;
             return true;
@@ -297,10 +300,10 @@ bool readBriefingGoals(const std::string& path, std::string& descriptions)
                     continue;
                 if(action.mType == LevelScriptActionType::hint)
                 {
-                    descriptions += "\nHint: " + action.mText;
+                    descriptions += "\n" + Translation::makeReference("goal.hint", {{"text", action.mText}});
                     continue;
                 }
-                descriptions += "\n[image='GoalStatus/Open'] " + action.mText;
+                descriptions += "\n[image='GoalStatus/Open'] " + LevelText::display(action.mText);
             }
         }
         break;
@@ -481,7 +484,7 @@ void MenuModeCampaign::activate()
     {
         OD_LOG_INF("Campaign menu shows the campaign end message after level " + Helper::toString(playedLevel));
         mCampaignEnd = true;
-        mResultText = Campaign::CAMPAIGN_END_MESSAGE;
+        mResultText = Campaign::getEndMessage();
     }
     else if(playedLevel < campaign.getNumLevels())
     {
@@ -489,13 +492,13 @@ void MenuModeCampaign::activate()
         playedLevelWon = campaign.getPlayedLevelWon();
         if(playedLevelWon)
         {
-            mResultText = "Debriefing - " + level.mTitle + "\n\n" + level.mDebriefing + "\n\n";
+            mResultText = Translation::tr("mode.menu.campaign.debriefing", {{"title", LevelText::display(level.mTitle)}}) + "\n\n" + LevelText::display(level.mDebriefing) + "\n\n";
             if(level.mBonus)
             {
-                mResultText += "You have cleared the hidden chamber.";
+                mResultText += Translation::tr("mode.menu.campaign.bonus_cleared");
             }
             else
-                mResultText += "The next level is unlocked.";
+                mResultText += Translation::tr("mode.menu.campaign.next_unlocked");
 
             // The numbers of the level, as sent by the server when it was won
             std::string summary = campaign.getLevelSummary();
@@ -505,7 +508,7 @@ void MenuModeCampaign::activate()
         else
         {
             OD_LOG_INF("Campaign menu shows the lost-level message for level " + Helper::toString(playedLevel));
-            mResultText = "You did not complete this level. You can try again.";
+            mResultText = Translation::tr("mode.menu.campaign.level_failed");
         }
         campaign.clearPlayedLevel();
     }
@@ -528,7 +531,7 @@ void MenuModeCampaign::activate()
 
     if(!loadWorld())
     {
-        window->getChild(CMP_TEXT_LOADING)->setText("ERROR: The campaign map of Moreya could not be loaded.");
+        window->getChild(CMP_TEXT_LOADING)->setText(Gui::trCegui("mode.menu.campaign.map_load_error"));
         return;
     }
 
@@ -550,11 +553,12 @@ void MenuModeCampaign::updateDifficultyButton()
     CEGUI::Window* button = window->getChild(CMP_BUTTON_DIFFICULTY);
     KeeperAIType type = static_cast<KeeperAIType>(campaign.getDifficulty());
     std::string name = KeeperAITypes::toString(type);
-    name[0] = static_cast<char>(std::toupper(static_cast<unsigned char>(name[0])));
-    button->setText("Difficulty: " + name);
+    std::string displayName = Translation::tr("mode.menu.campaign.difficulty." + name);
+    button->setText(Gui::toCeguiText(Translation::tr("mode.menu.campaign.difficulty", {{"name", displayName}})));
     // The difficulty is chosen when a new campaign is begun and then stays
     button->setEnabled(!campaign.hasProgress());
-    button->setTooltipText(!campaign.hasProgress() && !campaign.isHellUnlocked() ? "Finish the campaign on Hard to unlock Hell." : "");
+    button->setTooltipText(!campaign.hasProgress() && !campaign.isHellUnlocked() ?
+        Gui::trCegui("mode.menu.campaign.hell_hint") : CEGUI::String());
 }
 
 //! \brief Selects the next unlocked campaign difficulty.
@@ -839,12 +843,12 @@ void MenuModeCampaign::fillMap()
         if(named && (level < campaign.getNumLevels()))
         {
             createMapText("CaveName_" + caveId, cave.mLabel, FONT_CAVE, colour, "WordWrapCentreAligned",
-                campaign.getLevel(level).mTitle);
+                LevelText::display(campaign.getLevel(level).mTitle));
         }
         else if(named && !campaign.isWingAvailable(cave.mWing))
         {
             createMapText("CaveName_" + caveId, cave.mLabel, FONT_CAVE, colour, "WordWrapCentreAligned",
-                CampaignPackages::MISSING_WING_TEXT);
+                CampaignPackages::getMissingWingText());
         }
     }
 
@@ -982,7 +986,7 @@ void MenuModeCampaign::setTooltipVisible(bool visible)
 
 //! \brief Shows the banner, the leader's portrait, the name, leader, raid size and origin of the guild that raids the
 //! current level on a carved stone slab, with a trail of embers from it to the current level and its banner there.
-//! Once every story level is defeated no guild comes any more.
+//! Once every story level is defeated no guild comes any more. The names come from the chosen language.
 void MenuModeCampaign::fillGuildPanel()
 {
     Campaign& campaign = Campaign::getSingleton();
@@ -1014,9 +1018,16 @@ void MenuModeCampaign::fillGuildPanel()
     createMapImage("GuildPortrait", guild.mPortrait, static_cast<float>(panel.mPortrait.mX),
         static_cast<float>(panel.mPortrait.mY), static_cast<float>(panel.mPortrait.mWidth),
         static_cast<float>(panel.mPortrait.mHeight), packageDirectory);
-    createMapText("GuildName", panel.mName, FONT_GUILD_NAME, COLOUR_HIGHLIGHT, "WordWrapLeftAligned", guild.mName);
+    // The names of the guild and its leaders come from the language files
+    CampaignWorldGuild shownGuild = guild;
+    shownGuild.mName = LevelText::display(guild.mName);
+    shownGuild.mLeader = LevelText::display(guild.mLeader);
+    shownGuild.mFirstLeader = LevelText::display(guild.mFirstLeader);
+    shownGuild.mOrigin = LevelText::display(guild.mOrigin);
+    createMapText("GuildName", panel.mName, FONT_GUILD_NAME, COLOUR_HIGHLIGHT, "WordWrapLeftAligned",
+        shownGuild.mName);
     createMapText("GuildDetails", panel.mDetails, FONT_GUILD_DETAILS, COLOUR_TEXT, "WordWrapLeftAligned",
-        CampaignWorld::getGuildDetailsText(guild));
+        CampaignWorld::getGuildDetailsText(shownGuild));
 }
 
 //! \brief Progress: defeated story levels and wings, Heartstone shards, cleared bonus caves, and a bar of the defeated
@@ -1063,11 +1074,12 @@ void MenuModeCampaign::fillProgressPanel()
     textArea.mWidth = static_cast<int>(panelWidth * PROGRESS_TEXT_WIDTH);
     textArea.mHeight = static_cast<int>(panelHeight * PROGRESS_TEXT_HEIGHT);
     createMapText("ProgressText", textArea, FONT_PROGRESS, COLOUR_TEXT, "LeftAligned",
-        "Levels defeated: " + Helper::toString(levelsDefeated) + " / " + Helper::toString(levelTotal)
-        + "\nWings defeated: " + Helper::toString(wingsDefeated) + " / " + Helper::toString(static_cast<uint32_t>(wings.size()))
-        + "\nHeartstone shards: " + Helper::toString(static_cast<uint32_t>(campaign.getHeartstonePieces())) + " / "
-        + Helper::toString(static_cast<uint32_t>(campaign.getHeartstoneTotal()))
-        + "\nBonus caves cleared: " + Helper::toString(bonusCleared) + " / " + Helper::toString(bonusTotal));
+        Translation::tr("mode.menu.campaign.progress", {
+            {"levels", Helper::toString(levelsDefeated)}, {"levelTotal", Helper::toString(levelTotal)},
+            {"wings", Helper::toString(wingsDefeated)}, {"wingTotal", Helper::toString(static_cast<uint32_t>(wings.size()))},
+            {"shards", Helper::toString(static_cast<uint32_t>(campaign.getHeartstonePieces()))},
+            {"shardTotal", Helper::toString(static_cast<uint32_t>(campaign.getHeartstoneTotal()))},
+            {"bonus", Helper::toString(bonusCleared)}, {"bonusTotal", Helper::toString(bonusTotal)}}));
 
     CEGUI::Window* bar = createMapWindow("OD/ProgressBar", "ProgressBar", panelX + panelWidth * PROGRESS_LEFT,
         panelY + panelHeight * PROGRESS_BAR_TOP, panelWidth * PROGRESS_BAR_WIDTH, panelHeight * PROGRESS_BAR_HEIGHT);
@@ -1163,14 +1175,14 @@ void MenuModeCampaign::updateTooltip(const CEGUI::Vector2f& position, size_t cav
     const CampaignWorldCave& worldCave = caves[cave];
     size_t level = mWorld.findLevel(campaign, cave);
     bool known = (level < campaign.getNumLevels());
-    std::string text = known ? campaign.getLevel(level).mTitle : CampaignPackages::MISSING_WING_TEXT;
+    std::string text = known ? LevelText::display(campaign.getLevel(level).mTitle) : CampaignPackages::getMissingWingText();
     std::string wingName;
     if((worldCave.mWing >= 1) && (worldCave.mWing <= mWorld.getWings().size()))
         wingName = mWorld.getWings()[worldCave.mWing - 1].mName;
     if(worldCave.mBonus)
-        text += "\nBonus cave of " + wingName;
+        text += "\n" + Translation::tr("mode.menu.campaign.bonus_cave", {{"wing", wingName}});
     else if(known && !campaign.getLevel(level).mGuild.mName.empty())
-        text += "\n" + wingName + "\nGuild: " + campaign.getLevel(level).mGuild.mName;
+        text += "\n" + wingName + "\n" + Translation::tr("mode.menu.campaign.guild", {{"name", LevelText::display(campaign.getLevel(level).mGuild.mName)}});
     else
         text += "\n" + wingName;
 
@@ -1179,22 +1191,22 @@ void MenuModeCampaign::updateTooltip(const CEGUI::Vector2f& position, size_t cav
     switch(mCaveStates[cave])
     {
         case CampaignCaveState::locked:
-            state = "State: Locked";
+            state = Translation::tr("mode.menu.campaign.state_locked");
             stateColour = COLOUR_LOCKED;
             break;
         case CampaignCaveState::current:
-            state = "State: Current level";
+            state = Translation::tr("mode.menu.campaign.state_current");
             stateColour = COLOUR_HIGHLIGHT;
             break;
         case CampaignCaveState::defeated:
-            state = "State: Defeated, can be played again";
+            state = Translation::tr("mode.menu.campaign.state_defeated");
             break;
         case CampaignCaveState::bonusFound:
-            state = "State: Found";
+            state = Translation::tr("mode.menu.campaign.state_found");
             stateColour = COLOUR_HIGHLIGHT;
             break;
         case CampaignCaveState::bonusCleared:
-            state = "State: Cleared, can be played again";
+            state = Translation::tr("mode.menu.campaign.state_cleared");
             break;
         case CampaignCaveState::hidden:
             setTooltipVisible(false);
@@ -1282,11 +1294,12 @@ bool MenuModeCampaign::mapClicked(const CEGUI::EventArgs& e)
     if((state == CampaignCaveState::locked) || (state == CampaignCaveState::hidden))
     {
         if(level < campaign.getNumLevels())
-            statusText->setText("This cave is locked. Defeat the levels before it first.");
+            statusText->setText(Gui::trCegui("mode.menu.campaign.cave_locked"));
         else if(!campaign.isWingAvailable(mWorld.getCaves()[cave].mWing))
-            statusText->setText("This wing is locked: " + CampaignPackages::MISSING_WING_TEXT + ".");
+            statusText->setText(Gui::toCeguiText(Translation::tr("mode.menu.campaign.wing_locked",
+                {{"text", CampaignPackages::getMissingWingText()}})));
         else
-            statusText->setText("This cave cannot be played yet.");
+            statusText->setText(Gui::trCegui("mode.menu.campaign.cave_unplayable"));
         return true;
     }
 
@@ -1295,7 +1308,8 @@ bool MenuModeCampaign::mapClicked(const CEGUI::EventArgs& e)
     return true;
 }
 
-//! \brief Shows the unchanged story beside the actual goals and optional preview of the selected level.
+//! \brief Shows the unchanged story beside the actual goals and optional preview of the selected level. Title and
+//! story are shown in the chosen language.
 void MenuModeCampaign::showBriefing(size_t level)
 {
     Campaign& campaign = Campaign::getSingleton();
@@ -1307,7 +1321,7 @@ void MenuModeCampaign::showBriefing(size_t level)
     setBriefingPreviewVisible(image != nullptr);
     if(image != nullptr)
         sheet->getChild(CMP_BRIEFING_IMAGE)->setProperty("Image", WORLD_IMAGE_PREFIX + campaignLevel.mPreview);
-    std::string text = "Briefing - " + campaignLevel.mTitle + "\n\n" + campaignLevel.mBriefing;
+    std::string text = Translation::tr("mode.menu.campaign.briefing", {{"title", LevelText::display(campaignLevel.mTitle)}}) + "\n\n" + LevelText::display(campaignLevel.mBriefing);
     sheet->getChild(CMP_BRIEFING_TEXT)->setText(reinterpret_cast<const CEGUI::utf8*>(text.c_str()));
     std::string goals;
     const std::string path = CampaignPackages::getLevelFile(campaignLevel,
@@ -1315,13 +1329,15 @@ void MenuModeCampaign::showBriefing(size_t level)
     if(!readBriefingGoals(path, goals))
     {
         OD_LOG_ERR("Could not read campaign briefing goals from " + path);
-        goals = "Goals: Could not read level goals.";
+        goals = Translation::tr("mode.menu.campaign.goals_unreadable");
     }
     Gui& gui = getModeManager().getGui();
     gui.setScaledArea(sheet->getChild(CMP_BRIEFING_TEXT), image != nullptr ?
         BRIEFING_PREVIEW_STORY_AREA : BRIEFING_STORY_AREA);
     gui.setScaledArea(sheet->getChild(CMP_BRIEFING_GOALS), image != nullptr ?
         BRIEFING_PREVIEW_GOALS_AREA : BRIEFING_GOALS_AREA);
+    // The goals are text references of the goals and of the level file (one per line), shown in the chosen language
+    goals = Translation::resolveLines(goals);
     sheet->getChild(CMP_BRIEFING_GOALS)->setText(reinterpret_cast<const CEGUI::utf8*>(goals.c_str()));
     sheet->getChild(CMP_BRIEFING_GOALS)->setVisible(true);
     sheet->getChild(CMP_BRIEFING_START)->setVisible(true);
@@ -1456,7 +1472,7 @@ bool MenuModeCampaign::canStartLevel(size_t index)
 
     if(!campaign.isUnlocked(index))
     {
-        statusText->setText("This level is locked. Complete the previous levels first.");
+        statusText->setText(Gui::trCegui("mode.menu.campaign.level_locked"));
         return false;
     }
 
@@ -1465,7 +1481,7 @@ bool MenuModeCampaign::canStartLevel(size_t index)
     if(!boost::filesystem::exists(boost::filesystem::path(level)))
     {
         OD_LOG_ERR("Campaign level not found: " + level);
-        statusText->setText("ERROR: Campaign level file not found.");
+        statusText->setText(Gui::trCegui("mode.menu.campaign.level_missing"));
         return false;
     }
 
@@ -1489,7 +1505,7 @@ void MenuModeCampaign::startLevel(size_t index)
 
     if(!campaign.isUnlocked(index))
     {
-        statusText->setText("This level is locked. Complete the previous levels first.");
+        statusText->setText(Gui::trCegui("mode.menu.campaign.level_locked"));
         mainWin->setVisible(true);
         return;
     }
@@ -1499,7 +1515,7 @@ void MenuModeCampaign::startLevel(size_t index)
     if(!boost::filesystem::exists(boost::filesystem::path(level)))
     {
         OD_LOG_ERR("Campaign level not found: " + level);
-        statusText->setText("ERROR: Campaign level file not found.");
+        statusText->setText(Gui::trCegui("mode.menu.campaign.level_missing"));
         mainWin->setVisible(true);
         return;
     }
@@ -1514,7 +1530,7 @@ void MenuModeCampaign::startLevel(size_t index)
     }
 
     hideBriefing();
-    statusText->setText("Loading...");
+    statusText->setText(Gui::trCegui("mode.menu.loading"));
 
     // In single player mode, we act as a server
     campaign.startLevel(index);
@@ -1525,7 +1541,7 @@ void MenuModeCampaign::startLevel(size_t index)
         relationshipsCheckbox->isSelected()))
     {
         OD_LOG_ERR("Could not start server for campaign game !!!");
-        statusText->setText("ERROR: Could not start server for campaign game !!!");
+        statusText->setText(Gui::trCegui("mode.menu.campaign.server_failed"));
         campaign.stopCampaign();
         mainWin->setVisible(true);
         return;
@@ -1538,7 +1554,7 @@ void MenuModeCampaign::startLevel(size_t index)
     if(!ODClient::getSingleton().connect("localhost", port, timeout, replayFilename))
     {
         OD_LOG_ERR("Could not connect to server for campaign game !!!");
-        statusText->setText("Error: Couldn't connect to local server!");
+        statusText->setText(Gui::trCegui("mode.menu.connect_failed"));
         campaign.stopCampaign();
         mainWin->setVisible(true);
         return;

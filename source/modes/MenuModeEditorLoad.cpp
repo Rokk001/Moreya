@@ -30,10 +30,32 @@
 #include "gamemap/MapHandler.h"
 #include "utils/ResourceManager.h"
 #include "utils/ConfigManager.h"
+#include "utils/Translation.h"
 
 #include <CEGUI/CEGUI.h>
 
 #include <boost/filesystem.hpp>
+
+namespace
+{
+    //! \brief Writes the texts of the items of the Level type combo box in the chosen language. The items are found
+    //! by their id (0 to 3), so that the selection stays when the language changes.
+    void translateLevelTypeItems(CEGUI::Combobox* levelTypeCb)
+    {
+        static const char* const KEYS[4] = {"editor.load.type.official_skirmish", "editor.load.type.official_multiplayer",
+            "editor.load.type.custom_skirmish", "editor.load.type.custom_multiplayer"};
+        for(size_t i = 0; i < levelTypeCb->getItemCount(); ++i)
+        {
+            CEGUI::ListboxItem* item = levelTypeCb->getListboxItemFromIndex(i);
+            if(item->getID() >= 4)
+                continue;
+            item->setText(Gui::trCegui(KEYS[item->getID()]));
+            if(item->isSelected())
+                levelTypeCb->setText(item->getText());
+        }
+        levelTypeCb->invalidate();
+    }
+}
 
 //! \brief Builds the editor load menu; the shipped level types are listed only with the hidden option.
 MenuModeEditorLoad::MenuModeEditorLoad(ModeManager* modeManager):
@@ -51,22 +73,24 @@ MenuModeEditorLoad::MenuModeEditorLoad(ModeManager* modeManager):
     CEGUI::ListboxTextItem* item = nullptr;
     if(MapHandler::isEditOfficialLevelsEnabled())
     {
-        item = new CEGUI::ListboxTextItem("Official Skirmish Levels", 0);
+        item = new CEGUI::ListboxTextItem(Gui::trCegui("editor.load.type.official_skirmish"), 0);
         item->setSelectionBrushImage(selImg);
         levelTypeCb->addItem(item);
 
-        item = new CEGUI::ListboxTextItem("Official Multiplayer Levels", 1);
+        item = new CEGUI::ListboxTextItem(Gui::trCegui("editor.load.type.official_multiplayer"), 1);
         item->setSelectionBrushImage(selImg);
         levelTypeCb->addItem(item);
     }
 
-    item = new CEGUI::ListboxTextItem("Custom Skirmish Levels", 2);
+    item = new CEGUI::ListboxTextItem(Gui::trCegui("editor.load.type.custom_skirmish"), 2);
     item->setSelectionBrushImage(selImg);
     levelTypeCb->addItem(item);
 
-    item = new CEGUI::ListboxTextItem("Custom Multiplayer Levels", 3);
+    item = new CEGUI::ListboxTextItem(Gui::trCegui("editor.load.type.custom_multiplayer"), 3);
     item->setSelectionBrushImage(selImg);
     levelTypeCb->addItem(item);
+
+    translateLevelTypeItems(levelTypeCb);
 
     addEventConnection(
         window->getChild(Gui::EDM_BUTTON_LAUNCH)->subscribeEvent(
@@ -125,6 +149,7 @@ void MenuModeEditorLoad::activate()
 
     CEGUI::Combobox* levelTypeCb = static_cast<CEGUI::Combobox*>(getModeManager().getGui().
                                        getGuiSheet(Gui::editorLoadMenu)->getChild(Gui::EDM_LIST_LEVEL_TYPES));
+    translateLevelTypeItems(levelTypeCb);
     levelTypeCb->setItemSelectState(static_cast<size_t>(0), true);
     updateFilesList();
 }
@@ -213,16 +238,16 @@ bool MenuModeEditorLoad::updateFilesList(const CEGUI::EventArgs&)
                 mapName += levelInfo.mLevelName;
                 mapDescription = levelInfo.mLevelDescription;
                 if (customMapExists)
-                    mapDescription += "\n(A custom map exists for this level.)";
+                    mapDescription += Translation::tr("editor.load.custom_map_exists");
             }
             else
             {
-                mapName = "invalid map";
-                mapDescription = "invalid map";
+                mapName = Translation::tr("editor.load.invalid_map");
+                mapDescription = Translation::tr("editor.load.invalid_map");
             }
 
             mDescriptionList.push_back(mapDescription);
-            CEGUI::ListboxTextItem* item = new CEGUI::ListboxTextItem(mapName);
+            CEGUI::ListboxTextItem* item = new CEGUI::ListboxTextItem(Gui::toCeguiText(mapName));
             item->setID(n);
             item->setSelectionBrushImage("OpenDungeonsSkin/SelectionBrush");
             levelSelectList->addItem(item);
@@ -242,11 +267,11 @@ bool MenuModeEditorLoad::launchSelectedButtonPressed(const CEGUI::EventArgs&)
 
     if(levelSelectList->getSelectedCount() == 0)
     {
-        window->getChild(Gui::EDM_TEXT_LOADING)->setText("Please select a level first.");
+        window->getChild(Gui::EDM_TEXT_LOADING)->setText(Gui::trCegui("editor.load.select_first"));
         return true;
     }
 
-    window->getChild(Gui::EDM_TEXT_LOADING)->setText("Loading...");
+    window->getChild(Gui::EDM_TEXT_LOADING)->setText(Gui::trCegui("editor.loading"));
 
     CEGUI::ListboxItem* selItem = levelSelectList->getFirstSelectedItem();
     int id = selItem->getID();
@@ -267,7 +292,7 @@ bool MenuModeEditorLoad::launchSelectedButtonPressed(const CEGUI::EventArgs&)
     if(!ODServer::getSingleton().startServer(nickname, level, ServerMode::ModeEditor, false))
     {
         OD_LOG_ERR("Could not start server for editor !!!");
-        window->getChild(Gui::EDM_TEXT_LOADING)->setText("ERROR: Could not start server for editor !!!");
+        window->getChild(Gui::EDM_TEXT_LOADING)->setText(Gui::trCegui("editor.load.server_failed"));
         return true;
     }
 
@@ -278,7 +303,7 @@ bool MenuModeEditorLoad::launchSelectedButtonPressed(const CEGUI::EventArgs&)
     if(!ODClient::getSingleton().connect("localhost", port, timeout, replayFilename))
     {
         OD_LOG_ERR("Could not connect to server for editor !!!");
-        window->getChild(Gui::EDM_TEXT_LOADING)->setText("Error: Couldn't connect to local server!");
+        window->getChild(Gui::EDM_TEXT_LOADING)->setText(Gui::trCegui("editor.connect_failed"));
         return true;
     }
     return true;
@@ -303,6 +328,6 @@ bool MenuModeEditorLoad::updateDescription(const CEGUI::EventArgs&)
     int id = selItem->getID();
 
     std::string description = mDescriptionList[id];
-    descTxt->setText(description);
+    descTxt->setText(Gui::toCeguiText(description));
     return true;
 }

@@ -25,6 +25,7 @@
 #include "render/Gui.h"
 #include "render/ODFrameListener.h"
 #include "utils/LogManager.h"
+#include "utils/Translation.h"
 #include "modes/GameEditorModeBase.h"
 
 #include <CEGUI/widgets/MultiLineEditbox.h>
@@ -237,7 +238,7 @@ GameEditorModeConsole::GameEditorModeConsole(ModeManager* modeManager):
 
     }
     
-    GameEditorModeConsole::getSingleton().printToConsole("The up to now console commands are in the package cheats. \n For example to call command fps with argument 30 type cheats.fps(30) \n For more type help('cheats') ");
+    GameEditorModeConsole::getSingleton().printToConsole(Translation::tr("console.python.hint"));
     startInterpreterThread();
 
     // register an anwser to an Event we want, since GameEditorModeConsole is EventHandler as well
@@ -411,7 +412,7 @@ void GameEditorModeConsole::flushConsoleOutput()
         pending.pop();
         if(!ss.empty() && ss[ss.length() - 1] == '\n')
             ss.pop_back();
-        lbi->setText(ss);
+        lbi->setText(Gui::toCeguiText(ss));
         mConsoleHistoryWindow->addItem(lbi);
     }
 }

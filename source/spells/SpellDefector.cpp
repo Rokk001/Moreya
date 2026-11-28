@@ -35,10 +35,11 @@
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
+#include "utils/Translation.h"
 
 
 const std::string SpellDefectorName = "defector";
-const std::string SpellDefectorNameDisplay = "Defector";
+const std::string SpellDefectorNameKey = "spell.defector.name";
 const std::string SpellDefectorCooldownKey = "DefectorCooldown";
 const SpellType SpellDefector::mSpellType = SpellType::defector;
 
@@ -55,8 +56,9 @@ class SpellDefectorFactory : public SpellFactory
     const std::string& getCooldownKey() const override
     { return SpellDefectorCooldownKey; }
 
-    const std::string& getNameReadable() const override
-    { return SpellDefectorNameDisplay; }
+    //! \brief The name shown to the player, in the chosen language.
+    std::string getNameReadable() const override
+    { return Translation::tr(SpellDefectorNameKey); }
 
     virtual void checkSpellCast(GameMap* gameMap, const InputManager& inputManager, InputCommand& inputCommand) const override
     { SpellDefector::checkSpellCast(gameMap, inputManager, inputCommand); }

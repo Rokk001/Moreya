@@ -15,6 +15,8 @@ import time
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts"))
 import content_packages  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import language_texts  # noqa: E402
 #: A game data path a probe reads below the repository path (a string literal "/config/items.cfg" of the probe)
 DATA_PATH = re.compile(r'"/((?:config|gui|models|materials|levels|sounds|particles)/[\w./-]+\.\w+)"')
 
@@ -25,6 +27,10 @@ def data_roots_environment(data_root=None):
     environment = dict(os.environ)
     roots = ([str(data_root)] if data_root is not None else []) + [str(ROOT)]
     environment["ODP_DATA_ROOTS"] = "|".join(roots + [str(root) for root in content_packages.package_roots(ROOT)])
+    # The English language texts the probe code asks Translation for (localization plan R11)
+    english = content_packages.packages(ROOT).get('lang-en')
+    if english is not None:
+        environment["ODP_LANG_EN"] = str(english / 'texts')
     return environment
 
 
@@ -89,6 +95,9 @@ def compile_and_run(name, probe, optimize=False):
     output = ROOT / "out" / name
     output.mkdir(parents=True, exist_ok=True)
     code, executable = output / "probe.cpp", output / "probe.exe"
+    # A probe that calls Translation::tr without defining it gets the English texts of the language files
+    if "Translation::" in probe and "namespace Translation" not in probe:
+        probe = language_texts.translation_stub() + probe
     code.write_text(probe, encoding="utf-8")
     command = ["cl", "/nologo", "/EHsc", "/std:c++14", "/I" + str(ROOT / "source"), str(code),
                "/Fe:" + str(executable), "/Fo:" + str(output / "probe.obj")]
@@ -113,6 +122,7 @@ def catalogue_fixture():
 #include "entities/ItemValueLines.h"
 #include "entities/PotionDefinition.h"
 #include "rooms/RoomType.h"
+#include "utils/DisplayText.h"
 static const uint32_t MAX_LEVEL = 30;
 #include <algorithm>
 #include <cmath>
@@ -140,6 +150,43 @@ public:
     //! \brief Reports a valid fixture packet; no packet assertion is made by these probes.
     explicit operator bool() const { return true; }
 };
+//! \brief Stand-in of the language system: the texts of the English language package (folder ODP_LANG_EN), read once.
+namespace Translation {
+//! \brief The entries "<key>=<text>" of every text file of the folder, "\n" as a line break.
+std::map<std::string, std::string>& texts() {
+    static std::map<std::string, std::string> entries; static bool loaded = false;
+    if(!loaded) {
+        loaded = true; const char* folder = std::getenv("ODP_LANG_EN");
+        for(const char* name : {"menus.txt", "creatures.txt", "interface.txt"}) {
+            if(folder == nullptr) break;
+            std::ifstream file(std::string(folder) + "/" + name); std::string line;
+            while(std::getline(file, line)) {
+                if(!line.empty() && line.back() == '\r') line.pop_back();
+                const size_t equals = line.find('=');
+                if(line.empty() || line[0] == '#' || equals == std::string::npos) continue;
+                std::string text = line.substr(equals + 1);
+                for(size_t at = text.find("\\n"); at != std::string::npos; at = text.find("\\n", at + 1)) text.replace(at, 2, "\n");
+                entries[line.substr(0, equals)] = text;
+            }
+        }
+    }
+    return entries;
+}
+//! \brief True when the English texts hold the key.
+bool hasText(const std::string& key) { return texts().count(key) != 0; }
+//! \brief The English text of the key, else the key.
+std::string tr(const std::string& key) { return hasText(key) ? texts()[key] : key; }
+//! \brief The English text of the key with its placeholders "{name}" replaced.
+std::string tr(const std::string& key, const std::map<std::string, std::string>& values) {
+    std::string text = tr(key);
+    for(const std::pair<const std::string, std::string>& value : values) {
+        const std::string placeholder = "{" + value.first + "}";
+        for(size_t at = text.find(placeholder); at != std::string::npos; at = text.find(placeholder, at + value.second.size()))
+            text.replace(at, placeholder.size(), value.second);
+    }
+    return text;
+}
+}
 namespace Random {
 std::mt19937 engine(20261024);
 //! \brief Produces reproducible inclusive integral draws for production rolling methods.

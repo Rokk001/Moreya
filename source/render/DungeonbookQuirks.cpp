@@ -5,6 +5,7 @@
 
 #include "render/DungeonbookQuirks.h"
 #include "utils/ContentPackages.h"
+#include "utils/Translation.h"
 
 #include "game/CreatureAppearance.h"
 #include "render/PortraitCatalog.h"
@@ -119,33 +120,68 @@ const std::string* DungeonbookQuirks::find(const std::string& tag) const
     return it == mTexts.end() ? nullptr : &it->second;
 }
 
+//! \brief The remark of a tag in the chosen language, else the text of the file.
+std::string DungeonbookQuirks::getDisplayText(const std::string& tag) const
+{
+    const std::string* fileText = find(tag);
+    if(fileText == nullptr)
+        return std::string();
+
+    const std::string key = "quirk." + tag;
+    if(Translation::hasText(key))
+        return Translation::tr(key);
+    return *fileText;
+}
+
 namespace DungeonbookQuirkLogic
 {
 const uint32_t MAX_REMARKS = 2;
+
+namespace
+{
+//! \brief The remarks of the tags of the stored whole image: the texts of the file (the base of the choice) and
+//! the texts in the chosen language, at the same positions. A removed image has none.
+void collectRemarkTexts(const DungeonbookQuirks& quirks, const PortraitCatalog& catalog,
+    const CreatureAppearance& appearance, std::vector<std::string>& fileTexts, std::vector<std::string>& shownTexts)
+{
+    fileTexts.clear();
+    shownTexts.clear();
+    const PortraitCatalog::Image* image = catalog.findImage(appearance.getImageNumber());
+    if(image == nullptr)
+        return;
+    for(const std::string& tag : image->mTags)
+    {
+        const std::string* text = quirks.find(tag);
+        if(text != nullptr)
+        {
+            fileTexts.push_back(*text);
+            shownTexts.push_back(quirks.getDisplayText(tag));
+        }
+    }
+}
+}
 
 //! \brief Collects tags of the stored whole image, so missing images never invent character details.
 std::vector<std::string> collectRemarks(const DungeonbookQuirks& quirks, const PortraitCatalog& catalog,
     const CreatureAppearance& appearance)
 {
-    std::vector<std::string> candidates;
-    const PortraitCatalog::Image* image = catalog.findImage(appearance.getImageNumber());
-    if(image == nullptr)
-        return candidates;
-    for(const std::string& tag : image->mTags)
-    {
-        const std::string* text = quirks.find(tag);
-        if(text != nullptr)
-            candidates.push_back(*text);
-    }
-    return candidates;
+    std::vector<std::string> fileTexts;
+    std::vector<std::string> shownTexts;
+    collectRemarkTexts(quirks, catalog, appearance, fileTexts, shownTexts);
+    return shownTexts;
 }
 
-//! \brief Selects at most maxCount remarks using the stable name and image token.
-std::vector<std::string> pickRemarks(const std::vector<std::string>& candidates, const std::string& creatureName,
-    const CreatureAppearance& appearance, uint32_t maxCount)
+//! \brief The positions of the remarks picked with the stable name and image token.
+std::vector<std::size_t> pickRemarkIndexes(const std::vector<std::string>& candidates,
+    const std::string& creatureName, const CreatureAppearance& appearance, uint32_t maxCount)
 {
+    std::vector<std::size_t> result;
     if(candidates.size() <= maxCount)
-        return candidates;
+    {
+        for(std::size_t i = 0; i < candidates.size(); ++i)
+            result.push_back(i);
+        return result;
+    }
 
     const std::string seed = creatureName + "|" + CreatureAppearanceLogic::toToken(appearance) + "|";
     std::vector<ScoredRemark> scored;
@@ -161,17 +197,35 @@ std::vector<std::string> pickRemarks(const std::vector<std::string>& candidates,
     scored.resize(maxCount);
     std::sort(scored.begin(), scored.end(), isLowerIndex);
 
-    std::vector<std::string> result;
     for(std::vector<ScoredRemark>::const_iterator it = scored.begin(); it != scored.end(); ++it)
-        result.push_back(candidates[it->mIndex]);
+        result.push_back(it->mIndex);
     return result;
 }
 
-//! \brief Selects stable remarks for the stored whole-image feature tags.
+//! \brief Selects at most maxCount remarks using the stable name and image token.
+std::vector<std::string> pickRemarks(const std::vector<std::string>& candidates, const std::string& creatureName,
+    const CreatureAppearance& appearance, uint32_t maxCount)
+{
+    std::vector<std::size_t> indexes = pickRemarkIndexes(candidates, creatureName, appearance, maxCount);
+    std::vector<std::string> result;
+    for(std::vector<std::size_t>::const_iterator it = indexes.begin(); it != indexes.end(); ++it)
+        result.push_back(candidates[*it]);
+    return result;
+}
+
+//! \brief Selects stable remarks for the stored whole-image feature tags. The choice is made on the texts of the
+//! file, so it is the same in every language; the remarks returned are the texts of the chosen language.
 std::vector<std::string> selectRemarks(const DungeonbookQuirks& quirks, const PortraitCatalog& catalog,
     const CreatureAppearance& appearance, const std::string& creatureName)
 {
-    return pickRemarks(collectRemarks(quirks, catalog, appearance), creatureName, appearance, MAX_REMARKS);
+    std::vector<std::string> fileTexts;
+    std::vector<std::string> shownTexts;
+    collectRemarkTexts(quirks, catalog, appearance, fileTexts, shownTexts);
+    std::vector<std::size_t> indexes = pickRemarkIndexes(fileTexts, creatureName, appearance, MAX_REMARKS);
+    std::vector<std::string> result;
+    for(std::vector<std::size_t>::const_iterator it = indexes.begin(); it != indexes.end(); ++it)
+        result.push_back(shownTexts[*it]);
+    return result;
 }
 
 //! \brief Formats the selected remarks for the existing profile label.

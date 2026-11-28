@@ -112,9 +112,9 @@ BOOST_AUTO_TEST_CASE(test_refusalMessage)
     BOOST_CHECK(HandLimitRules::refusal(false, true, 1, MAX_FIGHTERS, COOLDOWN) == HandLimitRules::Refusal::none);
 
     BOOST_CHECK_EQUAL(HandLimitRules::refusalMessage(HandLimitRules::Refusal::handFull, 0.0),
-        "Your hand cannot hold another fighting creature.");
+        "@msg.hand.full");
     BOOST_CHECK_EQUAL(HandLimitRules::refusalMessage(HandLimitRules::Refusal::cooldown, 2.1),
-        "You can pick up the next fighting creature in 3 s.");
+        "@msg.hand.cooldown|seconds=3");
     BOOST_CHECK_EQUAL(HandLimitRules::refusalMessage(HandLimitRules::Refusal::none, 2.1), "");
 }
 

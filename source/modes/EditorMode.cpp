@@ -57,7 +57,12 @@
 #include "utils/ResourceManager.h"
 #include "utils/Helper.h"
 #include "utils/LevelFileNameInput.h"
+#include "utils/LevelText.h"
 #include "utils/MapSizeInput.h"
+#include "utils/Translation.h"
+
+#include <functional>
+#include <map>
 #include "ODApplication.h"
 
 
@@ -143,6 +148,7 @@ EditorMode::EditorMode(ModeManager* modeManager):
     mSettings(mRootWindow, modeManager->getGui()),
     mModifiedMapBit(false)
 {
+    mLanguageListener = Translation::addListener(std::bind(&EditorMode::onLanguageChanged, this));
 
     // Set per default the input on the map
     mModeManager->getInputManager().mMouseDownOnCEGUIWindow = false;
@@ -517,11 +523,11 @@ EditorMode::EditorMode(ModeManager* modeManager):
     levelTypeCb->resetList();
 
     CEGUI::ListboxTextItem* item =
-    new CEGUI::ListboxTextItem("Skirmish Level", 0);
+    new CEGUI::ListboxTextItem(Gui::trCegui("editor.leveltype.skirmish"), 0);
     item->setSelectionBrushImage(selImg);
     levelTypeCb->addItem(item);
 
-    item = new CEGUI::ListboxTextItem("Multiplayer Level", 1);
+    item = new CEGUI::ListboxTextItem(Gui::trCegui("editor.leveltype.multiplayer"), 1);
     item->setSelectionBrushImage(selImg);
     levelTypeCb->addItem(item);
 
@@ -1014,109 +1020,99 @@ void EditorMode::updateCursorText()
     // Update the fullness info
     CEGUI::Window *posWin = mRootWindow->getChild(Gui::EDITOR_FULLNESS);
     textSS.str("");
-    textSS << "Tile Fullness (T): " << mCurrentFullness << "%";
-    posWin->setText(textSS.str());
+    textSS << mCurrentFullness;
+    posWin->setText(Gui::toCeguiText(Translation::tr("editor.status.fullness", {{"value", textSS.str()}})));
 
     // Update the gold density info
     posWin = mRootWindow->getChild(Gui::EDITOR_GOLD_DENSITY);
     textSS.str("");
-    textSS << "Gold density (G): " << mCurrentGoldDensity << "%";
-    posWin->setText(textSS.str());
+    textSS << mCurrentGoldDensity;
+    posWin->setText(Gui::toCeguiText(Translation::tr("editor.status.gold_density", {{"value", textSS.str()}})));
 
     // Update the cursor position
     posWin = mRootWindow->getChild(Gui::EDITOR_CURSOR_POS);
     textSS.str("");
-    textSS << "Cursor: x: " << mMouseX << ", y: " << mMouseY;
+    textSS << mMouseX;
+    std::string mouseX = textSS.str();
+    textSS.str("");
+    textSS << mMouseY;
+    std::string cursorText = Translation::tr("editor.status.cursor", {{"x", mouseX}, {"y", textSS.str()}});
     std::string regionName = mGameMap->getLevelScript().getRegionNameAt(mMouseX, mMouseY);
     if(!regionName.empty())
-        textSS << " (" << regionName << ")";
-    posWin->setText(textSS.str());
+        cursorText += " (" + regionName + ")";
+    posWin->setText(Gui::toCeguiText(cursorText));
 
     // Update the seat id
     posWin = mRootWindow->getChild(Gui::EDITOR_SEAT_ID);
     textSS.str("");
-    textSS << "Seat id (Y): " << getModeManager().getInputManager().mSeatIdSelected;
-    posWin->setText(textSS.str());
+    textSS << getModeManager().getInputManager().mSeatIdSelected;
+    posWin->setText(Gui::toCeguiText(Translation::tr("editor.status.seat", {{"id", textSS.str()}})));
 
     // Update the seat id
     posWin = mRootWindow->getChild(Gui::EDITOR_CREATURE_SPAWN);
     textSS.str("");
+    textSS << mCurrentCreatureLevel;
     const CreatureDefinition* def = mGameMap->getClassDescription(mCurrentCreatureIndex);
     if(def == nullptr)
-        textSS << "Creature (C): ?";
+        posWin->setText(Gui::toCeguiText(Translation::tr("editor.status.creature_unknown",
+            {{"level", textSS.str()}})));
     else
-        textSS << "Creature (C): " << def->getClassName();
-
-    textSS << ", level (L): " << mCurrentCreatureLevel;
-
-    posWin->setText(textSS.str());
+        posWin->setText(Gui::toCeguiText(Translation::tr("editor.status.creature",
+            {{"name", def->getDisplayName()}, {"level", textSS.str()}})));
 }
 
+//! \brief Shows the name of the edited level (in the chosen language when the file holds a text reference).
 void EditorMode::updateLevelNameText()
 {
-    std::string levelName = mGameMap->getLevelName();
+    // The name of a level file may be a reference to a language text
+    std::string levelName = LevelText::display(mGameMap->getLevelName());
     if(levelName.empty())
-        levelName = "unnamed";
+        levelName = Translation::tr("editor.level.unnamed");
 
-    if(levelName == mDisplayedLevelName)
+    // The displayed text (not only the name) is kept, so that it is also written again when the language changed
+    std::string levelText = Translation::tr("editor.level.label", {{"name", levelName}});
+    if(levelText == mDisplayedLevelName)
         return;
 
-    mDisplayedLevelName = levelName;
-    mRootWindow->getChild(Gui::EDITOR_LEVEL_NAME)->setText("Level: " + levelName);
+    mDisplayedLevelName = levelText;
+    mRootWindow->getChild(Gui::EDITOR_LEVEL_NAME)->setText(Gui::toCeguiText(levelText));
 }
 
 void EditorMode::fillControlsWindow()
 {
     // The editor has no other place saying what its keys do, and half of them are only
     // reachable from the keyboard, so they are listed here rather than left to be found.
-    std::stringstream txt;
-    txt << "Camera" << std::endl;
-    txt << "    W A S D or the arrow keys - move" << std::endl;
-    txt << "    Q, E - rotate" << std::endl;
-    txt << "    Page Up, Page Down - tilt" << std::endl;
-    txt << "    Home, End - zoom in and out" << std::endl;
-    txt << "    1 to 0 - go back to a saved point of view" << std::endl;
-    txt << "    Shift + 1 to 0 - save the current point of view" << std::endl;
-    txt << std::endl;
+    // The sections are separated by an empty line; the last line ends with a line break
+    std::string txt;
+    const char* const sections[] = {"editor.help.camera", "editor.help.tiles", "editor.help.creatures",
+        "editor.help.rooms", "editor.help.regions", "editor.help.editing", "editor.help.level"};
+    for(size_t i = 0; i < sizeof(sections) / sizeof(sections[0]); ++i)
+    {
+        if(i > 0)
+            txt += "\n\n";
+        txt += Translation::tr(sections[i]);
+    }
+    txt += "\n";
 
-    txt << "Tiles" << std::endl;
-    txt << "    T - switch between full and empty tiles" << std::endl;
-    txt << "    G - gold wall density 50/100/150 %" << std::endl;
-    txt << "    Y - next seat, Shift + Y - previous seat" << std::endl;
-    txt << std::endl;
+    mRootWindow->getChild("EditorHelpWindow")->getChild("HelpText")->setText(Gui::toCeguiText(txt));
+}
 
-    txt << "Creatures" << std::endl;
-    txt << "    C - next creature class, Shift + C - previous class" << std::endl;
-    txt << "    L - raise the level given to new creatures, Shift + L - lower it" << std::endl;
-    txt << "    Both are shown at the bottom of the screen. To change a creature" << std::endl;
-    txt << "    already placed, pick it up, set the level, then drop it." << std::endl;
-    txt << std::endl;
-
-    txt << "Rooms" << std::endl;
-    txt << "    P - edit the waves of the wave portal under the mouse" << std::endl;
-    txt << "    The waves are what the portal sends against the players, and" << std::endl;
-    txt << "    they are only kept once the level is saved." << std::endl;
-    txt << std::endl;
-
-    txt << "Regions" << std::endl;
-    txt << "    R - make the marked tiles a region (shown as a green frame)" << std::endl;
-    txt << "    Shift + R - remove the region under the mouse" << std::endl;
-    txt << "    Triggers in the level file refer to a region by its name, for" << std::endl;
-    txt << "    example: Cond region 1 Region1. The name is shown next to the" << std::endl;
-    txt << "    cursor position. Regions are kept once the level is saved." << std::endl;
-    txt << std::endl;
-
-    txt << "Editing" << std::endl;
-    txt << "    Ctrl + C - copy the marked tiles, Ctrl + V - paste" << std::endl;
-    txt << "    Delete - delete what was copied" << std::endl;
-    txt << std::endl;
-
-    txt << "Level" << std::endl;
-    txt << "    F5 - save, F10 - editor options" << std::endl;
-    txt << "    F11 - debug info, F12 or ` - console" << std::endl;
-    txt << "    Print Screen - screenshot, Escape - quit" << std::endl;
-
-    mRootWindow->getChild("EditorHelpWindow")->getChild("HelpText")->setText(txt.str());
+//! \brief Writes the texts of the items of the Level type combo box in the chosen language.
+void EditorMode::translateLevelTypeItems()
+{
+    static const char* const KEYS[2] = {"editor.leveltype.skirmish", "editor.leveltype.multiplayer"};
+    CEGUI::Combobox* levelTypeCb = static_cast<CEGUI::Combobox*>(
+        mRootWindow->getChild("LevelWindowFrame/LevelTypeSelect"));
+    for(size_t i = 0; i < levelTypeCb->getItemCount(); ++i)
+    {
+        CEGUI::ListboxItem* item = levelTypeCb->getListboxItemFromIndex(i);
+        if(item->getID() >= 2)
+            continue;
+        item->setText(Gui::trCegui(KEYS[item->getID()]));
+        if(item->isSelected())
+            levelTypeCb->setText(item->getText());
+    }
+    levelTypeCb->invalidate();
 }
 
 bool EditorMode::showControlsWindow(const CEGUI::EventArgs& /*arg*/)
@@ -1147,14 +1143,14 @@ void EditorMode::setLevelOfCreaturesInHand()
 namespace
 {
     //! \brief The strategies a wave portal can follow, in the order they are written to the
-    //! level file, with the name the editor shows for each of them.
+    //! level file, with the language file key of the name the editor shows for each of them.
     const std::vector<std::pair<RoomPortalWaveStrategy, std::string>>& getWaveStrategies()
     {
         static const std::vector<std::pair<RoomPortalWaveStrategy, std::string>> strategies =
         {
-            { RoomPortalWaveStrategy::closestDungeon, "Closest dungeon" },
-            { RoomPortalWaveStrategy::randomPlayer, "Random player" },
-            { RoomPortalWaveStrategy::fixedTeamIds, "Fixed teams" }
+            { RoomPortalWaveStrategy::closestDungeon, "editor.wave.strategy.closest_dungeon" },
+            { RoomPortalWaveStrategy::randomPlayer, "editor.wave.strategy.random_player" },
+            { RoomPortalWaveStrategy::fixedTeamIds, "editor.wave.strategy.fixed_teams" }
         };
         return strategies;
     }
@@ -1163,15 +1159,56 @@ namespace
     //! wide as half the window.
     std::string describeWave(uint32_t index, const RoomPortalWaveData& wave)
     {
-        std::stringstream ss;
-        ss << (index + 1) << ": " << wave.mSpawnTurnMin;
+        std::map<std::string, std::string> values;
+        values["index"] = Helper::toString(index + 1);
+        values["min"] = Helper::toString(wave.mSpawnTurnMin);
+        values["max"] = Helper::toString(wave.mSpawnTurnMax);
+        values["count"] = Helper::toString(wave.mSpawnCreatureClassName.size());
         if(wave.mSpawnTurnMax < 0)
-            ss << " on";
-        else
-            ss << " to " << wave.mSpawnTurnMax;
+            return Translation::tr("editor.wave.describe_open", values);
 
-        ss << " (" << wave.mSpawnCreatureClassName.size() << ")";
-        return ss.str();
+        return Translation::tr("editor.wave.describe_range", values);
+    }
+}
+
+//! \brief Writes the texts set from code again after the language changed (the layout texts are handled by Gui).
+void EditorMode::onLanguageChanged()
+{
+    translateLevelTypeItems();
+    fillControlsWindow();
+    mDisplayedLevelName.clear();
+    if(mGameMap != nullptr)
+    {
+        updateLevelNameText();
+        updateCursorText();
+    }
+
+    CEGUI::Window* window = mRootWindow->getChild("EditorPortalWavesWindow");
+    if(!mPortalWaveRoomName.empty())
+    {
+        window->setText(Gui::toCeguiText(Translation::tr("editor.wave.title", {{"room", mPortalWaveRoomName}})));
+        // The strategy items are found by their id (the strategy), so that the selection stays
+        CEGUI::Combobox* strategyCb = static_cast<CEGUI::Combobox*>(window->getChild("Strategy"));
+        for(size_t i = 0; i < strategyCb->getItemCount(); ++i)
+        {
+            CEGUI::ListboxItem* item = strategyCb->getListboxItemFromIndex(i);
+            for(const std::pair<RoomPortalWaveStrategy, std::string>& strategy : getWaveStrategies())
+            {
+                if(item->getID() != static_cast<CEGUI::uint>(strategy.first))
+                    continue;
+
+                item->setText(Gui::trCegui(strategy.second));
+                if(item->isSelected())
+                    strategyCb->setText(item->getText());
+            }
+        }
+        strategyCb->invalidate();
+        if(window->isVisible())
+        {
+            // What was typed but not yet read is kept
+            readPortalWaveWindow();
+            refreshPortalWaveWindow();
+        }
     }
 }
 
@@ -1201,7 +1238,7 @@ void EditorMode::showPortalWaveWindow(const std::string& roomName, const RoomPor
 {
     if(roomName.empty())
     {
-        displayText(Ogre::ColourValue::White, "Point at a wave portal to edit its waves");
+        displayText(Ogre::ColourValue::White, Translation::tr("editor.wave.point_at_portal"));
         return;
     }
 
@@ -1210,7 +1247,7 @@ void EditorMode::showPortalWaveWindow(const std::string& roomName, const RoomPor
     mPortalWaveSelectedWave = mPortalWaveConfig.mWaves.empty() ? -1 : 0;
 
     CEGUI::Window* window = mRootWindow->getChild("EditorPortalWavesWindow");
-    window->setText("Waves of " + roomName);
+    window->setText(Gui::toCeguiText(Translation::tr("editor.wave.title", {{"room", roomName}})));
 
     // The class list only depends on the level, but it is only known once the level has been
     // loaded, which is why it is filled here rather than when the window is created.
@@ -1223,7 +1260,7 @@ void EditorMode::showPortalWaveWindow(const std::string& roomName, const RoomPor
         if(def == nullptr)
             continue;
 
-        CEGUI::ListboxTextItem* item = new CEGUI::ListboxTextItem(def->getClassName(), i);
+        CEGUI::ListboxTextItem* item = new CEGUI::ListboxTextItem(Gui::toCeguiText(def->getDisplayName()), i);
         item->setSelectionBrushImage(selImg);
         classCb->addItem(item);
     }
@@ -1238,7 +1275,7 @@ void EditorMode::showPortalWaveWindow(const std::string& roomName, const RoomPor
     strategyCb->resetList();
     for(const std::pair<RoomPortalWaveStrategy, std::string>& strategy : getWaveStrategies())
     {
-        CEGUI::ListboxTextItem* item = new CEGUI::ListboxTextItem(strategy.second,
+        CEGUI::ListboxTextItem* item = new CEGUI::ListboxTextItem(Gui::trCegui(strategy.second),
             static_cast<CEGUI::uint>(strategy.first));
         item->setSelectionBrushImage(selImg);
         strategyCb->addItem(item);
@@ -1290,7 +1327,7 @@ void EditorMode::refreshPortalWaveWindow()
     for(uint32_t i = 0; i < mPortalWaveConfig.mWaves.size(); ++i)
     {
         CEGUI::ListboxTextItem* item = new CEGUI::ListboxTextItem(
-            describeWave(i, mPortalWaveConfig.mWaves[i]), i);
+            Gui::toCeguiText(describeWave(i, mPortalWaveConfig.mWaves[i])), i);
         item->setSelectionBrushImage(selImg);
         waveList->addItem(item);
     }
@@ -1334,7 +1371,8 @@ void EditorMode::refreshPortalWaveSelectedWave()
     {
         const std::pair<std::string, uint32_t>& p = wave.mSpawnCreatureClassName[i];
         CEGUI::ListboxTextItem* item = new CEGUI::ListboxTextItem(
-            p.first + " (level " + Helper::toString(p.second) + ")", i);
+            Gui::toCeguiText(Translation::tr("editor.wave.creature_entry",
+                {{"class", CreatureDefinition::getDisplayNameOf(p.first)}, {"level", Helper::toString(p.second)}})), i);
         item->setSelectionBrushImage(selImg);
         creatureList->addItem(item);
     }
@@ -1446,7 +1484,7 @@ bool EditorMode::onPortalWaveAddCreature(const CEGUI::EventArgs& /*arg*/)
     if((mPortalWaveSelectedWave < 0) ||
        (static_cast<size_t>(mPortalWaveSelectedWave) >= mPortalWaveConfig.mWaves.size()))
     {
-        displayText(Ogre::ColourValue::White, "Select a wave before adding creatures to it");
+        displayText(Ogre::ColourValue::White, Translation::tr("editor.wave.select_before_add"));
         return true;
     }
 
@@ -1463,8 +1501,12 @@ bool EditorMode::onPortalWaveAddCreature(const CEGUI::EventArgs& /*arg*/)
         level = MAX_LEVEL;
 
     readPortalWaveWindow();
+    // The item text is the name the player sees; the id of the item is the index of the creature class
+    const CreatureDefinition* selectedClass = mGameMap->getClassDescription(static_cast<int>(classItem->getID()));
+    if(selectedClass == nullptr)
+        return true;
     mPortalWaveConfig.mWaves[mPortalWaveSelectedWave].mSpawnCreatureClassName.push_back(
-        std::pair<std::string, uint32_t>(classItem->getText().c_str(), level));
+        std::pair<std::string, uint32_t>(selectedClass->getClassName(), level));
 
     // The wave list shows how many creatures a wave holds, so it changed too
     refreshPortalWaveWindow();
@@ -1482,7 +1524,7 @@ bool EditorMode::onPortalWaveRemoveCreature(const CEGUI::EventArgs& /*arg*/)
     CEGUI::ListboxItem* item = creatureList->getFirstSelectedItem();
     if(item == nullptr)
     {
-        displayText(Ogre::ColourValue::White, "Select the creature to remove from the wave");
+        displayText(Ogre::ColourValue::White, Translation::tr("editor.wave.select_creature"));
         return true;
     }
 
@@ -1521,8 +1563,7 @@ bool EditorMode::onPortalWaveApply(const CEGUI::EventArgs& /*arg*/)
     ODClient::getSingleton().queueClientNotification(clientNotification);
 
     mModifiedMapBit = true;
-    displayText(Ogre::ColourValue::White, "Waves of " + mPortalWaveRoomName
-        + " changed. Save the level to keep them.");
+    displayText(Ogre::ColourValue::White, Translation::tr("editor.wave.changed", {{"room", mPortalWaveRoomName}}));
     return true;
 }
 
@@ -1926,7 +1967,7 @@ void EditorMode::markRegion()
 {
     if(!mTileMarker.isVisible)
     {
-        displayText(Ogre::ColourValue::White, "Mark some tiles first, then press R");
+        displayText(Ogre::ColourValue::White, Translation::tr("editor.region.mark_first"));
         return;
     }
 
@@ -1938,10 +1979,13 @@ void EditorMode::markRegion()
     askRegionEdit(EditorRegionOperation::set, name, x1, y1, x2, y2);
 
     mModifiedMapBit = true;
-    std::stringstream message;
-    message << name << " set from " << x1 << "," << y1 << " to " << x2 << "," << y2
-        << ". Save the level to keep it.";
-    displayText(Ogre::ColourValue::White, message.str());
+    std::map<std::string, std::string> values;
+    values["name"] = name;
+    values["x1"] = Helper::toString(x1);
+    values["y1"] = Helper::toString(y1);
+    values["x2"] = Helper::toString(x2);
+    values["y2"] = Helper::toString(y2);
+    displayText(Ogre::ColourValue::White, Translation::tr("editor.region.set", values));
 }
 
 void EditorMode::unmarkRegion()
@@ -1950,13 +1994,13 @@ void EditorMode::unmarkRegion()
     std::string name = mGameMap->getLevelScript().getRegionNameAt(inputManager.mXPos, inputManager.mYPos);
     if(name.empty())
     {
-        displayText(Ogre::ColourValue::White, "Point at a region to remove it");
+        displayText(Ogre::ColourValue::White, Translation::tr("editor.region.point_at"));
         return;
     }
 
     askRegionEdit(EditorRegionOperation::remove, name, 0, 0, 0, 0);
     mModifiedMapBit = true;
-    displayText(Ogre::ColourValue::White, name + " removed. Save the level to keep the change.");
+    displayText(Ogre::ColourValue::White, Translation::tr("editor.region.removed", {{"name", name}}));
 }
 
 
@@ -2111,7 +2155,8 @@ void EditorMode::notifyGuiAction(GuiAction guiAction)
     }
 }
 
-//! \brief Populates server-resolved item choices in the same order as the shared catalogue.
+//! \brief Populates server-resolved item choices in the same order as the shared catalogue, the item names in the
+//! chosen language.
 void EditorMode::initialiseItemBoxControls()
 {
     CEGUI::Combobox* choices = static_cast<CEGUI::Combobox*>(mRootWindow->getChild("MainTabControl/Boxes/ItemBoxContent"));
@@ -2125,11 +2170,12 @@ void EditorMode::initialiseItemBoxControls()
             const ItemQuality& values = definition->getQuality(quality);
             if(!values.mAvailable) continue;
             mItemBoxContents.push_back(definition->getId() + " " + qualityName(quality));
-            labels.push_back(values.mDisplay + " (" + qualityName(quality) + ")");
+            labels.push_back(definition->getDisplayText(quality) + " (" + qualityName(quality) + ")");
         }
     for(size_t index = 0; index < labels.size(); ++index)
     {
-        CEGUI::ListboxTextItem* item = new CEGUI::ListboxTextItem(labels[index], static_cast<uint32_t>(index));
+        CEGUI::ListboxTextItem* item = new CEGUI::ListboxTextItem(Gui::toCeguiText(labels[index]),
+            static_cast<uint32_t>(index));
         item->setSelectionBrushImage("OpenDungeonsSkin/SelectionBrush");
         choices->addItem(item);
     }
@@ -2553,7 +2599,7 @@ bool EditorMode::loadMenuLevelSelectSelected(const CEGUI::EventArgs& /*arg*/)
             if(MapHandler::getMapInfo( fullPath , levelInfo))
                 descTxt->setText(levelInfo.mLevelDescription);
             else
-                descTxt->setText("Invalid map");        
+                descTxt->setText(Gui::trCegui("editor.invalid_map"));        
         }
     
         else if(is_directory(path((levelEditBox->getText() + "/" + levelSelectList->getFirstSelectedItem()->getText()).c_str())))
@@ -2986,7 +3032,7 @@ void EditorMode::installCreaturesMenuButtons()
     for(unsigned int ii = 0 ;  ii < mGameMap->numClassDescriptions()   ; ++ii )
     {
         CEGUI::Window* ww = CEGUI::WindowManager::getSingletonPtr()->createWindow("OD/MenuItem");
-        ww->setText(mGameMap->getClassDescription(ii)->getClassName());
+        ww->setText(Gui::toCeguiText(mGameMap->getClassDescription(ii)->getDisplayName()));
         ww->setName(mGameMap->getClassDescription(ii)->getClassName());
         mRootWindow->getChild("Menubar")->getChild("Creatures")
         ->getChild("PopupMenu4")->addChild(ww);
@@ -3070,9 +3116,11 @@ void EditorMode::installSeatsMenuButtons()
         ss <<  "[colour='" ;
         ss <<  std::hex << seat->getColorValue().getAsARGB();
         ss << "']" ;
+        std::string seatText = ss.str();
         ss << "Seat";
         ss << seat->getId();
-        ww->setText(ss.str());
+        seatText += Translation::tr("editor.seat.menu_item", {{"id", Helper::toString(seat->getId())}});
+        ww->setText(Gui::toCeguiText(seatText));
         ww->setName(ss.str());
         mRootWindow->getChild("Menubar")->getChild("Seats")->getChild("PopupMenu5")->addChild(ww);
         addEventConnection(
@@ -3132,6 +3180,7 @@ void EditorMode::addPathNameToList(directory_entry& xx, CEGUI::Listbox* levelSel
 
 EditorMode::~EditorMode()
 {
+    Translation::removeListener(mLanguageListener);
     ConfigManager::getSingleton().saveEditorSettings();
     if(draggableTileContainer!=nullptr)
     {
@@ -3173,14 +3222,14 @@ bool EditorMode::launchNewLevelPressed(const CEGUI::EventArgs&)
     Helper::trim(level);
     if (level.empty()) {
         mRootWindow->getChild("LevelWindowFrame/LevelMessageText")
-            ->setText("Please set a level filename.");
+            ->setText(Gui::trCegui("editor.new.filename_missing"));
         return true;
     }
     // The map is made in the user level folder: a name with a folder or ".." could put it anywhere else
     if(!LevelFileNameInput::isPlainFileName(level))
     {
         mRootWindow->getChild("LevelWindowFrame/LevelMessageText")
-            ->setText("The level filename must be a plain file name,\nwithout folders.");
+            ->setText(Gui::trCegui("editor.new.filename_plain_dialog"));
         return true;
     }
 
@@ -3196,7 +3245,7 @@ bool EditorMode::launchNewLevelPressed(const CEGUI::EventArgs&)
     }
     if (boost::filesystem::exists(level)) {
         mRootWindow->getChild("LevelWindowFrame/LevelMessageText")
-            ->setText("The level filename already exists.\nPlease set a different filename.");
+            ->setText(Gui::trCegui("editor.new.filename_exists"));
         return true;
     }
 
@@ -3208,8 +3257,8 @@ bool EditorMode::launchNewLevelPressed(const CEGUI::EventArgs&)
     int32_t width = 0;
     int32_t height = 0;
     if (!MapSizeInput::parse(widthStr, width) || !MapSizeInput::parse(heightStr, height)) {
-        mRootWindow->getChild("LevelWindowFrame/LevelMessageText")->setText("Invalid map size.\nWidth and height must be\nwhole numbers from 1 to "
-            + Helper::toString(MapSizeInput::MAX_SIZE) + ".");
+        mRootWindow->getChild("LevelWindowFrame/LevelMessageText")->setText(Gui::toCeguiText(Translation::tr("editor.new.size_invalid_dialog",
+            {{"max", Helper::toString(MapSizeInput::MAX_SIZE)}})));
         return true;
     }
 
@@ -3217,7 +3266,7 @@ bool EditorMode::launchNewLevelPressed(const CEGUI::EventArgs&)
     editWin = static_cast<CEGUI::Editbox*>(mRootWindow->getChild("LevelWindowFrame/LevelTitleEdit"));
     std::string levelTitle = editWin->getText().c_str();
     if (levelTitle.empty()) {
-        mRootWindow->getChild("LevelWindowFrame/LevelMessageText")->setText("Please set a level title.");
+        mRootWindow->getChild("LevelWindowFrame/LevelMessageText")->setText(Gui::trCegui("editor.new.title_missing"));
         return true;
     }
     // A failed earlier load or new level can have left the culling manager null
@@ -3245,8 +3294,9 @@ bool EditorMode::launchNewLevelPressed(const CEGUI::EventArgs&)
     if(ODServer::getSingleton().isConnected())
         ODServer::getSingleton().stopServer();
 
-    
-    mRootWindow->getChild("LevelWindowFrame/LevelMessageText")->setText("Loading...");
+
+    // The text LoadingScreen looks for in LevelMessageText (findLoadingText compares with ui.loading)
+    mRootWindow->getChild("LevelWindowFrame/LevelMessageText")->setText(Gui::trCegui("ui.loading"));
     LoadingScreen loading;
 
     // Create the level before opening it.
@@ -3256,7 +3306,7 @@ bool EditorMode::launchNewLevelPressed(const CEGUI::EventArgs&)
     if(!gameMap->createNewMap(width, height))
     {
         OD_LOG_WRN("Couldn't create a new map of size " + Helper::toString(width) + "x" + Helper::toString(height));
-        mRootWindow->getChild("LevelWindowFrame/LevelMessageText")->setText("Couldn't create a map of this size.");
+        mRootWindow->getChild("LevelWindowFrame/LevelMessageText")->setText(Gui::trCegui("editor.new.create_failed"));
         return true;
     }
     gameMap->setLevelFileName(level);
@@ -3280,14 +3330,14 @@ bool EditorMode::launchNewLevelPressed(const CEGUI::EventArgs&)
     {
         OD_LOG_WRN("Couldn't add seat id=" + Helper::toString(seat->getId()));
         delete seat;
-        mRootWindow->getChild("LevelWindowFrame/LevelMessageText")->setText("Invalid seat data...");
+        mRootWindow->getChild("LevelWindowFrame/LevelMessageText")->setText(Gui::trCegui("editor.new.seat_invalid"));
         return true;
     }
 
     if (!MapHandler::writeGameMapToFile(level, *gameMap)) {
         OD_LOG_WRN("Couldn't write new map before loading: " + level);
         mRootWindow->getChild("LevelWindowFrame/LevelMessageText")
-            ->setText("Couldn't write new map before loading.\nPlease check logs.");
+            ->setText(Gui::trCegui("editor.new.write_failed"));
         return true;
     }
 
@@ -3298,7 +3348,7 @@ bool EditorMode::launchNewLevelPressed(const CEGUI::EventArgs&)
     {
         OD_LOG_ERR("Could not start server for editor!");
         mRootWindow->getChild("LevelWindowFrame/LevelMessageText")
-            ->setText("ERROR: Could not start server for editor!");
+            ->setText(Gui::trCegui("editor.new.server_failed"));
         return true;
     }
 
@@ -3310,11 +3360,11 @@ bool EditorMode::launchNewLevelPressed(const CEGUI::EventArgs&)
     {
         OD_LOG_ERR("Could not connect to server for editor!");
         mRootWindow->getChild("LevelWindowFrame/LevelMessageText")
-            ->setText("Error: Couldn't connect to local server!");
+            ->setText(Gui::trCegui("editor.connect_failed"));
         return true;
     }
     mRootWindow->getChild("LevelWindowFrame/LevelMessageText")
-        ->setText("The level was created successfully.");
+        ->setText(Gui::trCegui("editor.new.created"));
 
     ODClient::getSingleton().processClientSocketMessages(75);
     ODClient::getSingleton().processClientNotifications();

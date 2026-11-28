@@ -18,16 +18,28 @@
 #include "social/SocialData.h"
 #include "social/SocialGenerator.h"
 #include "social/SocialRng.h"
+#include "utils/Translation.h"
+
+#include <boost/filesystem.hpp>
 
 #include <fstream>
 #include <set>
 #include <sstream>
+#include <vector>
 
 #define BOOST_TEST_MODULE SocialGenerator
 #include "BoostTestTargetConfig.h"
 
 namespace
 {
+
+//! \brief Writes a file of a test language package, creating the folders on the way.
+void writeLanguageFile(const boost::filesystem::path& file, const std::string& text)
+{
+    boost::filesystem::create_directories(file.parent_path());
+    std::ofstream out(file.string().c_str(), std::ios::binary);
+    out << text;
+}
 
 //! The data files live in ../../config relative to this source file
 std::string getConfigDirectory()
@@ -400,4 +412,75 @@ BOOST_AUTO_TEST_CASE(test_SocialMoodPosts)
         BOOST_CHECK_MESSAGE(!social::SocialGenerator::renderPost(data, other, false, "complainbed", 1, 0, "", "").empty(),
             classes[i]);
     }
+}
+
+//! The texts of the posts, the mood lines and the name pools come from the language files by key, the generator
+//! draws the same entry in every language, and without language files the text of the data file is used.
+BOOST_AUTO_TEST_CASE(test_SocialTextsFollowTheLanguage)
+{
+    const boost::filesystem::path root = boost::filesystem::temp_directory_path() / "od_test_social_language";
+    boost::filesystem::remove_all(root);
+    writeLanguageFile(root / "lang-en" / "Package.cfg", "Content=lang-en\nLanguage=en\nLanguageName=English\n");
+    writeLanguageFile(root / "lang-en" / "texts" / "social.txt",
+        "social.post.eat.001=First meal.\nsocial.post.eat.002=Second meal.\nsocial.post.eat.003=Third meal.\n"
+        "social.mood.hungry.001=Hungry one.\nsocial.name.tg.title.001=the Damp\nsocial.name.tg.title.002=the Late\n"
+        "social.name.tg.hometown.001=Mudcrest\nsocial.name.tg.hometown.002=Soggy Bottom\n");
+    writeLanguageFile(root / "lang-de" / "Package.cfg", "Content=lang-de\nLanguage=de\nLanguageName=Deutsch\n");
+    writeLanguageFile(root / "lang-de" / "texts" / "social.txt",
+        "social.post.eat.001=Erste Mahlzeit.\nsocial.post.eat.002=Zweite Mahlzeit.\nsocial.post.eat.003=Dritte Mahlzeit.\n"
+        "social.mood.hungry.001=Hungrig.\nsocial.name.tg.title.001=Feucht\nsocial.name.tg.title.002=Zuspaet\n"
+        "social.name.tg.hometown.001=Schlammkamm\nsocial.name.tg.hometown.002=Sumpfgrund\n");
+    std::vector<std::string> folders;
+    folders.push_back((root / "lang-de").string());
+    folders.push_back((root / "lang-en").string());
+
+    std::istringstream names("[NameGroup]\nGroup\ttg\nClasses\tTestClass\nGiven\tX\tPip\nTitle\tthe Damp\tthe Late\n"
+        "Hometown\tMudcrest\tSoggy Bottom\n[/NameGroup]\n");
+    std::istringstream texts("Post\teat\t*\tFirst meal.\nPost\teat\t*\tSecond meal.\nPost\teat\t*\tThird meal.\n"
+        "MoodLine\tHungry\t*\tHungry one.\n");
+    social::SocialData data;
+    BOOST_REQUIRE(data.loadNames(names, "names"));
+    BOOST_REQUIRE(data.loadTexts(texts, "texts"));
+    const social::NameGroup& group = data.getGroupForClass("TestClass");
+    BOOST_REQUIRE_EQUAL(group.mName, "tg");
+
+    // Without language files: the texts of the data files
+    Translation::loadLanguages(std::vector<std::string>());
+    BOOST_CHECK_EQUAL(group.getDisplayTitle(1), "the Late");
+    BOOST_CHECK_EQUAL(group.getDisplayHometown(0), "Mudcrest");
+    BOOST_CHECK_EQUAL(social::SocialGenerator::moodLine(data, "Orc17", "TestClass", false, "Hungry"), "Hungry one.");
+
+    Translation::loadLanguages(folders);
+    std::vector<std::string> scopes(1, "*");
+    std::vector<std::string> englishPosts;
+    std::vector<std::string> germanPosts;
+    Translation::setLanguage("en");
+    data.getTexts("Post:eat", scopes, englishPosts);
+    BOOST_CHECK_EQUAL(group.getDisplayTitle(1), "the Late");
+    Translation::setLanguage("de");
+    data.getTexts("Post:eat", scopes, germanPosts);
+    BOOST_REQUIRE_EQUAL(englishPosts.size(), 3u);
+    BOOST_REQUIRE_EQUAL(germanPosts.size(), 3u);
+    BOOST_CHECK_EQUAL(germanPosts[0], "Erste Mahlzeit.");
+    BOOST_CHECK_EQUAL(germanPosts[2], "Dritte Mahlzeit.");
+    BOOST_CHECK_EQUAL(group.getDisplayTitle(1), "Zuspaet");
+    BOOST_CHECK_EQUAL(group.getDisplayHometown(0), "Schlammkamm");
+    BOOST_CHECK_EQUAL(group.getDisplayHometown(5), "");
+    BOOST_CHECK_EQUAL(social::SocialGenerator::moodLine(data, "Orc17", "TestClass", false, "Hungry"), "Hungrig.");
+
+    // The same entry is drawn in both languages (the position in the pool is the draw)
+    for(uint32_t variant = 0; variant < 20; ++variant)
+    {
+        Translation::setLanguage("en");
+        std::string english = social::SocialGenerator::postTemplate(data, "Orc17", "TestClass", false, "eat", variant);
+        Translation::setLanguage("de");
+        std::string german = social::SocialGenerator::postTemplate(data, "Orc17", "TestClass", false, "eat", variant);
+        std::size_t position = 0;
+        while((position < 3) && (englishPosts[position] != english))
+            ++position;
+        BOOST_REQUIRE(position < 3);
+        BOOST_CHECK_EQUAL(germanPosts[position], german);
+    }
+    Translation::loadLanguages(std::vector<std::string>());
+    boost::filesystem::remove_all(root);
 }

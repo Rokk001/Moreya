@@ -43,12 +43,13 @@
 #include "utils/LogManager.h"
 #include "utils/MakeUnique.h"
 #include "utils/Random.h"
+#include "utils/Translation.h"
 
 #include <algorithm>
 #include <cmath>
 
 const std::string RoomPrisonName = "Prison";
-const std::string RoomPrisonNameDisplay = "Prison room";
+const std::string RoomPrisonNameKey = "room.prison.name";
 const RoomType RoomPrison::mRoomType = RoomType::prison;
 const TileVisual RoomPrison::mRoomVisual= TileVisual::prisonRoom;
 
@@ -67,8 +68,9 @@ class RoomPrisonFactory : public RoomFactory
     const std::string& getName() const override
     { return RoomPrisonName; }
 
-    const std::string& getNameReadable() const override
-    { return RoomPrisonNameDisplay; }
+    //! \brief The name shown to the player, in the chosen language.
+    std::string getNameReadable() const override
+    { return Translation::tr(RoomPrisonNameKey); }
 
     int getCostPerTile() const override
     { return ConfigManager::getSingleton().getRoomConfigInt32("PrisonCostPerTile"); }
@@ -92,7 +94,7 @@ class RoomPrisonFactory : public RoomFactory
         // if the creature is found we display message and return
         if(found)
         {
-            inputCommand.displayText(Ogre::ColourValue::Red, "Prison Room can only be placed on empty tiles, without Creatures  ");
+            inputCommand.displayText(Ogre::ColourValue::Red, Translation::tr("room.hint.prison_empty_tiles"));
             return;
         }
         
@@ -150,7 +152,7 @@ class RoomPrisonFactory : public RoomFactory
         {
             ServerNotification *serverNotification = new ServerNotification(
                 ServerNotificationType::displayText, player->getSeat()->getPlayer());
-            std::string msg = "Prison can be extended when there are \n no creatures at prison's fence and unusued tiles";
+            const std::string msg = Translation::makeReference("msg.prison.extend");
             serverNotification->mPacket << msg;
             ODServer::getSingleton().queueServerNotification(serverNotification);
             return false;
@@ -197,7 +199,7 @@ class RoomPrisonFactory : public RoomFactory
         {
             ServerNotification *serverNotification = new ServerNotification(
                 ServerNotificationType::displayText, player->getSeat()->getPlayer());
-            std::string msg = "Prison can be extended when there are \n no creatures at prison's fence and unusued tiles";
+            const std::string msg = Translation::makeReference("msg.prison.extend");
             serverNotification->mPacket << msg;
             ODServer::getSingleton().queueServerNotification(serverNotification);            
             return false;
@@ -368,7 +370,7 @@ void RoomPrison::doUpkeep()
             {
                 ServerNotification *serverNotification = new ServerNotification(
                     ServerNotificationType::chatServer, getSeat()->getPlayer());
-                std::string msg = "A creature died starving in your prison";
+                const std::string msg = Translation::makeReference("msg.prison.starved");
                 serverNotification->mPacket << msg << EventShortNoticeType::aboutCreatures;
                 ODServer::getSingleton().queueServerNotification(serverNotification);
             }
@@ -570,7 +572,7 @@ void RoomPrison::freePrisonersIfLiberated()
     {
         ServerNotification *serverNotification = new ServerNotification(
             ServerNotificationType::chatServer, getSeat()->getPlayer());
-        std::string msg = "Jailbreak! Enemy creatures freed prisoners from your prison";
+        const std::string msg = Translation::makeReference("msg.prison.jailbreak");
         serverNotification->mPacket << msg << EventShortNoticeType::aboutCreatures;
         ODServer::getSingleton().queueServerNotification(serverNotification);
     }

@@ -28,6 +28,7 @@
 #include "traps/TrapManager.h"
 #include "utils/ConfigManager.h"
 #include "utils/LogManager.h"
+#include "utils/Translation.h"
 
 #include <cmath>
 
@@ -40,7 +41,7 @@ std::set<Tile*> triggerChainTiles;
 }
 
 const std::string TrapTriggerName = "Trigger";
-const std::string TrapTriggerNameDisplay = "Trigger trap";
+const std::string TrapTriggerNameKey = "trap.trigger.name";
 const TrapType TrapTrigger::mTrapType = TrapType::trigger;
 
 namespace
@@ -53,8 +54,9 @@ class TrapTriggerFactory : public TrapFactory
     const std::string& getName() const override
     { return TrapTriggerName; }
 
-    const std::string& getNameReadable() const override
-    { return TrapTriggerNameDisplay; }
+    //! \brief The name shown to the player, in the chosen language.
+    std::string getNameReadable() const override
+    { return Translation::tr(TrapTriggerNameKey); }
 
     int getCostPerTile() const override
     { return ConfigManager::getSingleton().getTrapConfigInt32("TriggerCostPerTile"); }

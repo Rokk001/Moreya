@@ -41,6 +41,7 @@
 #include "utils/LogManager.h"
 #include "utils/MakeUnique.h"
 #include "utils/Random.h"
+#include "utils/Translation.h"
 
 #include <algorithm>
 #include <cmath>
@@ -51,7 +52,7 @@
 #include <string>
 
 const std::string RoomSpaName = "Spa";
-const std::string RoomSpaNameDisplay = "Lava spa";
+const std::string RoomSpaNameKey = "room.spa.name";
 const RoomType RoomSpa::mRoomType = RoomType::spa;
 const TileVisual RoomSpa::mRoomVisual = TileVisual::spaRoom;
 
@@ -195,8 +196,9 @@ class RoomSpaFactory : public RoomFactory
     const std::string& getName() const override
     { return RoomSpaName; }
 
-    const std::string& getNameReadable() const override
-    { return RoomSpaNameDisplay; }
+    //! \brief The name shown to the player, in the chosen language.
+    std::string getNameReadable() const override
+    { return Translation::tr(RoomSpaNameKey); }
 
     int getCostPerTile() const override
     { return ConfigManager::getSingleton().getRoomConfigInt32("SpaCostPerTile"); }
@@ -267,9 +269,8 @@ class RoomSpaFactory : public RoomFactory
         if(!hasMinimumSize(gameMap, player->getSeat(), tiles))
         {
             ServerNotification* serverNotification = new ServerNotification(ServerNotificationType::chatServer, player);
-            std::string msg = "A lava spa needs at least " +
-                Helper::toString(ConfigManager::getSingleton().getRoomConfigUInt32("SpaMinRoomSide")) + "x" +
-                Helper::toString(ConfigManager::getSingleton().getRoomConfigUInt32("SpaMinRoomSide")) + " tiles.";
+            const std::string side = Helper::toString(ConfigManager::getSingleton().getRoomConfigUInt32("SpaMinRoomSide"));
+            const std::string msg = Translation::makeReference("msg.spa.size", {{"width", side}, {"height", side}});
             serverNotification->mPacket << msg << EventShortNoticeType::genericGameInfo;
             ODServer::getSingleton().queueServerNotification(serverNotification);
             return false;

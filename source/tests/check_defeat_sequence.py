@@ -14,6 +14,11 @@ import tempfile
 repo = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(repo / 'scripts'))
 import content_packages  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import language_texts  # noqa: E402
+# The language system stands in for the probe: Translation::tr answers with the English texts of the language
+# files, and Gui::trCegui / Gui::toCeguiText hand the text on as it is
+TEXT_STUB = language_texts.translation_stub() + ('namespace Gui {inline std::string trCegui(const std::string& key) {return Translation::tr(key);} inline std::string toCeguiText(const std::string& text) {return text;}}\n')
 game_mode = (repo / 'source/modes/GameMode.cpp').read_text()
 game_mode_header = (repo / 'source/modes/GameMode.h').read_text()
 sequence_header = (repo / 'source/modes/DefeatSequence.h').read_text()
@@ -469,7 +474,7 @@ print('STYLE OK: no auto in the new code')
 
 with tempfile.TemporaryDirectory(prefix='odp-defeat-sequence-') as directory:
     work = Path(directory)
-    (work / 'check.cpp').write_text(probe)
+    (work / 'check.cpp').write_text(TEXT_STUB + probe)
     subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17', '/I', str(repo / 'source'), 'check.cpp', '/Fecheck.exe'],
                    cwd=work, check=True)
     # Windows application control errors must reach the runner without restarting this executable.

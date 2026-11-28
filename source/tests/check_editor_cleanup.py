@@ -38,7 +38,7 @@ def read(path):
 
 def read_data(path):
     """Returns the text of a game data file as the game reads it (with its own rows from the content)."""
-    return content_packages.read_text(repo, path)
+    return content_packages.read_layout_text(repo, path)
 
 
 def check(condition, message):

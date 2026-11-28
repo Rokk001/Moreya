@@ -31,9 +31,10 @@
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
+#include "utils/Translation.h"
 
 const std::string SpellPlagueName = "plague";
-const std::string SpellPlagueNameDisplay = "Plague";
+const std::string SpellPlagueNameKey = "spell.plague.name";
 const std::string SpellPlagueCooldownKey = "PlagueCooldown";
 const SpellType SpellPlague::mSpellType = SpellType::plague;
 
@@ -51,8 +52,9 @@ class SpellPlagueFactory : public SpellFactory
     const std::string& getCooldownKey() const override
     { return SpellPlagueCooldownKey; }
 
-    const std::string& getNameReadable() const override
-    { return SpellPlagueNameDisplay; }
+    //! \brief The name shown to the player, in the chosen language.
+    std::string getNameReadable() const override
+    { return Translation::tr(SpellPlagueNameKey); }
 
     virtual void checkSpellCast(GameMap* gameMap, const InputManager& inputManager, InputCommand& inputCommand) const override
     { SpellPlague::checkSpellCast(gameMap, inputManager, inputCommand); }
@@ -80,7 +82,7 @@ void SpellPlague::checkSpellCast(GameMap* gameMap, const InputManager& inputMana
     Tile* tileSelected = gameMap->getTile(inputManager.mXPos, inputManager.mYPos);
     if(tileSelected == nullptr)
     {
-        inputCommand.displayText(Ogre::ColourValue::Red, "Point at a tile inside the map.");
+        inputCommand.displayText(Ogre::ColourValue::Red, Translation::tr("spell.hint.point_at_tile"));
         return;
     }
 
@@ -94,19 +96,19 @@ void SpellPlague::checkSpellCast(GameMap* gameMap, const InputManager& inputMana
     Creature* closestCreature = tileSelected->getClosestCreature(SelectionEntityWanted::creatureAliveEnemy);
     if(closestCreature == nullptr)
     {
-        inputCommand.displayText(Ogre::ColourValue::Red, "Select a living enemy creature you can see.");
+        inputCommand.displayText(Ogre::ColourValue::Red, Translation::tr("spell.hint.select_visible_enemy"));
         return;
     }
 
     if(closestCreature->getDefinition()->isWorker() || closestCreature->getDefinition()->isChampion())
     {
-        inputCommand.displayText(Ogre::ColourValue::Red, "Zivs and champions never get sick.");
+        inputCommand.displayText(Ogre::ColourValue::Red, Translation::tr("spell.hint.no_plague_on_ziv"));
         return;
     }
 
     if(playerMana < price)
     {
-        inputCommand.displayText(Ogre::ColourValue::Red, "Not enough mana. " + formatCastSpell(SpellType::plague, price));
+        inputCommand.displayText(Ogre::ColourValue::Red, Translation::tr("spell.hint.not_enough_mana", {{"text", formatCastSpell(SpellType::plague, price)}}));
         return;
     }
 

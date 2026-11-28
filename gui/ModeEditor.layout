@@ -8,64 +8,64 @@
             <Property name="Area" value="{{0,0},{0,11},{1,0},{0,23}}" />
 
             <Window type="OD/MenuItem" name="File">
-                <Property name="Text" value="File"/>
+                <Property name="Text" value="@layout.mode_editor.editorgui.menubar.file.text"/>
                 <Property name="Area" value="{{0,0},{0,10},{0,0},{0,20}}" />
                 <Window type="OD/PopupMenu" name="PopupMenu1">
                     <Window type="OD/MenuItem" name="New">
-                        <Property name="Text" value="New"/>     
+                        <Property name="Text" value="@layout.mode_editor.editorgui.menubar.file.popup_menu1.new.text"/>     
                     </Window>
                     <Window type="OD/MenuItem" name="Load">
-                        <Property name="Text" value="Load"/>     
+                        <Property name="Text" value="@layout.mode_editor.editorgui.menubar.file.popup_menu1.load.text"/>     
                     </Window>
                     <Window type="OD/MenuItem" name="Save">
-                        <Property name="Text" value="Save"/>     
+                        <Property name="Text" value="@layout.mode_editor.editorgui.menubar.file.popup_menu1.save.text"/>     
                     </Window>
                     <Window type="OD/MenuItem" name="SaveAs">
-                        <Property name="Text" value="Save As ..."/>     
+                        <Property name="Text" value="@layout.mode_editor.editorgui.menubar.file.popup_menu1.save_as.text"/>     
                     </Window>
                     <Window type="OD/MenuItem" name="RecentlyUsed">
-                        <Property name="Text" value="Recently Used Files"/>     
+                        <Property name="Text" value="@layout.mode_editor.editorgui.menubar.file.popup_menu1.recently_used.text"/>     
                 	<Window type="OD/PopupMenu" name="PopupMenu2">
                     	</Window>
                     </Window>
                     <Window type="OD/MenuItem" name="Quit">
-                        <Property name="Text" value="Quit"/>     
+                        <Property name="Text" value="@layout.mode_editor.editorgui.menubar.file.popup_menu1.quit.text"/>     
                     </Window>
                 </Window>
             </Window>
             <Window type="OD/MenuItem" name="Edit">
-                <Property name="Text" value="Edit"/>
+                <Property name="Text" value="@layout.mode_editor.editorgui.menubar.edit.text"/>
                 <Property name="Area" value="{{0,0},{0,10},{0,0},{0,20}}" />
                 <Window type="OD/PopupMenu" name="PopupMenu3">
                     <Window type="OD/MenuItem" name="Copy">
-                        <Property name="Text" value="Copy"/>     
+                        <Property name="Text" value="@layout.mode_editor.editorgui.menubar.edit.popup_menu3.copy.text"/>     
                     </Window>
                     <Window type="OD/MenuItem" name="Paste">
-                        <Property name="Text" value="Paste"/>     
+                        <Property name="Text" value="@layout.mode_editor.editorgui.menubar.edit.popup_menu3.paste.text"/>     
                     </Window>
                     <Window type="OD/MenuItem" name="Delete">
-                        <Property name="Text" value="Delete"/>     
+                        <Property name="Text" value="@layout.mode_editor.editorgui.menubar.edit.popup_menu3.delete.text"/>     
                     </Window>
                 </Window>
             </Window>
             <Window type="OD/MenuItem" name="Creatures">
-                <Property name="Text" value="Creatures"/>
+                <Property name="Text" value="@layout.mode_editor.editorgui.menubar.creatures.text"/>
                 <Property name="Area" value="{{0,0},{0,10},{0,0},{0,20}}" />
                 <Window type="OD/PopupMenu" name="PopupMenu4">
                 </Window>
             </Window>
             <Window type="OD/MenuItem" name="Seats">
-                <Property name="Text" value="Seats"/>
+                <Property name="Text" value="@layout.mode_editor.editorgui.menubar.seats.text"/>
                 <Property name="Area" value="{{0,0},{0,10},{0,0},{0,20}}" />
                 <Window type="OD/PopupMenu" name="PopupMenu5">
                 </Window>
             </Window>
             <Window type="OD/MenuItem" name="Help">
-                <Property name="Text" value="Help"/>
+                <Property name="Text" value="@layout.mode_editor.editorgui.menubar.help.text"/>
                 <Property name="Area" value="{{0,0},{0,10},{0,0},{0,20}}" />
                 <Window type="OD/PopupMenu" name="PopupMenu6">
                     <Window type="OD/MenuItem" name="Controls">
-                        <Property name="Text" value="Controls"/>     
+                        <Property name="Text" value="@layout.mode_editor.editorgui.menubar.help.popup_menu6.controls.text"/>     
                     </Window>
                 </Window>
             </Window>
@@ -83,9 +83,9 @@
             <Window type="OD/StaticText" name="FullnessDisplay" >
                 <Property name="AlwaysOnTop" value="True" />
                 <Property name="Area" value="{{0,5},{0,0},{0,200},{0,25}}" />
-                <Property name="Text" value="Tile Fullness: 100" />
+                <Property name="Text" value="@layout.mode_editor.editorgui.horizontal_pipe.fullness_display.text" />
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
-                <Property name="TooltipText" value="(0% = Ground - 100% = Wall)" />
+                <Property name="TooltipText" value="@layout.mode_editor.editorgui.horizontal_pipe.fullness_display.tooltip" />
                 <Property name="HorzFormatting" value="RightAligned" />
                 <Property name="ClippedByParent" value="False" />
                 <Property name="VerticalAlignment" value="Centre" />
@@ -94,7 +94,7 @@
                     <Property name="Image" value="OpenDungeonsIcons/TerritoryIcon" />
                     <Property name="MaxSize" value="{{1,0},{1,0}}" />
                     <Property name="AlwaysOnTop" value="True" />
-                    <Property name="TooltipText" value="(0% = Ground - 100% = Wall)" />
+                    <Property name="TooltipText" value="@layout.mode_editor.editorgui.horizontal_pipe.fullness_display.icon.tooltip" />
                     <Property name="FrameEnabled" value="False" />
                     <Property name="ClippedByParent" value="False" />
                     <Property name="BackgroundEnabled" value="False" />
@@ -124,7 +124,7 @@
             <Window type="OD/StaticText" name="PositionDisplay" >
                 <Property name="AlwaysOnTop" value="True" />
 <!--#@own 5-->
-                <Property name="Text" value="Cursor Position: 0, 0" />
+                <Property name="Text" value="@layout.mode_editor.editorgui.horizontal_pipe.position_display.text" />
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
                 <Property name="TooltipText" value="" />
                 <Property name="HorzFormatting" value="RightAligned" />
@@ -145,9 +145,9 @@
             <Window type="OD/StaticText" name="SeatIdDisplay" >
                 <Property name="AlwaysOnTop" value="True" />
 <!--#@own 6-->
-                <Property name="Text" value="Seat id (Y): 0" />
+                <Property name="Text" value="@layout.mode_editor.editorgui.horizontal_pipe.seat_id_display.text" />
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
-                <Property name="TooltipText" value="Selected Seat Id" />
+                <Property name="TooltipText" value="@layout.mode_editor.editorgui.horizontal_pipe.seat_id_display.tooltip" />
                 <Property name="HorzFormatting" value="RightAligned" />
                 <Property name="ClippedByParent" value="False" />
                 <Property name="VerticalAlignment" value="Centre" />
@@ -166,9 +166,9 @@
             <Window type="OD/StaticText" name="CreatureSpawnDisplay" >
                 <Property name="AlwaysOnTop" value="True" />
 <!--#@own 7-->
-                <Property name="Text" value="Creature (C): ?, level (L): 1" />
+                <Property name="Text" value="@layout.mode_editor.editorgui.horizontal_pipe.creature_spawn_display.text" />
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
-                <Property name="TooltipText" value="Selected Creature to spawn" />
+                <Property name="TooltipText" value="@layout.mode_editor.editorgui.horizontal_pipe.creature_spawn_display.tooltip" />
                 <Property name="HorzFormatting" value="RightAligned" />
                 <Property name="ClippedByParent" value="False" />
                 <Property name="VerticalAlignment" value="Centre" />
@@ -177,7 +177,7 @@
                     <Property name="Image" value="OpenDungeonsIcons/CreaturesIcon" />
                     <Property name="MaxSize" value="{{1,0},{1,0}}" />
                     <Property name="AlwaysOnTop" value="True" />
-                    <Property name="TooltipText" value="Selected Creature to spawn" />
+                    <Property name="TooltipText" value="@layout.mode_editor.editorgui.horizontal_pipe.creature_spawn_display.icon.tooltip" />
                     <Property name="FrameEnabled" value="False" />
                     <Property name="ClippedByParent" value="False" />
                     <Property name="BackgroundEnabled" value="False" />
@@ -188,9 +188,9 @@
         <Window type="OD/StaticText" name="LevelNameDisplay" >
             <Property name="AlwaysOnTop" value="True" />
             <Property name="Area" value="{{1,-330},{0,32},{1,-5},{0,57}}" />
-            <Property name="Text" value="Level: " />
+            <Property name="Text" value="@layout.mode_editor.editorgui.level_name_display.text" />
             <Property name="MaxSize" value="{{1,0},{1,0}}" />
-            <Property name="TooltipText" value="The level being edited" />
+            <Property name="TooltipText" value="@layout.mode_editor.editorgui.level_name_display.tooltip" />
             <Property name="HorzFormatting" value="RightAligned" />
             <Property name="ClippedByParent" value="False" />
         </Window>
@@ -198,7 +198,7 @@
             <Property name="Area" value="{{1,-27},{0,5},{1,-2},{0,30}}" />
             <Property name="ButtonImage" value="OpenDungeonsIcons/OptionsIcon" />
             <Property name="AlwaysOnTop" value="True" />
-            <Property name="TooltipText" value="Options (F10)" />
+            <Property name="TooltipText" value="@layout.mode_editor.editorgui.options_button.tooltip" />
             <Property name="ClippedByParent" value="False" />
             <Property name="Visible" value="True" />
         </Window>
@@ -214,49 +214,49 @@
             <Window type="DefaultWindow" name="Tiles" >
                 <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
                 <Property name="Text" value="[image-size='w:28 h:28'][image='OpenDungeonsIcons/TerritoryIcon']" />
-                <Property name="TooltipText" value="Tiles" />
+                <Property name="TooltipText" value="@layout.mode_editor.editorgui.main_tab_control.tiles.tooltip" />
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
                 <Property name="RiseOnClickEnabled" value="False" />
                 <Window type="OD/GameTabButton" name="DirtButton" >
                     <Property name="Area" value="{{0,20},{0,25},{0,80},{0,85}}" />
                     <Property name="NormalImage" value="OpenDungeonsIcons/DirtButton" />
-                    <Property name="TooltipText" value="Place dirt tiles." />
+                    <Property name="TooltipText" value="@layout.mode_editor.editorgui.main_tab_control.tiles.dirt_button.tooltip" />
                     <Property name="InheritsAlpha" value="False" />
                 </Window>
                 <Window type="OD/GameTabButton" name="RockButton" >
                     <Property name="Area" value="{{0,80},{0,25},{0,140},{0,85}}" />
                     <Property name="NormalImage" value="OpenDungeonsIcons/RockButton" />
-                    <Property name="TooltipText" value="Place undiggable rock tiles." />
+                    <Property name="TooltipText" value="@layout.mode_editor.editorgui.main_tab_control.tiles.rock_button.tooltip" />
                     <Property name="InheritsAlpha" value="False" />
                 </Window>
                 <Window type="OD/GameTabButton" name="GoldButton" >
                     <Property name="Area" value="{{0,140},{0,25},{0,200},{0,85}}" />
                     <Property name="NormalImage" value="OpenDungeonsIcons/GoldButton" />
-                    <Property name="TooltipText" value="Place gold tiles." />
+                    <Property name="TooltipText" value="@layout.mode_editor.editorgui.main_tab_control.tiles.gold_button.tooltip" />
                     <Property name="InheritsAlpha" value="False" />
                 </Window>
                 <Window type="OD/GameTabButton" name="WaterButton" >
                     <Property name="Area" value="{{0,200},{0,25},{0,260},{0,85}}" />
                     <Property name="NormalImage" value="OpenDungeonsIcons/WaterButton" />
-                    <Property name="TooltipText" value="Place some water." />
+                    <Property name="TooltipText" value="@layout.mode_editor.editorgui.main_tab_control.tiles.water_button.tooltip" />
                     <Property name="InheritsAlpha" value="False" />
                 </Window>
                 <Window type="OD/GameTabButton" name="LavaButton" >
                     <Property name="Area" value="{{0,260},{0,25},{0,320},{0,85}}" />
                     <Property name="NormalImage" value="OpenDungeonsIcons/LavaButton" />
-                    <Property name="TooltipText" value="Place some lava." />
+                    <Property name="TooltipText" value="@layout.mode_editor.editorgui.main_tab_control.tiles.lava_button.tooltip" />
                     <Property name="InheritsAlpha" value="False" />
                 </Window>
                 <Window type="OD/GameTabButton" name="ClaimedButton" >
                     <Property name="Area" value="{{0,320},{0,25},{0,380},{0,85}}" />
                     <Property name="NormalImage" value="OpenDungeonsIcons/ClaimedButton" />
-                    <Property name="TooltipText" value="Place some claimed/dungeon tiles." />
+                    <Property name="TooltipText" value="@layout.mode_editor.editorgui.main_tab_control.tiles.claimed_button.tooltip" />
                     <Property name="InheritsAlpha" value="False" />
                 </Window>
                 <Window type="OD/GameTabButton" name="GemButton" >
                     <Property name="Area" value="{{0,380},{0,25},{0,440},{0,85}}" />
                     <Property name="NormalImage" value="OpenDungeonsIcons/GemButton" />
-                    <Property name="TooltipText" value="Place gem tiles." />
+                    <Property name="TooltipText" value="@layout.mode_editor.editorgui.main_tab_control.tiles.gem_button.tooltip" />
                     <Property name="InheritsAlpha" value="False" />
                 </Window>
 <!--#@own 8-->
@@ -271,14 +271,14 @@
             <Window type="DefaultWindow" name="Lights" >
                 <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
                 <Property name="Text" value="[image-size='w:32 h:32'][image='OpenDungeonsIcons/MapLightButton']" />
-                <Property name="TooltipText" value="Lights" />
+                <Property name="TooltipText" value="@layout.mode_editor.editorgui.main_tab_control.lights.tooltip" />
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
                 <Property name="Visible" value="False" />
                 <Property name="RiseOnClickEnabled" value="False" />
                 <Window type="OD/GameTabButton" name="MapLightButton" >
                     <Property name="Area" value="{{0,20},{0,25},{0,80},{0,85}}" />
                     <Property name="NormalImage" value="OpenDungeonsIcons/MapLightButton" />
-                    <Property name="TooltipText" value="Adds a Map light" />
+                    <Property name="TooltipText" value="@layout.mode_editor.editorgui.main_tab_control.lights.map_light_button.tooltip" />
                     <Property name="InheritsAlpha" value="False" />
                 </Window>
             </Window>

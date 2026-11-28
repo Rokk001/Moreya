@@ -30,8 +30,14 @@ public:
     //! \brief Same for a stream, source only names the file in the warnings.
     void loadFromStream(std::istream& is, const std::string& source);
 
-    //! \brief Returns nullptr if the painted feature tag has no remark
+    //! \brief Returns nullptr if the painted feature tag has no remark. The text is the one of the file (the English
+    //! text); it is the fixed base of the remark choice (see DungeonbookQuirkLogic::pickRemarks), not what the player
+    //! reads, see getDisplayText().
     const std::string* find(const std::string& tag) const;
+
+    //! \brief The remark of the feature tag in the chosen language: the text of the key "quirk.<tag>" in the language
+    //! files, else the text of the file. Empty if the tag has no remark.
+    std::string getDisplayText(const std::string& tag) const;
 
     //! \brief Returns the number of loaded feature-tag remarks.
     std::size_t size() const
@@ -51,8 +57,8 @@ namespace DungeonbookQuirkLogic
 //! Number of remarks one creature shows at most
 extern const uint32_t MAX_REMARKS;
 
-//! \brief Returns remarks for the selected image tags in their index order.
-//! A removed image has no remarks until its number is repaired.
+//! \brief Returns remarks for the selected image tags in their index order, in the chosen language
+//! (DungeonbookQuirks::getDisplayText). A removed image has no remarks until its number is repaired.
 std::vector<std::string> collectRemarks(const DungeonbookQuirks& quirks, const PortraitCatalog& catalog,
     const CreatureAppearance& appearance);
 
@@ -63,7 +69,14 @@ std::vector<std::string> collectRemarks(const DungeonbookQuirks& quirks, const P
 std::vector<std::string> pickRemarks(const std::vector<std::string>& candidates, const std::string& creatureName,
     const CreatureAppearance& appearance, uint32_t maxCount);
 
-//! \brief collectRemarks() followed by pickRemarks() with MAX_REMARKS.
+//! \brief The positions (in the order of the candidates) of the candidates that pickRemarks() picks. The choice
+//! depends on the texts given as candidates, so the caller gives the texts of the file (not translated ones): the
+//! same creature then shows the same remarks in every language.
+std::vector<std::size_t> pickRemarkIndexes(const std::vector<std::string>& candidates,
+    const std::string& creatureName, const CreatureAppearance& appearance, uint32_t maxCount);
+
+//! \brief Picks the remarks of the tags of the image like pickRemarks() does for the texts of the file, and returns
+//! them in the chosen language.
 std::vector<std::string> selectRemarks(const DungeonbookQuirks& quirks, const PortraitCatalog& catalog,
     const CreatureAppearance& appearance, const std::string& creatureName);
 

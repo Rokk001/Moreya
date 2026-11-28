@@ -102,7 +102,7 @@ hand_over = function(room_source, 'Room* Room::handTilesOverToSeat(')
 check(hand_over.index('addToGameMap(gameMap)') < hand_over.index('tile->claimTile(seat)'),
       'the tiles are claimed after the new room is on the map')
 notify = function(room_source, 'void Room::notifyOwnerChanged(')
-check('You have claimed a room' in notify and 'You have captured a room' in notify and 'A room has been lost' in notify,
+check('"msg.room.claimed"' in notify and '"msg.room.captured"' in notify and '"msg.room.lost"' in notify,
       'the new and the old owner get a message')
 
 portal_change = function(portal_source, 'void RoomPortal::changeOwner(')

@@ -12,6 +12,9 @@ from pathlib import Path
 repo = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(repo / "scripts"))
 import content_packages  # noqa: E402
+import language_package_texts  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from language_texts import english  # noqa: E402
 
 #: The mixed files of config/ and gui/ come with their own rows only with the content (scripts/content_packages.py)
 WITH_CONTENT = content_packages.has_content(repo)
@@ -19,7 +22,7 @@ WITH_CONTENT = content_packages.has_content(repo)
 
 def read(path):
     """The text of a repository file; a mixed file of config/ or gui/ comes joined with its own rows of the content."""
-    return content_packages.read_text(repo, path)
+    return content_packages.read_layout_text(repo, path)
 
 
 # (tab, tier, skill type, research button, parents) in row order, as the tree shows them
@@ -204,7 +207,10 @@ assert skill_type_h.index("spellSummonChampion") < skill_type_h.index("keeperDom
 skill_type_cpp = read("source/game/SkillType.cpp")
 for name, (button, title, tab) in KEEPERS.items():
     assert 'return "%s";' % name in skill_type_cpp, "toString name of " + name
-    assert 'return "%s";' % title in skill_type_cpp, "player visible name of " + name
+    # the player visible name is the entry research.<skill>.name of the English language package
+    assert 'return Translation::tr("research.%s.name");' % name.lower() in skill_type_cpp, "player visible name of " + name
+    if content_packages.has_content(repo):
+        assert language_package_texts.english(repo).get("research.%s.name" % name.lower()) == title, "player visible name of " + name
 assert "enum class SkillTab" in read("source/game/SkillManager.h")
 header = read("source/game/SkillManager.h")
 assert re.search(r"spells,\s*keeper,\s*nb", header), "SkillFamily::keeper stands before nb"
@@ -212,8 +218,11 @@ assert "case SkillFamily::keeper:" in manager
 keeper_class = manager[manager.index("class SkillDefKeeper"):manager.index("static Skill* createSkill(")]
 assert "return SkillFamily::keeper;" in keeper_class
 assert 'return "";' in keeper_class and "static const std::string guiPath;" in keeper_class
-for title in ("Dominion", "Heart Fortitude", "Heart Mending", "Mana Flow"):
-    assert 'KEEPER_TITLE' in manager and '"%s"' % title in manager
+for key, title in (("dominion", "Dominion"), ("heartfortitude", "Heart Fortitude"), ("heartmending", "Heart Mending"),
+                   ("manaflow", "Mana Flow")):
+    assert 'KEEPER_TITLE' in manager and '"research.keeper.%s.title"' % key in manager
+    if content_packages.has_content(repo):
+        assert language_package_texts.english(repo).get("research.keeper.%s.title" % key) == title, key
 
 # a skill without an action bar button gets an empty cast button name and is skipped where that matters
 assert 'skill->getGuiPath().empty() ? "" :' in manager
@@ -234,7 +243,7 @@ assert "SkillType::keeperManaFlow" in page and 'return "Spells";' in page
 
 # The repeated notice of an empty research queue
 player = read("source/game/Player.cpp")
-assert "Warning: your library has nothing to research. Choose the next research in the research tree." in player
+assert '"msg.research.nothing"' in player
 notice = player[player.index("void Player::notifyNoSkillInQueue()"):]
 assert "EventShortNoticeType::aboutSkills" in notice[:notice.index("\n}\n")]
 
@@ -267,7 +276,7 @@ if WITH_CONTENT:
     text = read("gui/WindowSkillTree.layout")
     assert "SelectionBrush" not in text and "FrameColours" not in text
     # The icon atlas lies in a content package (found through scripts/content_packages.py)
-    imageset = (content_packages.read_text(repo, "gui/ODIcons.imageset")
+    imageset = (content_packages.read_layout_text(repo, "gui/ODIcons.imageset")
                 if content_packages.data_file(repo, "gui/ODIcons.imageset") is not None else None)
     if imageset is None:
         content_packages.unchecked("check_world_balance_tree", ["gui/ODIcons.imageset"])
@@ -303,7 +312,8 @@ assert "pageWidth / static_cast<float>(widestRow) - freeSpace" in connections, "
 assert "(available - static_cast<float>(rowCount - 1) * freeSpace) / static_cast<float>(rowCount) - badgeHeight" in connections, "node size from the page: all rows with their counters fit the height"
 assert "getSkillTab(dependency->getType()) != SkillManager::getSkillTab(entry.first)" in connections, "paths only inside a tab"
 assert "ResearchJunction" not in game
-assert "Needs: " in game and "SkillManager::getTabTitle(parentTab)" in game
+assert "mode.game.research.needs" in game and "SkillManager::getTabTitle(parentTab)" in game
+assert english("mode.game.research.needs") == "  Needs: {name} ({tab})"
 seat = read("source/game/Seat.cpp")
 assert "bool Seat::canResearchLevel(SkillType type, int level, const std::vector<std::pair<SkillType, int> >& queuedBefore) const" in seat
 gate = seat[seat.index("const char* Seat::getResearchGateFailure("):seat.index("bool Seat::canResearchLevel(")]

@@ -18,6 +18,7 @@
 #include "modes/MenuModeReplay.h"
 
 #include "utils/Helper.h"
+#include "utils/Translation.h"
 #include "render/Gui.h"
 #include "modes/ModeManager.h"
 #include "sound/MusicPlayer.h"
@@ -126,13 +127,13 @@ bool MenuModeReplay::launchSelectedButtonPressed(const CEGUI::EventArgs&)
     if(replaySelectList->getSelectedCount() == 0)
     {
         tmpWin = getModeManager().getGui().getGuiSheet(Gui::replayMenu)->getChild(Gui::REM_TEXT_LOADING);
-        tmpWin->setText("Please select a replay first.");
+        tmpWin->setText(Gui::trCegui("mode.menu.replay.select_first"));
         tmpWin->show();
         return true;
     }
 
     tmpWin = getModeManager().getGui().getGuiSheet(Gui::replayMenu)->getChild(Gui::REM_TEXT_LOADING);
-    tmpWin->setText("Loading...");
+    tmpWin->setText(Gui::trCegui("mode.menu.loading"));
     tmpWin->show();
 
     CEGUI::ListboxItem* selItem = replaySelectList->getFirstSelectedItem();
@@ -142,7 +143,7 @@ bool MenuModeReplay::launchSelectedButtonPressed(const CEGUI::EventArgs&)
     std::string errorMsg;
     if(!checkReplayValid(mFilesList[id], mapDescription, errorMsg))
     {
-        tmpWin->setText("Error: trying to launch invalid replay!");
+        tmpWin->setText(Gui::trCegui("mode.menu.replay.invalid"));
         tmpWin->show();
         return true;
     }
@@ -152,7 +153,7 @@ bool MenuModeReplay::launchSelectedButtonPressed(const CEGUI::EventArgs&)
     {
         OD_LOG_ERR("Could not launch replay !!!");
         tmpWin = getModeManager().getGui().getGuiSheet(Gui::replayMenu)->getChild(Gui::REM_TEXT_LOADING);
-        tmpWin->setText("Error: Couldn't launch replay!");
+        tmpWin->setText(Gui::trCegui("mode.menu.replay.launch_failed"));
         tmpWin->show();
         return true;
     }
@@ -167,7 +168,7 @@ bool MenuModeReplay::deleteSelectedButtonPressed(const CEGUI::EventArgs&)
     if(replaySelectList->getSelectedCount() == 0)
     {
         tmpWin = getModeManager().getGui().getGuiSheet(Gui::replayMenu)->getChild(Gui::REM_TEXT_LOADING);
-        tmpWin->setText("Please select a replay first.");
+        tmpWin->setText(Gui::trCegui("mode.menu.replay.select_first"));
         tmpWin->show();
         return true;
     }
@@ -180,7 +181,7 @@ bool MenuModeReplay::deleteSelectedButtonPressed(const CEGUI::EventArgs&)
     {
         OD_LOG_ERR("Could not delete replay !!!");
         tmpWin = getModeManager().getGui().getGuiSheet(Gui::replayMenu)->getChild(Gui::REM_TEXT_LOADING);
-        tmpWin->setText("Error: Couldn't delete replay!");
+        tmpWin->setText(Gui::trCegui("mode.menu.replay.delete_failed"));
         tmpWin->show();
         return true;
     }
@@ -231,7 +232,7 @@ bool MenuModeReplay::checkReplayValid(const std::string& replayFileName, std::st
 
     if(is.eof())
     {
-        errorMsg = "Invalid replay file";
+        errorMsg = Translation::tr("mode.menu.replay.invalid_file");
         return false;
     }
 
@@ -251,7 +252,7 @@ bool MenuModeReplay::checkReplayValid(const std::string& replayFileName, std::st
 
     if(odVersion.compare(std::string("OpenDungeons V ") + ODApplication::VERSION) != 0)
     {
-        errorMsg = odVersion + " (Wrong version)\n\n" + mapDescription;
+        errorMsg = Translation::tr("mode.menu.replay.wrong_version", {{"version", odVersion}}) + "\n\n" + mapDescription;
         return false;
     }
 

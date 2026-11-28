@@ -34,7 +34,8 @@
 #include <map>
 #include <vector>
 
-const std::map<std::string, const char*>& getDocString();
+//! \brief The documentation text of the console command with the given name in the chosen language.
+std::string getDocString(const std::string& name);
 
 
 class GameMap;

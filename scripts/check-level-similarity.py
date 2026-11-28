@@ -123,6 +123,15 @@ def repository_root():
     return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
+def shown_text(text):
+    """The text the game shows in English: the English text of a reference "@<key>" to the language files of the
+    content (the texts of levels and wing packages moved there), any other text unchanged. The texts are compared,
+    not their keys."""
+    sys.path.insert(0, os.path.join(repository_root(), "scripts"))
+    import campaign_packages
+    return campaign_packages.resolve_text(repository_root(), text)
+
+
 def default_against():
     """The private folder next to the main working tree (not next to a worktree)."""
     root = repository_root()
@@ -213,7 +222,7 @@ def parse_level(path):
         if in_info:
             fields = line.split("\t", 1)
             if len(fields) == 2 and fields[0] in TEXT_KEYS:
-                level.texts.append(fields[1])
+                level.texts.append(shown_text(fields[1]))
             continue
         if section == "Tiles":
             body = line.split("#", 1)[0].strip()
@@ -284,7 +293,7 @@ def parse_level(path):
                     if x is not None and y is not None:
                         level.placements.append(("creature", x, y))
                 elif fields[1] in TEXT_ACTIONS:
-                    level.texts.append(fields[-1])
+                    level.texts.append(shown_text(fields[-1]))
     if width <= 0 or height <= 0:
         return None
     types = np.zeros((height, width), dtype=np.int16)
@@ -305,7 +314,7 @@ def parse_config_texts(path):
             line = line.rstrip("\r\n")
             for key in CONFIG_TEXT_KEYS:
                 if line.startswith(key + "="):
-                    texts.extend(line[len(key) + 1:].split("\\n"))
+                    texts.extend(shown_text(line[len(key) + 1:]).split("\\n"))
     return texts
 
 

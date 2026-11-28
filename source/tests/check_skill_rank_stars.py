@@ -32,7 +32,7 @@ STAR_FILES = ('gui/SkillRankStar.imageset', 'gui/SkillRankStar.png')
 
 def read(relative):
     """Returns the text of a file of the repository; a mixed interface file comes with its own rows of the content."""
-    return content_packages.read_text(ROOT, relative)
+    return content_packages.read_layout_text(ROOT, relative)
 
 
 def check(condition, message):
@@ -45,9 +45,9 @@ social = read('source/render/SocialWindow.cpp')
 node = social[social.index('void showSkillTreeNode('):]
 node = node[:node.index('\n}\n')]
 check('bar->setVisible(false);' in node, 'the rank bar is hidden')
-check('rank->setText(skillRankStars(node.mRank, node.mMaxRank, rank->getPixelSize().d_height));' in node,
+check('rank->setText(Gui::toCeguiText(skillRankStars(node.mRank, node.mMaxRank, rank->getPixelSize().d_height)));' in node,
       'the rank label shows the stars')
-check('rank->setTooltipText(escapeMarkup(node.mBarText));' in node, 'the rank text stays in the tooltip')
+check('rank->setTooltipText(Gui::toCeguiText(escapeMarkup(node.mBarText)));' in node, 'the rank text stays in the tooltip')
 check('setProgress(' not in node, 'no rank progress is drawn')
 stars = social[social.index('std::string skillRankStars('):]
 stars = stars[:stars.index('\n}\n')]
@@ -59,7 +59,7 @@ check('const char* const SKILL_RANK_STAR_EMPTY_COLOUR = "FF4A4A4A";' in social, 
 
 # The star files are checked when they are found or the content is present (then a missing one fails as before)
 if content_packages.has_content(ROOT) or all(content_packages.data_file(ROOT, path) is not None for path in STAR_FILES):
-    imageset = content_packages.read_text(ROOT, 'gui/SkillRankStar.imageset')
+    imageset = content_packages.read_layout_text(ROOT, 'gui/SkillRankStar.imageset')
     check('imagefile="SkillRankStar.png" name="SkillRankStar"' in imageset and 'name="Star"' in imageset,
           'imageset of the star')
     check(content_packages.data_file(ROOT, 'gui/SkillRankStar.png') is not None, 'star image file')

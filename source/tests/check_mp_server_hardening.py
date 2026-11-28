@@ -159,7 +159,7 @@ notification_names = [re.sub(r"//.*", "", line).strip().rstrip(",") for line in 
 notification_names = [name for name in notification_names if name]
 check(notification_names[-3:] == ["setHandCooldown", "startGameRefused", "possessionSkillBar"],
       "startGameRefused is appended last: " + repr(notification_names[-2:]))
-check('WIRE_SCHEMA_SUFFIX = " / wire-6";' in PACKET_H, "the wire suffix is wire-6 since the room package lists")
+check('WIRE_SCHEMA_SUFFIX = " / wire-7";' in PACKET_H, "the wire suffix is wire-7 since the server texts are text references")
 check("void sendStartGameRefused(ODSocketClient* clientSocket, StartGameRefusal::Reason reason);" in SERVER_H,
       "the refusal sender is declared")
 refusal_sender = block(SERVER, "void ODServer::sendStartGameRefused", "void ODServer::printConsoleMsg")

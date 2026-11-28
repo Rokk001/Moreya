@@ -1,8 +1,8 @@
 OpenDungeons_Version:0.7.4  # The version of OpenDungeons which created this file (for compatibility reasons).
 
 [Info]
-Name	\[Test\] Equipment and potions
-Description	Inspect equipment, the merchant, herbs and brewing near the first dungeon; six veteran knights arrive from the east at turn 300.
+Name	@level.testitemspotions.name
+Description	@level.testitemspotions.description
 Music	Searching_yd.ogg
 FightMusic	TheDarkAmulet_MP.ogg
 [/Info]

@@ -34,13 +34,14 @@
 #include "game/SkillType.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
+#include "utils/Translation.h"
 
 #include <algorithm>
 #include <iomanip>
 #include <limits>
 
 const std::string SpellEyeEvilName = "eyeEvil";
-const std::string SpellEyeEvilNameDisplay = "Eye of Evil";
+const std::string SpellEyeEvilNameKey = "spell.eyeevil.name";
 const std::string SpellEyeEvilCooldownKey = "EyeEvilCooldown";
 const SpellType SpellEyeEvil::mSpellType = SpellType::eyeEvil;
 
@@ -57,8 +58,9 @@ class SpellEyeEvilFactory : public SpellFactory
     const std::string& getCooldownKey() const override
     { return SpellEyeEvilCooldownKey; }
 
-    const std::string& getNameReadable() const override
-    { return SpellEyeEvilNameDisplay; }
+    //! \brief The name shown to the player, in the chosen language.
+    std::string getNameReadable() const override
+    { return Translation::tr(SpellEyeEvilNameKey); }
 
     virtual void checkSpellCast(GameMap* gameMap, const InputManager& inputManager, InputCommand& inputCommand) const override
     { SpellEyeEvil::checkSpellCast(gameMap, inputManager, inputCommand); }
@@ -198,7 +200,7 @@ void SpellEyeEvil::checkSpellCast(GameMap* gameMap, const InputManager& inputMan
     Tile* tile = gameMap->getTile(inputManager.mXPos, inputManager.mYPos);
     if(tile == nullptr)
     {
-        inputCommand.displayText(Ogre::ColourValue::Red, "Point at a tile inside the map.");
+        inputCommand.displayText(Ogre::ColourValue::Red, Translation::tr("spell.hint.point_at_tile"));
         return;
     }
 
@@ -206,8 +208,7 @@ void SpellEyeEvil::checkSpellCast(GameMap* gameMap, const InputManager& inputMan
     int32_t price = ConfigManager::getSingleton().getSpellConfigInt32("EyeEvilPrice");
     if(playerMana < price)
     {
-        inputCommand.displayText(Ogre::ColourValue::Red, "Not enough mana. " +
-            formatCastSpell(SpellType::eyeEvil, price));
+        inputCommand.displayText(Ogre::ColourValue::Red, Translation::tr("spell.hint.not_enough_mana", {{"text", formatCastSpell(SpellType::eyeEvil, price)}}));
         return;
     }
     inputCommand.displayText(Ogre::ColourValue::White, formatCastSpell(SpellType::eyeEvil, price));

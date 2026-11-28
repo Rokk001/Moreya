@@ -17,6 +17,7 @@ root = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
 import campaign_packages  # noqa: E402
 import content_packages  # noqa: E402
+import language_package_texts  # noqa: E402
 sys.path.insert(0, str(root / 'tools/balance'))
 from combat_sim import combat_stat, multiplier
 
@@ -900,13 +901,27 @@ def check_part_g():
     # ---- 11 the stats text: after "Level:" the attributes, critical chance, mana, path and skills
     stats = function(creature, 'std::string Creature::getStatsText(const Seat* viewer)')
     assert 'return getStatsText(getSeat());' in function(creature, 'std::string Creature::getStatsText()')
-    order = ['"Level: " << getLevel()', '"Strength / Dexterity / Life / Mana: "', '"Critical chance: "',
-             '"Mana: " << formatDisplayNumber(getCurrentMana()) << " / " << formatDisplayNumber(getMaxMana())',
-             '"Path: " << getSkillPathText()', '"Skills: " << getSkillListText()', '"Experience: "']
+    # The labels are text references "@creature.stats.<id>" (Creature::statsLabel); their English texts are the
+    # labels of before
+    order = ['statsLabel("level") << ": " << getLevel()', 'statsLabel("attributes") << ": "',
+             'statsLabel("critical_chance") << ": "',
+             'statsLabel("mana") << ": " << formatDisplayNumber(getCurrentMana()) << " / " << formatDisplayNumber(getMaxMana())',
+             'statsLabel("path") << ": " << getSkillPathText()', 'statsLabel("skills") << ": " << getSkillListText()',
+             'statsLabel("experience") << ": "']
     positions = [stats.index(part) for part in order]
     assert positions == sorted(positions), 'stats text order'
     assert 'formatFixedNumber(getCritChance()) << " %"' in stats, 'x.x %'
-    assert 'tempSS << "Weapons:"' in stats, 'the weapon lines stay'
+    assert 'tempSS << statsLabel("weapons") << ":"' in stats, 'the weapon lines stay'
+    assert 'return Translation::makeReference("creature.stats." + id);' in function(
+        creature, 'std::string Creature::statsLabel(const std::string& id)')
+    if content_packages.has_content(root):
+        english = language_package_texts.english(root)
+        for key, label in (('level', 'Level'), ('attributes', 'Strength / Dexterity / Life / Mana'),
+                           ('critical_chance', 'Critical chance'), ('mana', 'Mana'), ('path', 'Path'),
+                           ('skills', 'Skills'), ('experience', 'Experience'), ('weapons', 'Weapons')):
+            assert english.get('creature.stats.' + key) == label, key
+    else:
+        content_packages.unchecked('check_creature_attributes', ['English labels of the statistics text'])
     assert 'DISPLAY_NONE_TEXT = "none"' in creature, 'none when empty'
     skills = function(creature, 'std::string Creature::getSkillListText() const')
     assert 'it->second == 0' in skills and 'result += skillName + " " + Helper::toString(it->second);' in skills

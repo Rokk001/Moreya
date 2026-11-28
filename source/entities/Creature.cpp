@@ -178,6 +178,7 @@
 #include "utils/MakeUnique.h"
 #include "utils/Random.h"
 #include "utils/ResourceManager.h"
+#include "utils/Translation.h"
 
 #include <CEGUI/Event.h>
 #include <CEGUI/Image.h>
@@ -743,25 +744,25 @@ void collectProfileRelations(GameMap* gameMap, CreatureRelationships& relationsh
         switch(tier)
         {
             case RelationshipTier::lovers:
-                label = "partner";
+                label = "ui.relation.partner";
                 result.mHasPartner = true;
                 result.mClose.push_back(partner.first);
                 break;
             case RelationshipTier::bestFriends:
-                label = "best friend";
+                label = "ui.relation.bestfriend";
                 result.mClose.push_back(partner.first);
                 break;
             case RelationshipTier::friends:
-                label = "friend";
+                label = "ui.relation.friend";
                 result.mClose.push_back(partner.first);
                 break;
             case RelationshipTier::hated:
-                label = "dislikes";
+                label = "ui.relation.dislikes";
                 result.mHasHated = true;
                 result.mAgainst.insert(result.mAgainst.begin(), partner.first);
                 break;
             case RelationshipTier::nemesis:
-                label = "nemesis";
+                label = "ui.relation.nemesis";
                 result.mHasNemesis = true;
                 result.mAgainst.insert(result.mAgainst.begin(), partner.first);
                 break;
@@ -769,7 +770,7 @@ void collectProfileRelations(GameMap* gameMap, CreatureRelationships& relationsh
                 break;
         }
         if(label != nullptr)
-            result.mTierText[partner.first] = partnerName + " (" + label + ")";
+            result.mTierText[partner.first] = partnerName + " (" + Translation::tr(label) + ")";
     }
 }
 
@@ -5243,17 +5244,25 @@ std::string Creature::formatRoundedNumber(double value)
     return mantissa + suffix;
 }
 
-//! \brief Returns the template name for the displays ("none" while the creature follows no template).
+//! \brief Returns the template name for the displays, in the chosen language ("none" while the creature follows no
+//! template).
 std::string Creature::getSkillPathText() const
 {
     const std::string templateName = getSkillTemplateName();
     if(templateName.empty())
         return DISPLAY_NONE_TEXT;
 
-    return templateName;
+    // The internal name identifies the template; the player reads the name of the language files
+    const CreatureSkillTree::TemplateDef* templ = ConfigManager::getSingleton().getCreatureSkillTree().findTemplate(
+        skillTextOrEmpty(mDefinition->getSkillGroup()), mSkillBuild.mTemplate);
+    if(templ == nullptr)
+        return templateName;
+
+    return templ->getDisplayText();
 }
 
-//! \brief Returns the ranked skills for the displays as "<name> <rank>, ..." ("none" while there are none).
+//! \brief Returns the ranked skills for the displays as "<name> <rank>, ..." ("none" while there are none), the
+//! names in the chosen language.
 std::string Creature::getSkillListText() const
 {
     const CreatureSkillTree::SkillTreeConfig& config = ConfigManager::getSingleton().getCreatureSkillTree();
@@ -5268,9 +5277,9 @@ std::string Creature::getSkillListText() const
         const CreatureSkillTree::SkillDef* skill = config.findSkill(it->first);
         const CreatureSkillTree::TierFourDef* tierFour = config.findTierFourById(it->first);
         if(skill != nullptr)
-            skillName = skill->mName;
+            skillName = skill->getDisplayText();
         else if(tierFour != nullptr)
-            skillName = tierFour->mName;
+            skillName = tierFour->getDisplayText();
 
         if(!result.empty())
             result += ", ";
@@ -7748,11 +7757,18 @@ std::string Creature::getGender() const
 //! \brief Seconds of one minute, for the time in the effect lines of the Dungeonbook page.
 static const uint32_t PROFILE_SECONDS_PER_MINUTE = 60;
 
-//! \brief The name of a mood effect for the effect line: the capital letters inside the name start a new word.
+//! \brief The name of a mood effect for the effect line in the chosen language (the language entry
+//! "ui.moodeffect.<lower case name>"); a name without an entry gets spaces before the capital letters inside it.
 //! \param name The name of the effect without spaces (for example "MakeUnhappy").
-//! \return The name with spaces (for example "Make Unhappy").
+//! \return The name as the player sees it (for example "Make Unhappy").
 static std::string getMoodEffectDisplayName(const std::string& name)
 {
+    std::string key = "ui.moodeffect.";
+    for(std::string::size_type ii = 0; ii < name.size(); ++ii)
+        key += static_cast<char>(std::tolower(static_cast<unsigned char>(name[ii])));
+    if(Translation::hasText(key))
+        return Translation::tr(key);
+
     std::string display;
     for(std::string::size_type ii = 0; ii < name.size(); ++ii)
     {
@@ -7783,15 +7799,35 @@ static std::string getProfileEffectTime(double turns)
 //! \param turns The turns that are left.
 static std::string getProfileEffectTooltip(bool buff, const std::string& name, const std::string& what, double turns)
 {
-    return std::string(buff ? "Buff" : "Debuff") + " " + name + ": " + what + " Time left: " +
-        getProfileEffectTime(turns) + ".";
+    std::map<std::string, std::string> values;
+    values["kind"] = Translation::tr(buff ? "ui.profile.buff" : "ui.profile.debuff");
+    values["name"] = name;
+    values["what"] = what;
+    values["time"] = getProfileEffectTime(turns);
+    return Translation::tr("ui.profile.effect.tooltip", values);
 }
 
-//! \brief What a factor on the room points and the experience means, as a percentage ("works at 105.67 % ...").
-static std::string getProfileWorkFactorText(double factor)
+//! \brief The explaining sentence of a state that changes the room points and the experience by a factor, as a
+//! percentage ("... it earns 105.67 % of the usual room points ...").
+//! \param key The language key of the sentence; it has the placeholder {percent}.
+//! \param factor The factor on the room points and the experience.
+static std::string getProfileWorkFactorText(const std::string& key, double factor)
 {
-    return "it earns " + Creature::formatRoundedNumber(factor * Creature::PERCENT_FACTOR) +
-        " % of the usual room points and experience while it lasts.";
+    std::map<std::string, std::string> values;
+    values["percent"] = Creature::formatRoundedNumber(factor * Creature::PERCENT_FACTOR);
+    return Translation::tr(key, values);
+}
+
+//! \brief The line of an effect: "Buff: <name> (<time>)" or "Debuff: <name> (<time>)".
+//! \param buff True for a buff, false for a debuff.
+//! \param name The name of the effect as shown.
+//! \param turns The turns that are left.
+static std::string getProfileEffectLine(bool buff, const std::string& name, double turns)
+{
+    std::map<std::string, std::string> values;
+    values["name"] = name;
+    values["time"] = getProfileEffectTime(turns);
+    return Translation::tr(buff ? "ui.profile.effect.line.buff" : "ui.profile.effect.line.debuff", values);
 }
 
 //! \brief The lines of the active buffs and debuffs of a creature for the Dungeonbook page, buffs first: the buff
@@ -7821,9 +7857,10 @@ static std::string getProfileEffectsText(double relaxTurns, double hangoverTurns
 
     if((relaxTurns > 0.0) && !relaxedEffect)
     {
-        buffs.push_back("Buff: Relaxed (" + getProfileEffectTime(relaxTurns) + ")");
-        buffTips.push_back(getProfileEffectTooltip(true, "Relaxed", "after the lava spa " +
-            getProfileWorkFactorText(relaxWorkFactor), relaxTurns));
+        const std::string relaxedName = getMoodEffectDisplayName("Relaxed");
+        buffs.push_back(getProfileEffectLine(true, relaxedName, relaxTurns));
+        buffTips.push_back(getProfileEffectTooltip(true, relaxedName,
+            getProfileWorkFactorText("ui.profile.relaxed.what", relaxWorkFactor), relaxTurns));
     }
 
     for(const CreatureMoodEffect& effect : moodEffects)
@@ -7833,20 +7870,23 @@ static std::string getProfileEffectsText(double relaxTurns, double hangoverTurns
 
         const bool isBuff = (effect.mStrength >= 0.0);
         const std::string name = getMoodEffectDisplayName(effect.mName);
-        (isBuff ? buffs : debuffs).push_back(std::string(isBuff ? "Buff: " : "Debuff: ") +
-            name + " (" + getProfileEffectTime(effect.mTurnsLeft) + ")");
+        (isBuff ? buffs : debuffs).push_back(getProfileEffectLine(isBuff, name, effect.mTurnsLeft));
         // The mood the effect adds or takes every turn, and for the relaxation of the spa its factor on the work
-        std::string what = std::string(isBuff ? "raises" : "lowers") + " the mood of the creature by " +
-            Creature::formatRoundedNumber(std::fabs(effect.mStrength)) + " every turn";
-        what += (effect.mName == "Relaxed") ? "; " + getProfileWorkFactorText(relaxWorkFactor) : ".";
+        std::map<std::string, std::string> moodValues;
+        moodValues["points"] = Creature::formatRoundedNumber(std::fabs(effect.mStrength));
+        moodValues["percent"] = Creature::formatRoundedNumber(relaxWorkFactor * Creature::PERCENT_FACTOR);
+        const bool relaxed = (effect.mName == "Relaxed");
+        const std::string what = Translation::tr(isBuff ? (relaxed ? "ui.profile.mood.up.relaxed" : "ui.profile.mood.up") :
+            (relaxed ? "ui.profile.mood.down.relaxed" : "ui.profile.mood.down"), moodValues);
         (isBuff ? buffTips : debuffTips).push_back(getProfileEffectTooltip(isBuff, name, what, effect.mTurnsLeft));
     }
 
     if(hangoverTurns > 0.0)
     {
-        debuffs.push_back("Debuff: Hangover (" + getProfileEffectTime(hangoverTurns) + ")");
-        debuffTips.push_back(getProfileEffectTooltip(false, "Hangover", "after too much drink at the tavern " +
-            getProfileWorkFactorText(hangoverWorkFactor), hangoverTurns));
+        const std::string hangoverName = getMoodEffectDisplayName("Hangover");
+        debuffs.push_back(getProfileEffectLine(false, hangoverName, hangoverTurns));
+        debuffTips.push_back(getProfileEffectTooltip(false, hangoverName,
+            getProfileWorkFactorText("ui.profile.hangover.what", hangoverWorkFactor), hangoverTurns));
     }
 
     std::string effects;
@@ -7935,7 +7975,9 @@ void Creature::fillItemSlotWindows(Creature* creature, const std::vector<CEGUI::
         {
             const char* const levelKey = (slot == 7) ? "PotionSlotLevel2" : "PotionSlotLevel3";
             const int32_t level = static_cast<int32_t>(ConfigManager::getSingleton().getItemSetting("Potions", levelKey));
-            Gui::setPlainTooltip(image, "Potion slot locked: it opens at level " + Helper::toString(level));
+            std::map<std::string, std::string> lockValues;
+            lockValues["level"] = Helper::toString(level);
+            Gui::setPlainTooltip(image, Translation::tr("ui.profile.potionlocked", lockValues));
         }
     }
 }
@@ -8027,10 +8069,19 @@ Creature::ProfileSocialInfo Creature::getProfileSocialInfo()
     std::string moodLine = social::SocialGenerator::moodLine(cache.getData(),
         getName(), definition->getClassName(), definition->isWorker(),
         getProfileMoodState(getOverlayMoodValue(), mMoodValue));
-    std::string status = "Status";
+    std::map<std::string, std::string> statusValues;
+    statusValues["line"] = moodLine.empty() ? Translation::tr("ui.profile.status.nothing") : moodLine;
     if(mMoodValue != CreatureMoodLevel::Unknown)
-        status += " (" + getProfileMoodState(0, mMoodValue) + ")";
-    info.mStatus = status + ": " + (moodLine.empty() ? std::string("nothing to say") : moodLine);
+    {
+        std::string moodKey = "ui.mood.";
+        const std::string moodState = getProfileMoodState(0, mMoodValue);
+        for(std::string::size_type ii = 0; ii < moodState.size(); ++ii)
+            moodKey += static_cast<char>(std::tolower(static_cast<unsigned char>(moodState[ii])));
+        statusValues["mood"] = Translation::tr(moodKey);
+        info.mStatus = Translation::tr("ui.profile.status.withmood", statusValues);
+    }
+    else
+        info.mStatus = Translation::tr("ui.profile.status", statusValues);
     return info;
 }
 
@@ -8073,12 +8124,18 @@ std::string Creature::getRelationshipTooltip()
     collectProfileRelations(gameMap, *gameMap->getCreatureRelationships(), getName(), relations);
     std::string line;
     if(!relations.mClose.empty())
-        line += "Closest: " + relations.mTierText[relations.mClose[0]];
+    {
+        std::map<std::string, std::string> closeValues;
+        closeValues["name"] = relations.mTierText[relations.mClose[0]];
+        line += Translation::tr("ui.profile.closest", closeValues);
+    }
     if(!relations.mAgainst.empty())
     {
         if(!line.empty())
             line += " - ";
-        line += "Against: " + relations.mTierText[relations.mAgainst[0]];
+        std::map<std::string, std::string> againstValues;
+        againstValues["name"] = relations.mTierText[relations.mAgainst[0]];
+        line += Translation::tr("ui.profile.against", againstValues);
     }
     return line;
 }
@@ -8090,7 +8147,14 @@ std::string Creature::getStatsText()
     return getStatsText(getSeat());
 }
 
-//! \brief Builds statistics while masking new private item fields for foreign viewing seats.
+std::string Creature::statsLabel(const std::string& id)
+{
+    return Translation::makeReference("creature.stats." + id);
+}
+
+//! \brief Builds statistics while masking new private item fields for foreign viewing seats. The labels of the
+//! player values are text references (statsLabel), so every client reads them in its own language; the developer
+//! section "Debugging information" stays English like a log.
 std::string Creature::getStatsText(const Seat* viewer)
 {
     // The creatures are not refreshed at each turn so this information is relevant in the server
@@ -8100,18 +8164,18 @@ std::string Creature::getStatsText(const Seat* viewer)
     const bool showPrivateItems = viewer == getSeat();
 
     std::stringstream tempSS;
-    tempSS << formatTitleOn << "Characteristics" << formatTitleOff << std::endl;
+    tempSS << formatTitleOn << statsLabel("characteristics") << formatTitleOff << std::endl;
     if(getDefinition()->isChampion())
-        tempSS << "Level: " << CHAMPION_CROWN_MARKUP << std::endl;
+        tempSS << statsLabel("level") << ": " << CHAMPION_CROWN_MARKUP << std::endl;
     else
-        tempSS << "Level: " << getLevel() << std::endl;
-    tempSS << "Strength / Dexterity / Life / Mana: " << formatDisplayNumber(getStrength()) << " / "
+        tempSS << statsLabel("level") << ": " << getLevel() << std::endl;
+    tempSS << statsLabel("attributes") << ": " << formatDisplayNumber(getStrength()) << " / "
         << formatDisplayNumber(getDexterity()) << " / " << formatDisplayNumber(getLife()) << " / "
         << formatDisplayNumber(getMana()) << std::endl;
-    tempSS << "Critical chance: " << formatFixedNumber(getCritChance()) << " %" << std::endl;
-    tempSS << "Mana: " << formatDisplayNumber(getCurrentMana()) << " / " << formatDisplayNumber(getMaxMana())
+    tempSS << statsLabel("critical_chance") << ": " << formatFixedNumber(getCritChance()) << " %" << std::endl;
+    tempSS << statsLabel("mana") << ": " << formatDisplayNumber(getCurrentMana()) << " / " << formatDisplayNumber(getMaxMana())
         << std::endl;
-    tempSS << "Equipment: ";
+    tempSS << statsLabel("equipment") << ": ";
     for(std::size_t index = 0; index < mEquipment.size(); ++index)
     {
         if(index != 0)
@@ -8120,7 +8184,7 @@ std::string Creature::getStatsText(const Seat* viewer)
             mEquipment[index].get() : nullptr;
         tempSS << getItemSlotDisplayText(item, getGameMap()) << formatTitleOff;
     }
-    tempSS << std::endl << "Potions: ";
+    tempSS << std::endl << statsLabel("potions") << ": ";
     for(std::size_t index = 0; index < mPotionSlots.size(); ++index)
     {
         if(index != 0)
@@ -8128,7 +8192,7 @@ std::string Creature::getStatsText(const Seat* viewer)
         tempSS << getItemSlotDisplayText(showPrivateItems ? mPotionSlots[index].get() : nullptr, getGameMap())
             << formatTitleOff;
     }
-    tempSS << std::endl << "Inventory: ";
+    tempSS << std::endl << statsLabel("inventory") << ": ";
     for(std::size_t index = 0; index < mInventory.size(); ++index)
     {
         if(index != 0)
@@ -8137,51 +8201,53 @@ std::string Creature::getStatsText(const Seat* viewer)
             << formatTitleOff;
     }
     tempSS << std::endl;
-    tempSS << "Path: " << getSkillPathText() << std::endl;
-    tempSS << "Skills: " << getSkillListText() << std::endl;
+    tempSS << statsLabel("path") << ": " << getSkillPathText() << std::endl;
+    tempSS << statsLabel("skills") << ": " << getSkillListText() << std::endl;
     // Rounded to two decimals (owner decision 830), the Dungeonbook shows these values as they are written here
-    tempSS << "Experience: " << formatRoundedNumber(mExp) << std::endl;
-    tempSS << "HP: " << formatRoundedNumber(getHP()) << " / " << formatRoundedNumber(mMaxHP) << std::endl;
-    tempSS << "Gold: " << formatRoundedNumber(mGoldCarried) << std::endl;
+    tempSS << statsLabel("experience") << ": " << formatRoundedNumber(mExp) << std::endl;
+    tempSS << statsLabel("hp") << ": " << formatRoundedNumber(getHP()) << " / " << formatRoundedNumber(mMaxHP) << std::endl;
+    tempSS << statsLabel("gold") << ": " << formatRoundedNumber(mGoldCarried) << std::endl;
     for(Room* room : getGameMap()->getRoomsByTypeAndSeat(RoomType::infirmary, getSeat()))
     {
         RoomInfirmary* infirmary = static_cast<RoomInfirmary*>(room);
         const RoomInfirmary::PatientInfo* patient = infirmary->getPatient(*this);
         if(patient != nullptr && patient->creature == this)
         {
-            tempSS << "Infirmary: " << formatFixedNumber(getHP() * 100.0 / getMaxHp()) << " % -> "
+            tempSS << statsLabel("infirmary") << ": " << formatFixedNumber(getHP() * 100.0 / getMaxHp()) << " % -> "
                 << infirmary->getDischargeThreshold() << " %" << std::endl;
             break;
         }
     }
     if (!getDefinition()->isWorker())
     {
-        tempSS << "Wakefulness: " << mWakefulness << std::endl;
-        tempSS << "Hunger: " << mHunger << std::endl;
-        tempSS << "Thirst: " << mThirst << std::endl;
-        tempSS << "Drunk: " << mDrunk << std::endl;
-        tempSS << "Hangover: " << mHangoverTurns << std::endl;
-        tempSS << "Urge: " << mUrge << std::endl;
-        tempSS << "Dirt: " << mCreatureDirt << std::endl;
+        tempSS << statsLabel("wakefulness") << ": " << mWakefulness << std::endl;
+        tempSS << statsLabel("hunger") << ": " << mHunger << std::endl;
+        tempSS << statsLabel("thirst") << ": " << mThirst << std::endl;
+        tempSS << statsLabel("drunk") << ": " << mDrunk << std::endl;
+        tempSS << statsLabel("hangover") << ": " << mHangoverTurns << std::endl;
+        tempSS << statsLabel("urge") << ": " << mUrge << std::endl;
+        tempSS << statsLabel("dirt") << ": " << mCreatureDirt << std::endl;
     }
-    tempSS << "Move speed (G/W/L): " << getMoveSpeedGround() << " / "
+    tempSS << statsLabel("move_speed") << ": " << getMoveSpeedGround() << " / "
         << getMoveSpeedWater() << " / " << getMoveSpeedLava() << std::endl;
-    tempSS << "Weapons:" << std::endl;
+    tempSS << statsLabel("weapons") << ":" << std::endl;
     if(mWeaponL == nullptr)
-        tempSS << " - Left: none" << std::endl;
+        tempSS << " - " << statsLabel("weapon_left") << ": " << statsLabel("none") << std::endl;
     else
-        tempSS << " - Left: " << mWeaponL->getName() << " | Damage (P/M/E): " << mWeaponL->getPhysicalDamage()
+        tempSS << " - " << statsLabel("weapon_left") << ": " << mWeaponL->getName() << " | " << statsLabel("damage")
+               << ": " << mWeaponL->getPhysicalDamage()
                << " / " << mWeaponL->getMagicalDamage() << " / " << mWeaponL->getElementDamage() << std::endl;
     if(mWeaponR == nullptr)
-        tempSS << " - Right: none" << std::endl;
+        tempSS << " - " << statsLabel("weapon_right") << ": " << statsLabel("none") << std::endl;
     else
-        tempSS << " - Right: " << mWeaponR->getName() << " | Damage (P/M/E): " << mWeaponR->getPhysicalDamage()
+        tempSS << " - " << statsLabel("weapon_right") << ": " << mWeaponR->getName() << " | " << statsLabel("damage")
+               << ": " << mWeaponR->getPhysicalDamage()
                << " / " << mWeaponR->getMagicalDamage() << " / " << mWeaponR->getElementDamage() << std::endl;
-    tempSS << "Defense (P/M/E): " << getPhysicalDefense() << " / " << getMagicalDefense() << " / " << getElementDefense() << std::endl;
+    tempSS << statsLabel("defense") << ": " << getPhysicalDefense() << " / " << getMagicalDefense() << " / " << getElementDefense() << std::endl;
     if (getDefinition()->isWorker())
     {
-        tempSS << "Dig rate: " << getDigRate() << std::endl;
-        tempSS << "Dance rate: " << getClaimRate() << std::endl;
+        tempSS << statsLabel("dig_rate") << ": " << getDigRate() << std::endl;
+        tempSS << statsLabel("dance_rate") << ": " << getClaimRate() << std::endl;
     }
 
     tempSS << formatTitleOn << "\nDebugging information" << formatTitleOff << std::endl;
@@ -8208,8 +8274,8 @@ std::string Creature::getStatsText(const Seat* viewer)
         ++nbDestinations;
     }
     tempSS << std::endl;
-    tempSS << "Mood: " << CreatureMood::toString(mMoodValue) << std::endl;
-    tempSS << "Mood points: " << Helper::toString(mMoodPoints) << std::endl;
+    tempSS << statsLabel("mood") << ": " << CreatureMood::toString(mMoodValue) << std::endl;
+    tempSS << statsLabel("mood_points") << ": " << Helper::toString(mMoodPoints) << std::endl;
     return tempSS.str();
 }
 
@@ -10381,9 +10447,9 @@ void Creature::fireChatMsgTookFee(int goldTaken)
     std::string suffix;
     // We don't display the same message if we have taken all our fee or only a part of it
     if(getGoldFee() <= 0)
-        suffix = " took its fee: " + Helper::toString(goldTaken);
+        suffix = Translation::makeReference("msg.creature.fee.all", {{"gold", Helper::toString(goldTaken)}});
     else
-        suffix = " took " + Helper::toString(goldTaken) + " from its fee";
+        suffix = Translation::makeReference("msg.creature.fee.part", {{"gold", Helper::toString(goldTaken)}});
 
     getSeat()->getPlayer()->notifyCreatureEvent(*this, suffix);
 }
@@ -10403,7 +10469,7 @@ void Creature::fireChatMsgLeftDungeon()
         return;
     }
 
-    getSeat()->getPlayer()->notifyCreatureEvent(*this, " left your dungeon");
+    getSeat()->getPlayer()->notifyCreatureEvent(*this, Translation::makeReference("msg.creature.left"));
 }
 
 //! \brief Reports the creature notice to its human keeper or queues the matching AI event.
@@ -10421,7 +10487,7 @@ void Creature::fireChatMsgLeavingDungeon()
         return;
     }
 
-    getSeat()->getPlayer()->notifyCreatureEvent(*this, " is leaving your dungeon");
+    getSeat()->getPlayer()->notifyCreatureEvent(*this, Translation::makeReference("msg.creature.leaving"));
 }
 
 //! \brief Reports the creature notice to its human keeper or queues the matching AI event.
@@ -10439,7 +10505,7 @@ void Creature::fireChatMsgBecameRogue()
         return;
     }
 
-    getSeat()->getPlayer()->notifyCreatureEvent(*this, " is not under your control anymore !");
+    getSeat()->getPlayer()->notifyCreatureEvent(*this, Translation::makeReference("msg.creature.uncontrolled"));
 }
 
 //! \brief Reports the rampage of the creature to its human keeper.
@@ -10452,7 +10518,7 @@ void Creature::fireChatMsgRampaging()
     if(!getSeat()->getPlayer()->getIsHuman())
         return;
 
-    getSeat()->getPlayer()->notifyCreatureEvent(*this, " is rampaging in your dungeon !");
+    getSeat()->getPlayer()->notifyCreatureEvent(*this, Translation::makeReference("msg.creature.rampaging"));
 }
 
 //! \brief Reports the creature notice to its human keeper or queues the matching AI event.
@@ -10470,7 +10536,7 @@ void Creature::fireChatMsgUnhappy()
         return;
     }
 
-    getSeat()->getPlayer()->notifyCreatureEvent(*this, " is unhappy !");
+    getSeat()->getPlayer()->notifyCreatureEvent(*this, Translation::makeReference("msg.creature.unhappy"));
 }
 
 //! \brief Reports the creature notice to its human keeper or queues the matching AI event.
@@ -10488,7 +10554,7 @@ void Creature::fireChatMsgFurious()
         return;
     }
 
-    getSeat()->getPlayer()->notifyCreatureEvent(*this, " is furious !");
+    getSeat()->getPlayer()->notifyCreatureEvent(*this, Translation::makeReference("msg.creature.furious"));
 }
 
 //! \brief Resolves the definition and builds authoritative server stats while preserving received client summaries.
@@ -13914,7 +13980,7 @@ void Creature::dismissChampion()
     {
         ServerNotification* serverNotification = new ServerNotification(
             ServerNotificationType::chatServer, getSeat()->getPlayer());
-        std::string msg = "The champion leaves your dungeon";
+        const std::string msg = Translation::makeReference("msg.champion.leaves");
         serverNotification->mPacket << msg << EventShortNoticeType::aboutCreatures;
         ODServer::getSingleton().queueServerNotification(serverNotification);
     }

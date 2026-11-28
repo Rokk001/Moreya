@@ -42,12 +42,13 @@
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 #include "utils/Random.h"
+#include "utils/Translation.h"
 
 #include <algorithm>
 #include <string>
 
 const std::string RoomTreasuryName = "Treasury";
-const std::string RoomTreasuryNameDisplay = "Treasury room";
+const std::string RoomTreasuryNameKey = "room.treasury.name";
 const RoomType RoomTreasury::mRoomType = RoomType::treasury;
 const TileVisual RoomTreasury::mRoomVisual= TileVisual::treasuryRoom;
 
@@ -64,8 +65,9 @@ class RoomTreasuryFactory : public RoomFactory
     const std::string& getName() const override
     { return RoomTreasuryName; }
 
-    const std::string& getNameReadable() const override
-    { return RoomTreasuryNameDisplay; }
+    //! \brief The name shown to the player, in the chosen language.
+    std::string getNameReadable() const override
+    { return Translation::tr(RoomTreasuryNameKey); }
 
     int getCostPerTile() const override
     { return ConfigManager::getSingleton().getRoomConfigInt32("TreasuryCostPerTile"); }

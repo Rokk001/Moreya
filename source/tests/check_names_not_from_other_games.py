@@ -1,12 +1,15 @@
 """Check player-facing item, potion, herb, effect, room and research names against the hook's local term list.
 
-The item and potion tables (config/items.cfg, config/potions.cfg) live in content packages (found through
-scripts/content_packages.py); without the content their names are named as not checked and the names of the public
-source (effects, rooms, research) are still checked with their fixed counts."""
+The item and potion tables (config/items.cfg, config/potions.cfg) and the room and research names (the entries
+room.<id>.name and research.<skill>.name of the English language package) live in content packages (found through
+scripts/content_packages.py); without the content their names are named as not checked and the effect names of the
+public source are still checked with their fixed count."""
 import importlib.util
 import re
 from check_items_cfg import ROOT, blocks, read, value
 import content_packages
+import language_package_texts
+from lang_texts import english_texts
 
 
 def main():
@@ -31,43 +34,48 @@ def main():
     else:
         content_packages.unchecked("check_names_not_from_other_games",
                                    ["display names of config/items.cfg and config/potions.cfg"])
-    effect_table = read("source/entities/ItemEffects.cpp").split("EFFECT_NAMES[]", 1)[1].split("};", 1)[0]
-    effect_names = re.findall(r'\{"[^"]+",\s*"([^"]+)"\}', effect_table)
+    effect_table = read("source/entities/ItemEffects.cpp").split("EFFECT_IDS[]", 1)[1].split("};", 1)[0]
+    # The names of the effects are the texts of the language entries ui.itemeffect.<lower case id> (an id stands in
+    # for its name when the content with the language files is not there)
+    english = english_texts(ROOT) or {}
+    effect_names = [english.get("ui.itemeffect." + effect.lower(), effect)
+                    for effect in re.findall(r'"([^"]+)"', effect_table)]
     counts.append(len(effect_names))
     displays.extend(effect_names)
-    room_names = []
-    for name in ("RoomMerchant", "RoomHerbGarden", "RoomAlchemyLab"):
-        source = read("source/rooms/" + name + ".cpp")
-        readable = re.findall(r'getNameReadable\(\)[\s\S]*?\{([\s\S]*?)\}', source)
-        assert len(readable) == 1, "missing or ambiguous room display getter: " + name
-        body = readable[0]
-        returned = re.search(r'return\s+(\w+)\s*;', body)
-        assert returned, "missing readable return: " + name
-        literal = re.search(r'const std::string\s+' + returned[1] + r'\s*=\s*"([^"]+)"', body)
-        if literal is None:
-            literal = re.search(r'const std::string\s+' + returned[1] + r'\s*=\s*"([^"]+)"', source)
-        assert literal, "unresolved readable room constant: " + name
-        room_names.append(literal[1])
-    assert set(room_names) == {"Merchant room", "Herb garden", "Alchemy lab"}
-    counts.append(len(room_names))
-    displays.extend(room_names)
-    research = read("source/game/SkillType.cpp").split("std::string skillTypeToPlayerVisibleString(", 1)[1]
-    research = research.split("bool isRewardSkill(", 1)[0]
-    research_names = []
-    for skill in ("roomMerchant", "roomHerbGarden", "roomAlchemyLab", "trapFineTools", "trapMasterTools", "spellSunthornCultivation"):
-        found = re.search(r'case SkillType::' + skill + r':\s*return "([^"]+)"', research)
-        assert found, "missing research display: " + skill
-        research_names.append(found[1])
-    assert set(research_names) == {"The Merchant Room", "The Herb Garden", "The Alchemy Lab", "Fine Tools", "Master Tools", "Sunthorn Cultivation"}
-    counts.append(len(research_names))
-    displays.extend(research_names)
+    # The room and research names are entries of the English language package; the code asks for them by key
+    if with_content:
+        english = language_package_texts.english(ROOT)
+        room_keys = {"RoomMerchant": "room.merchant.name", "RoomHerbGarden": "room.herbgarden.name",
+                     "RoomAlchemyLab": "room.alchemylab.name"}
+        room_names = []
+        for name, key in room_keys.items():
+            assert 'Translation::tr("%s")' % key in read("source/rooms/" + name + ".cpp") or \
+                'Translation::tr(ROOM_DISPLAY_KEY)' in read("source/rooms/" + name + ".cpp"), "missing readable key: " + name
+            assert key in english, "missing room name: " + key
+            room_names.append(english[key])
+        assert set(room_names) == {"Merchant room", "Herb garden", "Alchemy lab"}
+        counts.append(len(room_names))
+        displays.extend(room_names)
+        research = read("source/game/SkillType.cpp").split("std::string skillTypeToPlayerVisibleString(", 1)[1]
+        research = research.split("bool isRewardSkill(", 1)[0]
+        research_names = []
+        for skill in ("roomMerchant", "roomHerbGarden", "roomAlchemyLab", "trapFineTools", "trapMasterTools", "spellSunthornCultivation"):
+            key = "research.%s.name" % skill.lower()
+            assert re.search(r'case SkillType::' + skill + r':\s*return Translation::tr\("' + key + r'"\)', research), "missing research key: " + skill
+            assert key in english, "missing research display: " + key
+            research_names.append(english[key])
+        assert set(research_names) == {"The Merchant Room", "The Herb Garden", "The Alchemy Lab", "Fine Tools", "Master Tools", "Sunthorn Cultivation"}
+        counts.append(len(research_names))
+        displays.extend(research_names)
+    else:
+        content_packages.unchecked("check_names_not_from_other_games", ["room and research names of the English language package"])
     if with_content:
         assert counts == [551, 29, 4, 49, 3, 6], "incomplete player-name extraction: " + repr(counts)
         assert len(displays) == 642
     else:
-        # the public part of the same fixed counts (effects, rooms, research)
-        assert counts == [49, 3, 6], "incomplete player-name extraction: " + repr(counts)
-        assert len(displays) == 58
+        # the public part of the same fixed counts (effects)
+        assert counts == [49], "incomplete player-name extraction: " + repr(counts)
+        assert len(displays) == 49
     hits = [(display, term) for display in displays for term in terms
             if re.search(r"(?<!\w)" + re.escape(term) + r"(?!\w)", display, re.I)]
     assert not hits, "forbidden whole-word name matches: " + repr(hits)

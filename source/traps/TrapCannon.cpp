@@ -31,6 +31,7 @@
 #include "utils/ConfigManager.h"
 #include "utils/Random.h"
 #include "utils/LogManager.h"
+#include "utils/Translation.h"
 #include "network/ODServer.h"
 #include "network/ServerMode.h"
 #include "network/ServerNotification.h"
@@ -39,7 +40,7 @@
 #include <iostream>
 
 const std::string TrapCannonName = "Cannon";
-const std::string TrapCannonNameDisplay = "Cannon trap";
+const std::string TrapCannonNameKey = "trap.cannon.name";
 const TrapType TrapCannon::mTrapType = TrapType::cannon;
 
 namespace
@@ -52,8 +53,9 @@ class TrapCannonFactory : public TrapFactory
     const std::string& getName() const override
     { return TrapCannonName; }
 
-    const std::string& getNameReadable() const override
-    { return TrapCannonNameDisplay; }
+    //! \brief The name shown to the player, in the chosen language.
+    std::string getNameReadable() const override
+    { return Translation::tr(TrapCannonNameKey); }
 
     int getCostPerTile() const override
     { return ConfigManager::getSingleton().getTrapConfigInt32("CannonCostPerTile"); }

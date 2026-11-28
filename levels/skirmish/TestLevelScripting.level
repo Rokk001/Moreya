@@ -1,8 +1,8 @@
 OpenDungeons_Version:0.7.1  # The version of OpenDungeons which created this file (for compatibility reasons).
 
 [Info]
-Name	\[Test\] Level scripting
-Description	Test map for level triggers: walk a creature to the area around tile 22,12 and a group of heroes appears.
+Name	@level.testlevelscripting.name
+Description	@level.testlevelscripting.description
 Music	Searching_yd.ogg
 FightMusic	TheDarkAmulet_MP.ogg
 [/Info]
@@ -2663,13 +2663,13 @@ Region	StoryCorner	36	41	38	43
 Name	welcome
 Mode	once
 Cond	time	3
-Action	objective	1	Move one of your creatures to the area around tile 22,12.
+Action	objective	1	@level.testlevelscripting.goal.01
 [/Trigger]
 [Trigger]
 Name	ambush
 Mode	once
 Cond	region	1	20	10	24	14
-Action	message	1	Heroes have noticed you and are coming!
+Action	message	1	@level.testlevelscripting.message.01
 Action	spawn	0	40	20	1	Knight:1	Adventurer:1	Monk:1
 Action	gold	1	500
 Action	setflag	ambushStarted	1
@@ -2678,7 +2678,7 @@ Action	setflag	ambushStarted	1
 Name	afterAmbush
 Mode	once
 Cond	flag	ambushStarted	1
-Action	objective	1	Defend your dungeon against the heroes.
+Action	objective	1	@level.testlevelscripting.goal.02
 [/Trigger]
 [Trigger]
 Name	storySwitches
