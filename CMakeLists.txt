@@ -446,6 +446,7 @@ set(OD_SOURCEFILES
     ${SRC}/entities/MapLight.cpp
     ${SRC}/entities/MissileBoulder.cpp
     ${SRC}/entities/MissileBlast.cpp
+    ${SRC}/entities/MissileBomb.cpp
     ${SRC}/entities/MissileStone.cpp
     ${SRC}/entities/MissileObject.cpp
     ${SRC}/entities/MissileOneHit.cpp

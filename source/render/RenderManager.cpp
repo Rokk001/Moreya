@@ -9913,6 +9913,22 @@ void RenderManager::rrSetCreatureModelVisible(Creature& creature, bool visible)
         entity->setVisible(visible);
 }
 
+//! \brief Matches the material stored in the mesh, so seat colour and outline copies of the material do not matter.
+void RenderManager::rrSetCreatureSubMeshVisible(Creature& creature, const std::string& meshMaterial, bool visible)
+{
+    const std::string entityName = creature.getOgreNamePrefix() + creature.getName();
+    if(!mSceneManager->hasEntity(entityName))
+        return;
+
+    Ogre::Entity* entity = mSceneManager->getEntity(entityName);
+    for(unsigned int index = 0; index < entity->getNumSubEntities(); ++index)
+    {
+        Ogre::SubEntity* sub = entity->getSubEntity(index);
+        if(sub->getSubMesh()->getMaterialName() == meshMaterial)
+            sub->setVisible(visible);
+    }
+}
+
 void RenderManager::rrToggleHandSelectorVisibility()
 {
     rrCancelIdleHandAnimation();

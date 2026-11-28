@@ -314,6 +314,11 @@ class GameEntity
     //! \return The number of effects ended
     uint32_t endParticleEffectsByScript(const std::string& script);
 
+    //! \brief Client side: shows a particle effect of this entity that was received but held back (the explosion
+    //! of a thrown bomb, see MissileBomb). Does nothing if the effect is gone or already shown.
+    //! \param effectName The name of the particle effect
+    void showHeldParticleEffect(const std::string& effectName);
+
     //! \brief Returns a list of the tiles that this object is in/covering.  For creatures and other small objects
     //! this will be a single tile, for larger objects like rooms this will be 1 or more tiles.
     virtual std::vector<Tile*> getCoveredTiles() = 0;

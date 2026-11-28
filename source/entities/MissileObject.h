@@ -35,7 +35,9 @@ enum class MissileObjectType
     oneHit,
     boulder,
     blast,
-    stone
+    stone,
+    //! \brief The bomb a creature throws with its Explosion skill (look only). Appended last: saved numbers stay
+    skillBomb
 };
 
 ODPacket& operator<<(ODPacket& os, const MissileObjectType& rot);

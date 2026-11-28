@@ -250,6 +250,15 @@ public:
     inline const std::string& getPreSkill() const { return mPreSkill; }
     //! \brief Returns the id of the tier 4 skill of this type (or none).
     inline const std::string& getTierFourSkill() const { return mTierFourSkill; }
+    //! \brief True when the Explosion skills of this type throw a visible bomb at the target (key ThrownBomb)
+    inline bool throwsBomb() const { return !mThrownBombMesh.empty(); }
+    //! \brief Mesh of the thrown bomb (key ThrownBomb), empty when the type throws nothing
+    inline const std::string& getThrownBombMesh() const { return mThrownBombMesh; }
+    //! \brief Particle script the thrown bomb carries in flight (key ThrownBomb), empty for none
+    inline const std::string& getThrownBombParticle() const { return mThrownBombParticle; }
+    //! \brief Material (as named in the mesh file) of the bomb part of the creature model that is hidden on the
+    //! clients while the bomb flies (key ThrownBomb), empty for none
+    inline const std::string& getThrownBombMaterial() const { return mThrownBombMaterial; }
     //! \brief Returns how fast the urge to use a toilet grows per turn (0 = the creature has no urge).
     inline double getUrgeGrowthPerTurn() const { return mUrgeGrowthPerTurn; }
     //! \brief Returns how much the creature minds dirt (0 = not at all, 1 = normal, 2 = twice as much).
@@ -451,6 +460,15 @@ private:
 
     //! \brief Optional (TierFourSkill): id of the tier 4 skill of this type (or none). Default "none" when not set
     std::string mTierFourSkill;
+
+    //! \brief Optional (ThrownBomb, first value): mesh of the bomb the Explosion skills of this type throw. Empty when
+    //! not set: nothing is thrown. Look only, the explosion hits as without it
+    std::string mThrownBombMesh;
+    //! \brief Optional (ThrownBomb, second value, none for empty): particle script of the bomb in flight
+    std::string mThrownBombParticle;
+    //! \brief Optional (ThrownBomb, third value, none for empty): material of the bomb part of the creature model,
+    //! hidden on the clients while the thrown bomb flies
+    std::string mThrownBombMaterial;
 
     //! \brief Optional (UrgeGrowth/Turn): how fast the urge to use a toilet grows per turn. Default 0.0 when not set
     double mUrgeGrowthPerTurn;

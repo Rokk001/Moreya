@@ -462,6 +462,10 @@ public:
     //! for the creature the local player possesses: the view is in its eyes, so its own model is hidden.
     void rrSetCreatureModelVisible(Creature& creature, bool visible);
 
+    //! \brief Shows or hides the parts of the creature model whose material, as named in the mesh file, is the given
+    //! one. Used on the client for the bomb a creature throws: hidden while the bomb flies (see MissileBomb).
+    void rrSetCreatureSubMeshVisible(Creature& creature, const std::string& meshMaterial, bool visible);
+
     //! \brief Returns the name of a copy of the given material that is tinted with the given colour.
     //! The copy is created on the first request and reused afterwards.
     std::string rrBuildTintedMaterial(const std::string& materialNameBase,

@@ -23,6 +23,7 @@
 #include "entities/Creature.h"
 #include "entities/CreatureDefinition.h"
 #include "entities/GameEntityType.h"
+#include "entities/MissileBomb.h"
 #include "entities/Tile.h"
 #include "gamemap/GameMap.h"
 #include "sound/SoundEffectsManager.h"
@@ -47,6 +48,42 @@ class CreatureSkillExplosionFactory : public CreatureSkillFactory
 
 // Register the factory
 static CreatureSkillRegister reg(new CreatureSkillExplosionFactory);
+
+//! \brief Height above the ground the thrown bomb flies at (the height of the other creature missiles)
+const Ogre::Real THROWN_BOMB_HEIGHT = 0.3;
+//! \brief Below this squared distance the target counts as on the thrower's tile: the bomb gets a fixed direction
+const Ogre::Real THROWN_BOMB_MIN_SQUARED_DISTANCE = 0.0001f;
+
+//! \brief Throws the bomb of a creature type with the key ThrownBomb at the attacked creature. Look only: the bomb
+//! lands on the target tile in the turn of the throw and has no effect; the explosion was applied by the skill.
+void launchThrownBomb(GameMap& gameMap, Creature& thrower, Creature& target, Tile* targetTile)
+{
+    Tile* throwerTile = thrower.getPositionTile();
+    if((throwerTile == nullptr) || (targetTile == nullptr))
+        return;
+
+    const CreatureDefinition* definition = thrower.getDefinition();
+    Ogre::Vector3 position = thrower.getPosition();
+    position.z = THROWN_BOMB_HEIGHT;
+    Ogre::Vector3 direction(static_cast<Ogre::Real>(targetTile->getX()), static_cast<Ogre::Real>(targetTile->getY()),
+        THROWN_BOMB_HEIGHT);
+    direction = direction - position;
+    const double distance = static_cast<double>(direction.length());
+    if(direction.squaredLength() < THROWN_BOMB_MIN_SQUARED_DISTANCE)
+        direction = Ogre::Vector3::UNIT_X;
+    else
+        direction.normalise();
+
+    MissileBomb* bomb = new MissileBomb(&gameMap, thrower.getSeat(), thrower.getName(),
+        definition->getThrownBombMesh(), definition->getThrownBombParticle(), definition->getThrownBombMaterial(),
+        direction, MissileBomb::flightSpeed(distance), &target, targetTile);
+    bomb->addToGameMap();
+    bomb->createMesh();
+    bomb->setPosition(position);
+    // Announce the bomb before its flight, like the other creature missiles
+    bomb->notifySeatsWithVision(throwerTile->getSeatsWithVision());
+    bomb->doUpkeep();
+}
 }
 
 const std::string& CreatureSkillExplosion::getSkillName() const
@@ -132,6 +169,10 @@ bool CreatureSkillExplosion::tryUseFight(GameMap& gameMap, Creature* creature, f
     // Rank property BURNING_GROUND: the ground around the target burns (damage per turn, turns, radius)
     if(hasProperty("BURNING_GROUND"))
         creature->addSkillBurningGround(*this, attackedTile);
+
+    // Look only: a creature type with the key ThrownBomb throws its bomb at the target; the hit above is unchanged
+    if(creature->getDefinition()->throwsBomb())
+        launchThrownBomb(gameMap, *creature, *attackedCreature, attackedTile);
 
     return true;
 }

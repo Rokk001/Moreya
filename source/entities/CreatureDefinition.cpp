@@ -101,6 +101,9 @@ CreatureDefinition::CreatureDefinition(
         mSkillFamily ("none"),
         mPreSkill ("none"),
         mTierFourSkill ("none"),
+        mThrownBombMesh (""),
+        mThrownBombParticle (""),
+        mThrownBombMaterial (""),
         mUrgeGrowthPerTurn (0.0),
         mCleanliness (1.0),
         mMoodSensitivity (1.0),
@@ -191,6 +194,9 @@ CreatureDefinition::CreatureDefinition(const CreatureDefinition& def) :
         mSkillFamily(def.mSkillFamily),
         mPreSkill(def.mPreSkill),
         mTierFourSkill(def.mTierFourSkill),
+        mThrownBombMesh(def.mThrownBombMesh),
+        mThrownBombParticle(def.mThrownBombParticle),
+        mThrownBombMaterial(def.mThrownBombMaterial),
         mUrgeGrowthPerTurn(def.mUrgeGrowthPerTurn),
         mCleanliness(def.mCleanliness),
         mMoodSensitivity(def.mMoodSensitivity),
@@ -479,6 +485,9 @@ ODPacket& operator<<(ODPacket& os, const CreatureDefinition* c)
     os << c->mSkillFamily;
     os << c->mPreSkill;
     os << c->mTierFourSkill;
+    os << c->mThrownBombMesh;
+    os << c->mThrownBombParticle;
+    os << c->mThrownBombMaterial;
     os << c->mUrgeGrowthPerTurn;
     os << c->mCleanliness;
     os << c->mMoodSensitivity;
@@ -557,6 +566,9 @@ ODPacket& operator>>(ODPacket& is, CreatureDefinition* c)
     is >> c->mSkillFamily;
     is >> c->mPreSkill;
     is >> c->mTierFourSkill;
+    is >> c->mThrownBombMesh;
+    is >> c->mThrownBombParticle;
+    is >> c->mThrownBombMaterial;
     is >> c->mUrgeGrowthPerTurn;
     is >> c->mCleanliness;
     is >> c->mMoodSensitivity;
@@ -837,6 +849,19 @@ bool CreatureDefinition::update(CreatureDefinition* creatureDef, std::stringstre
             else if (nextParam == "TierFourSkill")
             {
                 defFile >> creatureDef->mTierFourSkill;
+                continue;
+            }
+            else if (nextParam == "ThrownBomb")
+            {
+                // Mesh, particle script and material of the hidden part; none stands for an empty value
+                defFile >> creatureDef->mThrownBombMesh >> creatureDef->mThrownBombParticle
+                    >> creatureDef->mThrownBombMaterial;
+                if(creatureDef->mThrownBombMesh == "none")
+                    creatureDef->mThrownBombMesh.clear();
+                if(creatureDef->mThrownBombParticle == "none")
+                    creatureDef->mThrownBombParticle.clear();
+                if(creatureDef->mThrownBombMaterial == "none")
+                    creatureDef->mThrownBombMaterial.clear();
                 continue;
             }
             else if (nextParam == "MeshName")
@@ -1268,6 +1293,14 @@ void CreatureDefinition::writeCreatureDefinitionDiff(
         file << "    PreSkill\t" << def2->mPreSkill << std::endl;
     if((def1 == nullptr) ? (def2->mTierFourSkill != "none") : (def1->mTierFourSkill != def2->mTierFourSkill))
         file << "    TierFourSkill\t" << def2->mTierFourSkill << std::endl;
+    if((def1 == nullptr) ? !def2->mThrownBombMesh.empty() :
+        ((def1->mThrownBombMesh != def2->mThrownBombMesh) || (def1->mThrownBombParticle != def2->mThrownBombParticle) ||
+         (def1->mThrownBombMaterial != def2->mThrownBombMaterial)))
+    {
+        file << "    ThrownBomb\t" << (def2->mThrownBombMesh.empty() ? "none" : def2->mThrownBombMesh)
+            << "\t" << (def2->mThrownBombParticle.empty() ? "none" : def2->mThrownBombParticle)
+            << "\t" << (def2->mThrownBombMaterial.empty() ? "none" : def2->mThrownBombMaterial) << std::endl;
+    }
 
     if(def1 == nullptr || (def1->mMeshName.compare(def2->mMeshName) != 0))
         file << "    MeshName\t" << def2->mMeshName << std::endl;

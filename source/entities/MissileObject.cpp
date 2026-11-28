@@ -20,6 +20,7 @@
 #include "entities/Building.h"
 #include "entities/GameEntityType.h"
 #include "entities/MissileBlast.h"
+#include "entities/MissileBomb.h"
 #include "entities/MissileBoulder.h"
 #include "entities/MissileStone.h"
 #include "entities/MissileOneHit.h"
@@ -429,6 +430,11 @@ MissileObject* MissileObject::getMissileObjectFromStream(GameMap* gameMap, std::
             obj = MissileStone::getMissileStoneFromStream(gameMap, is);
             break;
         }
+        case MissileObjectType::skillBomb:
+        {
+            obj = MissileBomb::getMissileBombFromStream(gameMap, is);
+            break;
+        }
         default:
             OD_LOG_ERR("Unknown enum value : " + Helper::toString(
                 static_cast<int>(type)));
@@ -462,6 +468,11 @@ MissileObject* MissileObject::getMissileObjectFromPacket(GameMap* gameMap, ODPac
         case MissileObjectType::stone:
         {
             obj = MissileStone::getMissileStoneFromPacket(gameMap, is);
+            break;
+        }
+        case MissileObjectType::skillBomb:
+        {
+            obj = MissileBomb::getMissileBombFromPacket(gameMap, is);
             break;
         }
         default:

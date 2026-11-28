@@ -23,6 +23,7 @@
 #include "entities/GameEntity.h"
 
 #include "entities/GameEntityType.h"
+#include "entities/MissileBomb.h"
 #include "entities/Tile.h"
 #include "game/Player.h"
 #include "game/Seat.h"
@@ -695,6 +696,27 @@ void GameEntity::exportToPacketForUpdate(ODPacket& os, Seat* seat)
         EntityParticleEffect::exportParticleEffectToPacket(*effect, os);
 }
 
+void GameEntity::showHeldParticleEffect(const std::string& effectName)
+{
+    if(getIsOnServerMap() || !getIsOnMap())
+        return;
+
+    for(EntityParticleEffect* effect : mEntityParticleEffects)
+    {
+        if((effect->mName != effectName) || (effect->mParticleSystem != nullptr))
+            continue;
+
+        effect->mParticleSystem = RenderManager::getSingleton().rrEntityAddParticleEffect(this,
+            effect->mName, effect->mScript);
+        // A creature that gets a spell effect shows how it takes it
+        if(CreatureReactions::getSingletonPtr() != nullptr)
+            CreatureReactions::getSingleton().noteParticleEffect(this, effect->mScript);
+        return;
+    }
+}
+
+//! \brief Client side: adds the new particle effects of the update; the explosion of a flying bomb is held until it
+//! lands (MissileBomb::holdImpactParticle).
 void GameEntity::updateFromPacket(ODPacket& is)
 {
     uint32_t nbEffects;
@@ -726,10 +748,13 @@ void GameEntity::updateFromPacket(ODPacket& is)
         }
         if(!found)
         {
+            mEntityParticleEffects.push_back(effect);
+            // The explosion of a thrown bomb shows when the bomb lands (look only): the bomb shows it then
+            if(MissileBomb::holdImpactParticle(*this, *effect))
+                continue;
 
             effect->mParticleSystem = RenderManager::getSingleton().rrEntityAddParticleEffect(this,
                                                                                               effect->mName, effect->mScript);
-            mEntityParticleEffects.push_back(effect);
 
             // A creature that gets a spell effect shows how it takes it
             if(CreatureReactions::getSingletonPtr() != nullptr)
