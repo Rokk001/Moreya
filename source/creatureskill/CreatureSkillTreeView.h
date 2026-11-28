@@ -26,7 +26,8 @@
 
 //! \brief What the creature skill tree window shows of one creature: the four paths of its type as columns with
 //! tier 1 to 3, the tier 4 skill on top, the rank, the unlock state, the highlighted template path and the tooltip
-//! of every skill. Like CreatureSkillTree it only depends on the standard library so that it can be tested alone.
+//! of every skill. Like CreatureSkillTree it depends on the standard library and on the texts of Translation only, so
+//! that it can be tested alone.
 namespace CreatureSkillTree
 {
 //! \brief The rule values the view needs (SkillRanksPerSkill and the unlock values of global.cfg).
@@ -108,17 +109,19 @@ TreeView buildTreeView(const SkillTreeConfig& config, const TypeInfo& type, cons
     const ViewRules& rules);
 
 //! \brief Returns the readable text of a skill kind (the role skill kinds included) for the "Effect:" tooltip line,
-//! the kind token itself when it is unknown.
+//! in the chosen language, the kind token itself when it is unknown.
 std::string kindText(const std::string& kind);
 
 //! \brief Returns the value part of the "Effect:" line: the value as written, "%" after it for kinds ending in
-//! "%", "push p, stun s" for a WHIRLWIND value "p/s" and "blows b, factor f" for a FLURRY value "b/f".
+//! "%", "push p, stun s" for a WHIRLWIND value "p/s" and "blows b, factor f" for a FLURRY value "b/f" (in the chosen
+//! language).
 std::string effectValueText(const std::string& kind, const std::string& value);
 
-//! \brief Returns the four tooltip lines of a tier 1 to 3 skill at the given rank (rank 0 uses the rank 1 values).
+//! \brief Returns the four tooltip lines of a tier 1 to 3 skill at the given rank (rank 0 uses the rank 1 values), in
+//! the chosen language.
 std::vector<std::string> skillTooltip(const SkillDef& skill, uint32_t rank);
 
-//! \brief Returns the four tooltip lines of a tier 4 skill.
+//! \brief Returns the four tooltip lines of a tier 4 skill, in the chosen language.
 std::vector<std::string> tierFourTooltip(const TierFourDef& skill);
 }
 
