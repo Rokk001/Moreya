@@ -18,11 +18,12 @@ namespace
 {
 typedef std::map<std::string, std::vector<std::string>> FileMap;
 
-//! \brief Writes an empty recording file below the folder, creating the folders on the way.
+//! \brief Writes a recording file (the given path plus the extension ".ogg") below the folder, creating the folders on
+//! the way. The content is no sound, the folder scan only looks at the file names.
 void writeRecording(const boost::filesystem::path& file)
 {
     boost::filesystem::create_directories(file.parent_path());
-    std::ofstream out(file.string().c_str(), std::ios::binary);
+    std::ofstream out((file.string() + ".ogg").c_str(), std::ios::binary);
     out << "x";
 }
 
@@ -32,12 +33,12 @@ void writeRecording(const boost::filesystem::path& file)
 void makeGameData(const boost::filesystem::path& root)
 {
     boost::filesystem::remove_all(root);
-    writeRecording(root / "Relative" / "Test" / "de" / "Keeper" / "Lost" / "lost.ogg");
-    writeRecording(root / "Relative" / "Test" / "en" / "Keeper" / "Lost" / "lost.ogg");
-    writeRecording(root / "Relative" / "Test" / "en" / "Keeper" / "Victory" / "victory.ogg");
-    writeRecording(root / "Relative" / "Plain" / "Keeper" / "Lost" / "lost.ogg");
-    writeRecording(root / "Relative" / "Default" / "de" / "Keeper" / "Defeat" / "defeat.ogg");
-    writeRecording(root / "Relative" / "Default" / "Keeper" / "Defeat" / "defeat.ogg");
+    writeRecording(root / "Relative" / "Test" / "de" / "Keeper" / "Lost" / "lost");
+    writeRecording(root / "Relative" / "Test" / "en" / "Keeper" / "Lost" / "lost");
+    writeRecording(root / "Relative" / "Test" / "en" / "Keeper" / "Victory" / "victory");
+    writeRecording(root / "Relative" / "Plain" / "Keeper" / "Lost" / "lost");
+    writeRecording(root / "Relative" / "Default" / "de" / "Keeper" / "Defeat" / "defeat");
+    writeRecording(root / "Relative" / "Default" / "Keeper" / "Defeat" / "defeat");
 }
 
 //! \brief Reads the voice folders "Test", "Plain" and "Default" of a game data folder.
@@ -112,8 +113,8 @@ BOOST_AUTO_TEST_CASE(test_LanguagePackageBringsRecordings)
     boost::filesystem::path root = boost::filesystem::temp_directory_path() / "od_voice_language_d";
     makeGameData(root);
     boost::filesystem::path package = root / "packages" / "lang-fr";
-    writeRecording(package / "sounds" / "Relative" / "Test" / "Keeper" / "Lost" / "perdu.ogg");
-    writeRecording(package / "sounds" / "Relative" / "Test" / "Keeper" / "Lost" / "perdu2.ogg");
+    writeRecording(package / "sounds" / "Relative" / "Test" / "Keeper" / "Lost" / "perdu");
+    writeRecording(package / "sounds" / "Relative" / "Test" / "Keeper" / "Lost" / "perdu2");
     FileMap files = readGameData(root);
     BOOST_CHECK_EQUAL(VoiceLanguage::collectPackageFiles(package.string(), "fr", files), 2u);
     BOOST_CHECK_EQUAL(lookup(files, "Test", "fr", "Keeper/Lost"), "Test/fr/Keeper/Lost");
