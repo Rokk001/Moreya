@@ -45,6 +45,7 @@
 #include "rooms/RoomPackages.h"
 #include "utils/ContentPackages.h"
 #include "utils/RunLevelTest.h"
+#include "utils/Translation.h"
 
 #include <OgreLogManager.h>
 #include <OgreRenderWindow.h>
@@ -151,6 +152,8 @@ void ODApplication::startGame(boost::program_options::variables_map& options)
         ContentPackages::setStartRefused(true);
         return;
     }
+    // The language packages are content packages; every mode may show or send texts
+    Translation::discover();
 
     try
     {
@@ -259,6 +262,9 @@ void ODApplication::startClient()
 
     ConfigManager configManager(resMgr.getConfigPath(), resMgr.getUserCfgFile(),
         resMgr.getSoundPath());
+    // The saved language, else the system language on the first start, else English (localization plan R2.2, R2.3)
+    Translation::setLanguage(Translation::chooseLanguage(configManager.getGameValue(Config::LANGUAGE, std::string(),
+        false), Translation::getSystemLanguage(), Translation::getLanguageCodes()));
 
     if (!configManager.initVideoConfig(ogreRoot))
         return;

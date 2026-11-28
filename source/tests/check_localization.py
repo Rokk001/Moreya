@@ -221,6 +221,52 @@ else:
             if placeholders(texts['en'][key]) != placeholders(texts['de'][key]):
                 errors.append('key %s: German and English have different placeholders' % key)
 
+
+def read(path):
+    """The text of a repository file."""
+    return (repo / path).read_text(encoding='utf-8', errors='replace')
+
+
+# R3.1: the font of the texts above the creatures holds the German letters and the typographic quotes
+fontdef = read('gui/fonts/ogrefonts.fontdef')
+ranges = [tuple(int(v) for v in r.split('-')) for line in fontdef.splitlines() if line.strip().startswith('code_points')
+          for r in line.split()[1:]]
+for char in 'äöüÄÖÜß„“':
+    if not any(low <= ord(char) <= high for low, high in ranges):
+        errors.append('gui/fonts/ogrefonts.fontdef: code point of %r missing' % char)
+
+# R2: the language is loaded and chosen at the start, applies at once and is chosen in the settings
+application = read('source/ODApplication.cpp')
+for needle in ('Translation::discover();', 'Translation::setLanguage(Translation::chooseLanguage(configManager.getGameValue('
+               'Config::LANGUAGE', 'Translation::getSystemLanguage(), Translation::getLanguageCodes()));'):
+    if needle not in application:
+        errors.append('source/ODApplication.cpp: %s missing' % needle)
+gui = read('source/render/Gui.cpp')
+register = gui[gui.index('void Gui::registerWindow(CEGUI::Window* window)'):]
+if 'translateWindow(window);' not in register[:register.index('\n}\n')]:
+    errors.append('source/render/Gui.cpp: registerWindow does not show the texts of the window in the chosen language')
+for needle in ('Translation::addListener(languageChanged);', 'Translation::removeListener(mLanguageListener);',
+               'const std::string Gui::TEXT_KEY_PREFIX = "@";'):
+    if needle not in gui:
+        errors.append('source/render/Gui.cpp: %s missing' % needle)
+settings = read('source/modes/SettingsWindow.cpp')
+for needle in ('GameSP/LanguageCombo"', 'config.setGameValue(Config::LANGUAGE, code);', 'Translation::setLanguage(code);'):
+    if needle not in settings:
+        errors.append('source/modes/SettingsWindow.cpp: %s missing' % needle)
+layout = read('gui/WindowSettings.layout')
+for needle in ('name="LanguageCombo"', 'value="@settings.language"', 'value="@settings.language.tooltip"'):
+    if needle not in layout:
+        errors.append('gui/WindowSettings.layout: %s missing' % needle)
+
+# Every text key of a layout (public tree and content) has an English text
+if HAS_CONTENT and 'en' in texts:
+    layouts = sorted(set((repo / 'gui').glob('*.layout')) | set(content_packages.data_glob(repo, 'gui', '*.layout')))
+    for path in layouts:
+        for key in re.findall(r'<Property name="(?:Text|TooltipText)" value="@([^"]+)"',
+                              path.read_text(encoding='utf-8', errors='replace')):
+            if key not in texts['en']:
+                errors.append('%s: text key %s has no English text' % (path.name, key))
+
 for error in errors:
     print('FAIL: ' + error)
 if errors:

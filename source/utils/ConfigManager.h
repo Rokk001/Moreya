@@ -84,6 +84,8 @@ const std::string ZOOM_SPEED = "Zoom Speed";
 // Game
 const std::string NICKNAME = "Nickname";
 const std::string KEEPERVOICE = "KeeperVoice";
+//! Code of the language chosen in the settings (Translation); missing until the player chooses one
+const std::string LANGUAGE = "Language";
 const std::string MINIMAP_TYPE = "MinimapType";
 const std::string LIGHT_FACTOR = "LightFactor";
 const std::string CREATURE_REACTIONS = "CreatureReactions";
