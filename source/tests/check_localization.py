@@ -38,6 +38,9 @@ EXPECTED_CASES = 7
 # Languages of the game at the start (plan D1) and entries of each language, counted once for this branch
 EXPECTED_LANGUAGES = {'de': 'Deutsch', 'en': 'English'}
 EXPECTED_ENTRIES = 9383
+# Keys of the server messages and goal texts (prefixes msg. and goal.) that the code of source/ names, counted once for
+# this branch (localization plan R5): 85 messages and 20 goal texts
+EXPECTED_SERVER_KEYS = 105
 # Text keys of the layouts (prefix "layout.") in each language, counted once for this branch
 EXPECTED_LAYOUT_KEYS = 631
 # The literal Text/TooltipText values with letters (two or more ASCII letters) that stay in the layouts, counted once
