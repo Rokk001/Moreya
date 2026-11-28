@@ -135,12 +135,13 @@ std::string effectValueText(const std::string& kind, const std::string& value)
     return value;
 }
 
+//! \brief The tooltip lines of a skill at a rank; the first line is its name in the chosen language.
 std::vector<std::string> skillTooltip(const SkillDef& skill, uint32_t rank)
 {
     // A skill without a rank shows what rank 1 would give
     const std::size_t index = (rank == 0) ? 0 : static_cast<std::size_t>(rank - 1);
     std::vector<std::string> lines;
-    lines.push_back(skill.mName);
+    lines.push_back(skill.getDisplayText());
     const std::string value = (index < skill.mValues.size()) ? skill.mValues[index] :
         (skill.mValues.empty() ? std::string() : skill.mValues.back());
     lines.push_back("Effect: " + kindText(skill.mKind) + " " + effectValueText(skill.mKind, value));
@@ -152,10 +153,11 @@ std::vector<std::string> skillTooltip(const SkillDef& skill, uint32_t rank)
     return lines;
 }
 
+//! \brief The tooltip lines of a tier 4 skill; the first line is its name in the chosen language.
 std::vector<std::string> tierFourTooltip(const TierFourDef& skill)
 {
     std::vector<std::string> lines;
-    lines.push_back(skill.mName);
+    lines.push_back(skill.getDisplayText());
     lines.push_back("Effect: " + kindText(skill.mKind) + " " + effectValueText(skill.mKind, skill.mValue));
     lines.push_back(skill.mMana.mSet ? "Mana: " + numberText(skill.mMana.mValue) : std::string("Mana: none"));
     lines.push_back(cooldownLine(skill.mCooldown));

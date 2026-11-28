@@ -5243,17 +5243,25 @@ std::string Creature::formatRoundedNumber(double value)
     return mantissa + suffix;
 }
 
-//! \brief Returns the template name for the displays ("none" while the creature follows no template).
+//! \brief Returns the template name for the displays, in the chosen language ("none" while the creature follows no
+//! template).
 std::string Creature::getSkillPathText() const
 {
     const std::string templateName = getSkillTemplateName();
     if(templateName.empty())
         return DISPLAY_NONE_TEXT;
 
-    return templateName;
+    // The internal name identifies the template; the player reads the name of the language files
+    const CreatureSkillTree::TemplateDef* templ = ConfigManager::getSingleton().getCreatureSkillTree().findTemplate(
+        skillTextOrEmpty(mDefinition->getSkillGroup()), mSkillBuild.mTemplate);
+    if(templ == nullptr)
+        return templateName;
+
+    return templ->getDisplayText();
 }
 
-//! \brief Returns the ranked skills for the displays as "<name> <rank>, ..." ("none" while there are none).
+//! \brief Returns the ranked skills for the displays as "<name> <rank>, ..." ("none" while there are none), the
+//! names in the chosen language.
 std::string Creature::getSkillListText() const
 {
     const CreatureSkillTree::SkillTreeConfig& config = ConfigManager::getSingleton().getCreatureSkillTree();
@@ -5268,9 +5276,9 @@ std::string Creature::getSkillListText() const
         const CreatureSkillTree::SkillDef* skill = config.findSkill(it->first);
         const CreatureSkillTree::TierFourDef* tierFour = config.findTierFourById(it->first);
         if(skill != nullptr)
-            skillName = skill->mName;
+            skillName = skill->getDisplayText();
         else if(tierFour != nullptr)
-            skillName = tierFour->mName;
+            skillName = tierFour->getDisplayText();
 
         if(!result.empty())
             result += ", ";
