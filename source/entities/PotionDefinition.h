@@ -19,8 +19,14 @@ public:
     bool importFromStream(std::istream& stream);
     //! \brief Returns the unique potion id.
     const std::string& getId() const { return mId; }
-    //! \brief Returns the player-facing potion name.
+    //! \brief Returns the English potion name of the table. It also identifies the potion in the alchemy lab data
+    //! sent to the clients; the player reads getDisplayText().
     const std::string& getDisplay() const { return mDisplay; }
+    //! \brief Returns the key of the language files that holds the potion name, for example
+    //! "potion.healing_small.name".
+    std::string getNameKey() const;
+    //! \brief Returns the potion name in the chosen language (the English name while the language files have none).
+    std::string getDisplayText() const;
     //! \brief Returns Small, Medium, Large or Single.
     const std::string& getSize() const { return mSize; }
     //! \brief Returns the effect kind to apply when drinking.
@@ -68,6 +74,10 @@ struct HerbDefinition
     HerbDefinition() : mGrowSeconds(0.0), mStages(0) {}
     //! \brief Reads the contents of one Herb block.
     bool importFromStream(std::istream& stream);
+    //! \brief Returns the key of the language files that holds the herb name, for example "herb.bloodroot.name".
+    std::string getNameKey() const;
+    //! \brief Returns the herb name in the chosen language (the English name while the language files have none).
+    std::string getDisplayText() const;
     //! \brief Writes the complete growth definition.
     void exportToStream(std::ostream& stream) const;
     //! \brief Herb identity, player-visible name and hexadecimal colour.

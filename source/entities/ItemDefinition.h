@@ -78,6 +78,12 @@ public:
     const std::string& getPoorEquipment() const { return mPoorEquipment; }
     //! \brief Returns one quality's bonuses, price and presentation.
     const ItemQuality& getQuality(Quality quality) const;
+    //! \brief Returns the key of the language files that holds the name of one quality, for example
+    //! "item.poor_head.poor.name".
+    std::string getNameKey(Quality quality) const;
+    //! \brief Returns the name of one quality in the chosen language; the English Display of the catalogue while the
+    //! language files have no text for it.
+    std::string getDisplayText(Quality quality) const;
     //! \brief Writes a complete definition block for network transfer.
     void exportToStream(std::ostream& stream) const;
     //! \brief Transfers a definition as its canonical textual block.

@@ -94,8 +94,13 @@ public:
 
     //! \brief The name the player reads (optional DisplayName field of the equipment file). A weapon without one, or a
     //! copy received from the server, takes the display name of the configured equipment of the same name; without
-    //! that the internal name is split into words ("KoboldPick" -> "Kobold Pick"). Never the bare internal name.
+    //! that the internal name is split into words ("KoboldPick" -> "Kobold Pick"). Never the bare internal name. The
+    //! text of the language files under getNameKey() comes first, except for a name that differs from the configured
+    //! one (a name written into a level).
     std::string getDisplayName() const;
+    //! \brief The key of the language files that holds the name of the equipment, for example
+    //! "equipment.rustysword.name".
+    std::string getNameKey() const;
 
     //! \brief Splits an internal equipment name into words before every capital that follows a small letter or digit.
     static std::string makeReadableName(const std::string& name);

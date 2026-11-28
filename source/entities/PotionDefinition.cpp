@@ -1,7 +1,32 @@
 #include "entities/PotionDefinition.h"
 #include "network/ODPacket.h"
+#include "utils/DisplayText.h"
 
 #include <sstream>
+
+//! \brief Returns the key "potion.<id>.name" of the language files, the id in lower case.
+std::string PotionDefinition::getNameKey() const
+{
+    return DisplayText::makeKey("potion", mId);
+}
+
+//! \brief Returns the potion name from the language files, else the English Display of the table.
+std::string PotionDefinition::getDisplayText() const
+{
+    return DisplayText::translated(getNameKey(), mDisplay);
+}
+
+//! \brief Returns the key "herb.<id>.name" of the language files, the id in lower case.
+std::string HerbDefinition::getNameKey() const
+{
+    return DisplayText::makeKey("herb", mId);
+}
+
+//! \brief Returns the herb name from the language files, else the English Display of the table.
+std::string HerbDefinition::getDisplayText() const
+{
+    return DisplayText::translated(getNameKey(), mDisplay);
+}
 
 //! \brief Reads a recipe, preserving fractional effect and brewing values.
 bool PotionDefinition::importFromStream(std::istream& stream)
