@@ -41,8 +41,10 @@
 
  
 
+//! \brief Adds the Python cheat function name to the module m; it runs the console command of the same name with the
+//! arguments turned into text by cmdStrFunc. Named apart from ConsoleInterface::addCommand.
 template<typename M, typename Ret, typename... Args>
-void addCommand(M &&m, const char *name, Ret (*cmdStrFunc)(Args...)) {
+void addPythonCommand(M &&m, const char *name, Ret (*cmdStrFunc)(Args...)) {
 	m.def(
 		name, 
 		[cmdStrFunc, name](Args... args) {
@@ -55,10 +57,11 @@ void addCommand(M &&m, const char *name, Ret (*cmdStrFunc)(Args...)) {
 	);
 }
 
+//! \brief Adds the Python cheat function name without arguments to the module m.
 template<typename M>
-void addCommand(M &&m, const char *name)
+void addPythonCommand(M &&m, const char *name)
 {
-	addCommand(m, name, +[]() { return ""; });
+	addPythonCommand(m, name, +[]() { return ""; });
         
 }
  
@@ -67,41 +70,41 @@ void addCommand(M &&m, const char *name)
  
 PYBIND11_EMBEDDED_MODULE(cheats, m)
 {
-    addCommand(m, "addcreature",  +[](int seat, std::string creatureName,  std::string meshName, float x, float y, float z, std::string creatureDefinitionString, int level, int exp, std::string hpString, int wakeFullness, int hunger, int goldCarried, std::string weaponLeft, std::string weaponRight, std::string skillsList, int weaponDropDeath  ){ return Helper::toString(seat) + " " + creatureName + " " + meshName + " " +  Helper::toString(x) + " " +  Helper::toString(y) + " " +  Helper::toString(z) + " "  + creatureDefinitionString + " " + Helper::toString(level) + " " +  Helper::toString(exp) + " " + hpString + " " +  Helper::toString(wakeFullness) + " " +  Helper::toString(hunger) + " " +  Helper::toString(goldCarried) + " " + weaponLeft + " " + weaponRight + " " + skillsList + " " +  Helper::toString(weaponDropDeath) ;});    
-    addCommand(m, "addgold", +[](int seat, int gold){ return Helper::toString(seat)+ " " +Helper::toString(gold); });
-    addCommand(m, "addmana", +[](int seat, int mana){ return Helper::toString(seat)+ " " +Helper::toString(mana); });
-    addCommand(m, "catmullspline", +[](std::vector<double> points){ return Helper::toString(points);  });    
-    addCommand(m, "circlearound",  +[](double x, double y, double radious){ return Helper::toString(x) + " " +  Helper::toString(y) + " " + Helper::toString(radious);      });
-    addCommand(m, "creaturevisdebug", +[](std::string subject){ return subject; });
-    addCommand(m, "enableZPrePass");
-    addCommand(m, "farclip",+[](float distance){ return Helper::toString(distance); });
-    addCommand(m, "fps", +[](int frames){ return Helper::toString(frames); });
-    addCommand(m, "getposition");
-    addCommand(m, "getshadowtexturecount"); 
-    addCommand(m, "helpmessage");
-    addCommand(m, "keys"); 
-    addCommand(m, "light", +[](float r, float g, float b){ return Helper::toString(r) + " " + Helper::toString(g) + " " + Helper::toString(b) ;});    
-    addCommand(m, "list", +[](std::string subject){ return subject; });
-    addCommand(m, "listmeshanims", +[](std::string name){ return name;});
-    addCommand(m, "logfloodfill");
-    addCommand(m, "maxtime",  +[](int time){ return Helper::toString(time);});
-    addCommand(m, "nearclip",+[](float distance){ return Helper::toString(distance); });
-    addCommand(m, "printentities");
-    addCommand(m, "printnodes");    
-    addCommand(m, "seatvisdebug",  +[](int seat){ return Helper::toString(seat); });
-    addCommand(m, "setShadowFarClipDistance",   +[](float distance){ return Helper::toString(distance); });
-    addCommand(m, "setShadowNearClipDistance",   +[](float distance){ return Helper::toString(distance); });    
-    addCommand(m, "setcamerafovy",  +[](double fovy){ return Helper::toString(fovy);});
-    addCommand(m, "setcameralightdirectionthreshold",  +[](double threshold){ return Helper::toString(threshold);});    
-    addCommand(m, "setcreaturedest",  +[](std::string name, int x, int y){  return name + " " +  Helper::toString(x)+ " " +Helper::toString(y);     });
-    addCommand(m, "setcreaturelevel",  +[](std::string name, int level){ return name + " " + Helper::toString(level);});
-    addCommand(m, "setloglevel",  +[](int level){ return Helper::toString(level);});
-    addCommand(m, "setoptimaladjustfactor",  +[](float factor){ return Helper::toString(factor);});
-    addCommand(m, "setshadowcamerafovy",  +[](double fovy){ return Helper::toString(fovy);});
-    addCommand(m, "termwidth", +[](int width){ return Helper::toString(width); });
-    addCommand(m, "togglefow");        
-    addCommand(m, "triggercompositor", +[](std::string name){ return name;});
-    addCommand(m, "unlockskills");
+    addPythonCommand(m, "addcreature",  +[](int seat, std::string creatureName,  std::string meshName, float x, float y, float z, std::string creatureDefinitionString, int level, int exp, std::string hpString, int wakeFullness, int hunger, int goldCarried, std::string weaponLeft, std::string weaponRight, std::string skillsList, int weaponDropDeath  ){ return Helper::toString(seat) + " " + creatureName + " " + meshName + " " +  Helper::toString(x) + " " +  Helper::toString(y) + " " +  Helper::toString(z) + " "  + creatureDefinitionString + " " + Helper::toString(level) + " " +  Helper::toString(exp) + " " + hpString + " " +  Helper::toString(wakeFullness) + " " +  Helper::toString(hunger) + " " +  Helper::toString(goldCarried) + " " + weaponLeft + " " + weaponRight + " " + skillsList + " " +  Helper::toString(weaponDropDeath) ;});    
+    addPythonCommand(m, "addgold", +[](int seat, int gold){ return Helper::toString(seat)+ " " +Helper::toString(gold); });
+    addPythonCommand(m, "addmana", +[](int seat, int mana){ return Helper::toString(seat)+ " " +Helper::toString(mana); });
+    addPythonCommand(m, "catmullspline", +[](std::vector<double> points){ return Helper::toString(points);  });    
+    addPythonCommand(m, "circlearound",  +[](double x, double y, double radious){ return Helper::toString(x) + " " +  Helper::toString(y) + " " + Helper::toString(radious);      });
+    addPythonCommand(m, "creaturevisdebug", +[](std::string subject){ return subject; });
+    addPythonCommand(m, "enableZPrePass");
+    addPythonCommand(m, "farclip",+[](float distance){ return Helper::toString(distance); });
+    addPythonCommand(m, "fps", +[](int frames){ return Helper::toString(frames); });
+    addPythonCommand(m, "getposition");
+    addPythonCommand(m, "getshadowtexturecount"); 
+    addPythonCommand(m, "helpmessage");
+    addPythonCommand(m, "keys"); 
+    addPythonCommand(m, "light", +[](float r, float g, float b){ return Helper::toString(r) + " " + Helper::toString(g) + " " + Helper::toString(b) ;});    
+    addPythonCommand(m, "list", +[](std::string subject){ return subject; });
+    addPythonCommand(m, "listmeshanims", +[](std::string name){ return name;});
+    addPythonCommand(m, "logfloodfill");
+    addPythonCommand(m, "maxtime",  +[](int time){ return Helper::toString(time);});
+    addPythonCommand(m, "nearclip",+[](float distance){ return Helper::toString(distance); });
+    addPythonCommand(m, "printentities");
+    addPythonCommand(m, "printnodes");    
+    addPythonCommand(m, "seatvisdebug",  +[](int seat){ return Helper::toString(seat); });
+    addPythonCommand(m, "setShadowFarClipDistance",   +[](float distance){ return Helper::toString(distance); });
+    addPythonCommand(m, "setShadowNearClipDistance",   +[](float distance){ return Helper::toString(distance); });    
+    addPythonCommand(m, "setcamerafovy",  +[](double fovy){ return Helper::toString(fovy);});
+    addPythonCommand(m, "setcameralightdirectionthreshold",  +[](double threshold){ return Helper::toString(threshold);});    
+    addPythonCommand(m, "setcreaturedest",  +[](std::string name, int x, int y){  return name + " " +  Helper::toString(x)+ " " +Helper::toString(y);     });
+    addPythonCommand(m, "setcreaturelevel",  +[](std::string name, int level){ return name + " " + Helper::toString(level);});
+    addPythonCommand(m, "setloglevel",  +[](int level){ return Helper::toString(level);});
+    addPythonCommand(m, "setoptimaladjustfactor",  +[](float factor){ return Helper::toString(factor);});
+    addPythonCommand(m, "setshadowcamerafovy",  +[](double fovy){ return Helper::toString(fovy);});
+    addPythonCommand(m, "termwidth", +[](int width){ return Helper::toString(width); });
+    addPythonCommand(m, "togglefow");        
+    addPythonCommand(m, "triggercompositor", +[](std::string name){ return name;});
+    addPythonCommand(m, "unlockskills");
     
 }
 
