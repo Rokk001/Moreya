@@ -114,7 +114,7 @@ assert 'Gui::copyTooltip(slot, slot->getParent());' in block(social, 'void Socia
 merchant = (repo / 'source/modes/GameModeMerchant.cpp').read_text()
 stock = block(merchant, 'void GameMode::receiveMerchantWindow(')
 hover = block(merchant, 'bool GameMode::hoverMerchantItem(')
-assert 'cell->setTooltipText(Gui::describeItemTooltip(items[index].second, mGameMap, nullptr));' in stock
+assert 'cell->setTooltipText(Gui::toCeguiText(Gui::describeItemTooltip(items[index].second, mGameMap, nullptr)));' in stock
 assert 'list->setTooltipText(item->getTooltipText());' in hover and 'Gui::setPlainTooltip(list, "");' in hover
 assert 'Gui::markItemTooltip(list, static_cast<const MerchantImageItem*>(item)->getQualityColour(), area.str());' in hover
 
