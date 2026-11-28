@@ -177,9 +177,13 @@ struct Campaign
     static Campaign& getSingleton() {static Campaign campaign;return campaign;}
     bool isActive() const {return active;}
 };
+// The Gui registration of the loaded layout (the "@key" texts are not translated in this probe)
+struct LayoutGui {void registerWindowHierarchy(CEGUI::Window*) {}};
 struct ModeManager
 {
     enum ModeType {NONE = 0, MENU_MAIN = 1, MENU_CAMPAIGN = 2};
+    LayoutGui mGui;
+    LayoutGui& getGui() {return mGui;}
     bool mOpenSkirmishSubMenu = false;
     bool mOpenMultiplayerSubMenu = false;
     void requestMode(ModeType mode, bool = true) {++gModeRequests;gLastMode = mode;}
@@ -202,6 +206,7 @@ public:
             mEventConnections[i]->disconnect();
     }
     void addEventConnection(CEGUI::Event::Connection connection) {mEventConnections.push_back(connection);}
+    ModeManager& getModeManager() {return *mModeManager;}
     bool mouseMoved(const OIS::MouseEvent &arg);
     bool mousePressed(const OIS::MouseEvent& arg, OIS::MouseButtonID id);
     bool mouseReleased(const OIS::MouseEvent &arg, OIS::MouseButtonID id);

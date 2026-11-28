@@ -32,7 +32,7 @@ STAR_FILES = ('gui/SkillRankStar.imageset', 'gui/SkillRankStar.png')
 
 def read(relative):
     """Returns the text of a file of the repository; a mixed interface file comes with its own rows of the content."""
-    return content_packages.read_text(ROOT, relative)
+    return content_packages.read_layout_text(ROOT, relative)
 
 
 def check(condition, message):
@@ -59,7 +59,7 @@ check('const char* const SKILL_RANK_STAR_EMPTY_COLOUR = "FF4A4A4A";' in social, 
 
 # The star files are checked when they are found or the content is present (then a missing one fails as before)
 if content_packages.has_content(ROOT) or all(content_packages.data_file(ROOT, path) is not None for path in STAR_FILES):
-    imageset = content_packages.read_text(ROOT, 'gui/SkillRankStar.imageset')
+    imageset = content_packages.read_layout_text(ROOT, 'gui/SkillRankStar.imageset')
     check('imagefile="SkillRankStar.png" name="SkillRankStar"' in imageset and 'name="Star"' in imageset,
           'imageset of the star')
     check(content_packages.data_file(ROOT, 'gui/SkillRankStar.png') is not None, 'star image file')

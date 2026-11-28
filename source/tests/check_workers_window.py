@@ -31,7 +31,7 @@ def read(path):
     """Return the text of a tracked file (a game data file also from the content packages); a mixed file of config/ or
     gui/ comes joined with its own rows of the content."""
     if content_packages.data_file(repo, path) is not None:
-        return content_packages.read_text(repo, path)
+        return content_packages.read_layout_text(repo, path)
     return resolve(repo, path).read_text(encoding='utf-8')
 
 

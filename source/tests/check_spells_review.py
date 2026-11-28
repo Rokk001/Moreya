@@ -36,7 +36,7 @@ DATA_FILES = ("particles/RoomAmbienceSpells.particle", "config/roomAmbienceSpell
 def read(*parts):
     """Returns the text of a file below the repository root (game data from the public tree or a content package; a
     mixed table comes with its own rows of the content)."""
-    return content_packages.read_text(ROOT, "/".join(parts))
+    return content_packages.read_layout_text(ROOT, "/".join(parts))
 
 
 def data_present():
@@ -405,14 +405,14 @@ ICONS = {"CurseButton": "CurseButton", "BlessingButton": "BlessingButton",
          "BreakWallButton": "BreakWallButton", "RevealEnemyButton": "RevealEnemyButton"}
 # (the icon atlas lies whole in a content package)
 if DATA:
-    icon_names = [i.get("name") for i in ET.fromstring(content_packages.read_text(ROOT, "gui/ODIcons.imageset")).findall("Image")]
+    icon_names = [i.get("name") for i in ET.fromstring(content_packages.read_layout_text(ROOT, "gui/ODIcons.imageset")).findall("Image")]
     for icon in ICONS.values():
         need(icon_names.count(icon) == 1, "gui/ODIcons.imageset has the icon %s once" % icon)
 if WITH_CONTENT:
-    bar = ET.fromstring(content_packages.read_text(ROOT, "gui/WindowTabSpells.layout")).find("Window")
+    bar = ET.fromstring(content_packages.read_layout_text(ROOT, "gui/WindowTabSpells.layout")).find("Window")
     bar_buttons = [w for w in bar.findall("Window") if w.get("type") == "OD/GameTabButton"]
     need(len(bar_buttons) == 24, "the spells tab holds 24 buttons: %d" % len(bar_buttons))
-    tree = ET.fromstring(content_packages.read_text(ROOT, "gui/WindowSkillTree.layout"))
+    tree = ET.fromstring(content_packages.read_layout_text(ROOT, "gui/WindowSkillTree.layout"))
     spells_page = next(w for w in tree.iter("Window") if w.get("name") == "Spells")
     for button, icon in ICONS.items():
         node = next((w for w in bar_buttons if w.get("name") == button), None)

@@ -25,7 +25,7 @@ WITH_CONTENT = content_packages.has_content(ROOT)
 
 def read(path):
     """The text of a repository file; a mixed file of config/ or gui/ comes joined with its own rows of the content."""
-    return content_packages.read_text(ROOT, path)
+    return content_packages.read_layout_text(ROOT, path)
 
 
 def function_body(text, signature):

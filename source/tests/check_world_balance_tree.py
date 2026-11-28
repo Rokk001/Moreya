@@ -19,7 +19,7 @@ WITH_CONTENT = content_packages.has_content(repo)
 
 def read(path):
     """The text of a repository file; a mixed file of config/ or gui/ comes joined with its own rows of the content."""
-    return content_packages.read_text(repo, path)
+    return content_packages.read_layout_text(repo, path)
 
 
 # (tab, tier, skill type, research button, parents) in row order, as the tree shows them
@@ -267,7 +267,7 @@ if WITH_CONTENT:
     text = read("gui/WindowSkillTree.layout")
     assert "SelectionBrush" not in text and "FrameColours" not in text
     # The icon atlas lies in a content package (found through scripts/content_packages.py)
-    imageset = (content_packages.read_text(repo, "gui/ODIcons.imageset")
+    imageset = (content_packages.read_layout_text(repo, "gui/ODIcons.imageset")
                 if content_packages.data_file(repo, "gui/ODIcons.imageset") is not None else None)
     if imageset is None:
         content_packages.unchecked("check_world_balance_tree", ["gui/ODIcons.imageset"])

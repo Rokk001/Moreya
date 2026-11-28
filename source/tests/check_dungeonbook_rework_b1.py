@@ -37,7 +37,7 @@ missing_content = [name for name in ('gui/WindowSocial.layout', 'gui/Dungeonbook
 if missing_content:
     content_packages.unchecked('check_dungeonbook_rework_b1', missing_content)
     sys.exit(0)
-layout_text = content_packages.read_text(repo, 'gui/WindowSocial.layout')
+layout_text = content_packages.read_layout_text(repo, 'gui/WindowSocial.layout')
 book = ET.fromstring(layout_text).find('Window')
 social = (repo / 'source/render/SocialWindow.cpp').read_text()
 header = (repo / 'source/render/SocialWindow.h').read_text()

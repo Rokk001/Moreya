@@ -53,12 +53,14 @@ JOINED = tempfile.TemporaryDirectory(prefix='odp-info-window-')
 
 
 def joined_file(found, relative):
-    """The file itself, or for a mixed file (with own rows markers) a copy joined with its own rows from the content."""
-    if '#@own ' not in found.read_text(encoding='utf-8'):
+    """The file itself, or for a mixed file (with own rows markers) or a layout with "@key" texts a copy joined with its own
+    rows from the content and with the English texts of the keys (localization plan R11)."""
+    text = found.read_text(encoding='utf-8')
+    if '#@own ' not in text and '"@layout.' not in text:
         return found
     copy = Path(JOINED.name) / relative
     copy.parent.mkdir(parents=True, exist_ok=True)
-    copy.write_bytes(content_packages.read_text(repo, relative).encode('utf-8'))
+    copy.write_bytes(content_packages.read_layout_text(repo, relative).encode('utf-8'))
     return copy
 
 

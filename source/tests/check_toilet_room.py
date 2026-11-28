@@ -31,7 +31,7 @@ WITH_CONTENT = content_packages.has_content(root)
 
 def read(path):
     """The text of a game file (see room_file); a mixed file of config/ or gui/ comes joined with its own rows."""
-    return content_packages.read_text(root, path)
+    return content_packages.read_layout_text(root, path)
 
 
 # Returns the identifiers of an enum (comments and "= value" skipped), in order.

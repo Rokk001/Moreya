@@ -284,14 +284,14 @@ def check_page_data(images, placeholders, pages):
     """Assert the frame, the artwork and the elements, look and fit of every page; fills the images, the placeholder
     pictures and the pages and returns the number of fitted screen cases. The scheme and the imagesets are read with
     their own rows of the content (scripts/content_packages.py)."""
-    manager = ET.parse(data('gui/WindowRoomManager.layout')).getroot().find('Window')
+    manager = ET.ElementTree(ET.fromstring(content_packages.read_layout_text(ROOT, 'gui/WindowRoomManager.layout'))).getroot().find('Window')
     assert manager.get('type') == 'OD/SheetWindow', 'the Room Manager uses the window frame of the menu sheet'
     assert props(manager)['Area'] == '{{0.5,-%g},{0.5,-%g},{0.5,%g},{0.5,%g}}' % (
         WINDOW_W / 2, WINDOW_H / 2, WINDOW_W / 2, WINDOW_H / 2), 'fixed frame design dimensions'
     manager_windows = windows(manager)
-    scheme = ET.fromstring(content_packages.read_text(ROOT, 'gui/ODSkin.scheme'))
+    scheme = ET.fromstring(content_packages.read_layout_text(ROOT, 'gui/ODSkin.scheme'))
     for entry in scheme.findall('Imageset'):
-        root = ET.fromstring(content_packages.read_text(ROOT, 'gui/' + entry.get('filename')))
+        root = ET.fromstring(content_packages.read_layout_text(ROOT, 'gui/' + entry.get('filename')))
         for picture in root.findall('Image'):
             images[root.get('name') + '/' + picture.get('name')] = (root, picture)
     for name, (filename, size, placeholder) in ARTWORK.items():
@@ -308,7 +308,7 @@ def check_page_data(images, placeholders, pages):
             placeholders.append(filename)
     cases = 0
     for name, required in REQUIRED.items():
-        root = ET.parse(data('gui/RoomManager' + name + 'Page.layout')).getroot().find('Window')
+        root = ET.ElementTree(ET.fromstring(content_packages.read_layout_text(ROOT, 'gui/RoomManager' + name + 'Page.layout'))).getroot().find('Window')
         page = windows(root)
         pages[name] = page
         assert root.get('type') == 'DefaultWindow'

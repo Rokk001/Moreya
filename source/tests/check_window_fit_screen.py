@@ -37,7 +37,7 @@ def gui_file(name):
 
 def gui_root(name):
     """The parsed root of a gui file; a mixed interface file comes joined with its own rows of the content."""
-    return ET.fromstring(content_packages.read_text(repo, 'gui/' + name))
+    return ET.fromstring(content_packages.read_layout_text(repo, 'gui/' + name))
 
 
 def is_own_rows_file(path):
@@ -66,7 +66,7 @@ def moved_layout(name):
     if path is None:
         content_packages.unchecked('check_window_fit_screen', ['gui/' + name])
         return None
-    return ET.parse(path).getroot()
+    return ET.fromstring(content_packages.read_layout_text(repo, 'gui/' + name))
 
 
 def udims(value):

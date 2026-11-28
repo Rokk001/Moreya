@@ -58,9 +58,9 @@ item_cpp = (repo / 'source/entities/ItemInstance.cpp').read_text(encoding='utf-8
 weapon_cpp = (repo / 'source/entities/Weapon.cpp').read_text(encoding='utf-8')
 lines_h = (repo / 'source/entities/ItemValueLines.h').read_text(encoding='utf-8')
 placement_h = (repo / 'source/render/ItemTooltipPlacement.h').read_text(encoding='utf-8')
-layout_text = content_packages.read_text(repo, 'gui/WindowSocial.layout')
+layout_text = content_packages.read_layout_text(repo, 'gui/WindowSocial.layout')
 # The mixed interface files and data tables are read as the game reads them, with their own rows from the content
-look_text = content_packages.read_text(repo, 'gui/OD.looknfeel')
+look_text = content_packages.read_layout_text(repo, 'gui/OD.looknfeel')
 
 DESIGN_W, DESIGN_H = 1024.0, 768.0
 FONT_W, FONT_H = 800.0, 600.0
@@ -87,7 +87,7 @@ def udims(value):
 def parse_interface_file(path):
     if '.own.' in path.name:
         return None
-    return ET.fromstring(content_packages.read_text(repo, content_packages.relative_path(repo, path)))
+    return ET.fromstring(content_packages.read_layout_text(repo, content_packages.relative_path(repo, path)))
 
 
 fonts = {}
@@ -241,7 +241,7 @@ def text_fits(node, text, box, screen, user):
 
 # The longest values the code fills in. Names: every given name with every surname or title (config/social-names.cfg)
 names, hometowns, age_jokes = [], [], []
-for line in content_packages.read_text(repo, 'config/social-names.cfg').split('\n'):
+for line in content_packages.read_layout_text(repo, 'config/social-names.cfg').split('\n'):
     cells = line.rstrip('\r').split('\t')
     if cells[0] == '[NameGroup]':
         names.append(([], []))
@@ -256,7 +256,7 @@ for line in content_packages.read_text(repo, 'config/social-names.cfg').split('\
 full_names = [g + ((' ' + t) if t else '') for given, last in names for g in given for t in [''] + last]
 check(len(full_names) > 5000 and hometowns and age_jokes, 'names, hometowns and age jokes are read')
 texts = {'Relation': [], 'Job': [], 'Bio': []}
-for line in content_packages.read_text(repo, 'config/social-texts.cfg').split('\n'):
+for line in content_packages.read_layout_text(repo, 'config/social-texts.cfg').split('\n'):
     cells = line.rstrip('\r').split('\t')
     if cells[0] in texts:
         texts[cells[0]].append(cells[-1])
@@ -264,7 +264,7 @@ check(all(texts.values()), 'relations, jobs and bios are read')
 statuses = re.findall(r'return "([A-Za-z\' ]+)";', (repo / 'source/social/CreaturePosts.cpp').read_text(encoding='utf-8')[
     (repo / 'source/social/CreaturePosts.cpp').read_text(encoding='utf-8').index('CreaturePosts::getRelationshipStatus'):][:600])
 check('Single' in statuses and 'In a relationship' in statuses, 'relationship statuses are read')
-paths = sorted(set(re.findall(r'^Path\s+(.+?)\s*$', content_packages.read_text(repo, 'config/creatureSkills.cfg'), re.M)))
+paths = sorted(set(re.findall(r'^Path\s+(.+?)\s*$', content_packages.read_layout_text(repo, 'config/creatureSkills.cfg'), re.M)))
 check(len(paths) >= 3, 'skill paths are read')
 handle_max = '@' + 'w' * 14 + '99'  # the handle: letters of the first name, at most 2 digits (Creature.cpp)
 check('PROFILE_HANDLE_NUMBER_COUNT' in (repo / 'source/entities/Creature.cpp').read_text(encoding='utf-8'), 'handle')
@@ -324,7 +324,7 @@ for key in ('Experience', 'HitPoints', 'Gold', 'SightRadius', 'Potions', 'Invent
     DYNAMIC['ValuesPage/%sValue' % key] = NUMBERS + PAIRS + ['-', '4 / 4']
 # The Skills page (INGAME-QS-12 K7): every path name of config/creatureSkills.cfg as a column title, every rank text of
 # a skill ("rank/most ranks" of CreatureSkillTreeView barText; SkillRanksPerSkill of config/global.cfg, 1 for tier 4)
-max_rank = int(re.search(r'^\s*SkillRanksPerSkill\s+(\d+)', content_packages.read_text(repo, 'config/global.cfg'),
+max_rank = int(re.search(r'^\s*SkillRanksPerSkill\s+(\d+)', content_packages.read_layout_text(repo, 'config/global.cfg'),
                          re.M).group(1))
 SKILL_NODES = ['TierFour'] + ['Column%dTier%d' % (c, t) for c in range(4) for t in (3, 2, 1)]
 for column in range(4):
@@ -597,7 +597,7 @@ check(back_node.props.get('NonClient') == 'True' and back_node.props.get('Visibl
       'the back arrow is a hidden NonClient child of the book')
 
 # ------------------------------------------------------------------------------------------------ 6. the item tooltip
-equipment_text = content_packages.read_text(repo, 'config/equipments.cfg')
+equipment_text = content_packages.read_layout_text(repo, 'config/equipments.cfg')
 equipment_text = equipment_text[equipment_text.rindex('[EquipmentDefinitions]'):]
 blocks = re.findall(r'\[Equipment\](.*?)\[/Equipment\]', equipment_text, re.S)
 check(len(blocks) >= 30, 'equipment blocks are read')
