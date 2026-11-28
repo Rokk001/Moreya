@@ -2105,20 +2105,22 @@ void Gui::keepTooltipInFront()
     sRaisingTooltip = false;
 }
 
+//! \brief Sets the item card as the tooltip of the window; the item name is in the chosen language (UTF-8).
 void Gui::setItemTooltip(CEGUI::Window* window, const ItemInstance& item, const GameMap* map, const Weapon* heldWeapon)
 {
     window->setTooltipText(toCeguiText(describeItemTooltip(item, map, heldWeapon)));
     markItemTooltip(window, ItemInstance::getQualityColour(item.mQuality), std::string());
 }
 
+//! \brief Shows the item card of an item in the 3D world at the cursor; the item name is in the chosen language (UTF-8).
 void Gui::showItemTooltipAtCursor(const ItemInstance& item, const GameMap* map)
 {
     CEGUI::Tooltip* tooltip = getWorldItemTooltip(true);
     if(tooltip == nullptr)
         return;
-    const std::string text = describeItemTooltip(item, map, nullptr);
-    if(tooltip->getText() != toCeguiText(text))
-        tooltip->setText(toCeguiText(text));
+    const CEGUI::String text = toCeguiText(describeItemTooltip(item, map, nullptr));
+    if(tooltip->getText() != text)
+        tooltip->setText(text);
     // Size first, since the place of the card depends on it; the card appears in this frame, with no hover time
     tooltip->sizeSelf();
     const CEGUI::Sizef screen = tooltip->getRootContainerSize();

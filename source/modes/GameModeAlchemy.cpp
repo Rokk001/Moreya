@@ -12,6 +12,7 @@
 #include "gamemap/GameMap.h"
 #include "network/ClientNotification.h"
 #include "network/ODClient.h"
+#include "render/Gui.h"
 #include "rooms/RoomType.h"
 #include "render/Gui.h"
 #include "utils/Helper.h"
@@ -85,9 +86,46 @@ void GameMode::setLabModeShown(int32_t mode)
         button->getChild("Potion" + Helper::toString(index))->setVisible(potions[mode][index]);
 }
 
-//! \brief Replaces cauldron rows and herb totals with one coherent owner-seat snapshot.
+//! \brief Sets the item and potion names of the merchant stock and laboratory tooltips again after the language
+//! changed. Called every frame; it does nothing while the language is the one the texts were set for.
+void GameMode::refreshItemNameTexts()
+{
+    const std::string language = Translation::getLanguage();
+    if(mItemNameLanguage.empty())
+    {
+        mItemNameLanguage = language;
+        return;
+    }
+    if(mItemNameLanguage == language)
+        return;
+    mItemNameLanguage = language;
+
+    // The merchant stock: the item card of every cell is made again from its item
+    CEGUI::MultiColumnList* stock = static_cast<CEGUI::MultiColumnList*>(
+        mRootWindow->getChild("RoomManagerWindow/Pages/MerchantPage/StockList"));
+    for(CEGUI::uint row = 0; row < stock->getRowCount(); ++row)
+        for(CEGUI::uint column = 0; column < stock->getColumnCount(); ++column)
+        {
+            CEGUI::ListboxItem* cell = stock->getItemAtGridReference(CEGUI::MCLGridRef(row, column));
+            if(cell == nullptr || cell->isDisabled())
+                continue;
+            for(const std::pair<uint32_t, ItemInstance>& entry : mMerchantItems)
+                if(entry.first == cell->getID())
+                    cell->setTooltipText(Gui::toCeguiText(Gui::describeItemTooltip(entry.second, mGameMap, nullptr)));
+        }
+
+    // The laboratory: the cauldron rows are made again from the latest snapshot
+    if(mLabWindowDataReceived)
+        setLabWindowData(mLabWindowData);
+}
+
+//! \brief Replaces cauldron rows and herb totals with one coherent owner-seat snapshot; the potion names of the
+//! tooltips are in the chosen language.
 void GameMode::setLabWindowData(const LabWindowData& data)
 {
+    // Kept so that the tooltips can be set again when the language changes
+    mLabWindowData = data;
+    mLabWindowDataReceived = true;
     CEGUI::MultiColumnList* list = static_cast<CEGUI::MultiColumnList*>(
         mRootWindow->getChild("RoomManagerWindow/Pages/AlchemyPage/CauldronList"));
     if(list->getColumnCount() == 0)
@@ -116,7 +154,9 @@ void GameMode::setLabWindowData(const LabWindowData& data)
         const float progress = duration > 0.0 ? static_cast<float>(1.0 - cauldron.mRemaining / duration) : 0.0f;
         RoomManagerListItem* item = new RoomManagerListItem(Helper::toString(static_cast<uint32_t>(std::ceil(cauldron.mRemaining))) + " s",
             static_cast<uint32_t>(index), pictures, progress);
-        item->setTooltipText(cauldron.mPotion + " / " + cauldron.mBrewer);
+        // The server names the potion by its English table name; the player reads it in the chosen language
+        const std::string potionName = recipe == nullptr ? cauldron.mPotion : recipe->getDisplayText();
+        item->setTooltipText(Gui::toCeguiText(potionName + " / " + cauldron.mBrewer));
         list->setItem(item, 0, row);
     }
     // Every herb has its existing stock icon and a number; names stay in tooltips.

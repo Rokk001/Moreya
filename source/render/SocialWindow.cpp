@@ -1053,7 +1053,7 @@ bool SocialWindow::refreshSkills()
         CEGUI::Window* title = tree->getChild(prefix + "Title");
         const bool hasColumn = column < view.mColumns.size();
         title->setVisible(hasColumn);
-        title->setText(Gui::toCeguiText(hasColumn ? escapeMarkup(view.mColumns[column].mPath) : std::string()));
+        title->setText(hasColumn ? Gui::toCeguiText(escapeMarkup(view.mColumns[column].mTitle)) : CEGUI::String());
         title->setProperty("TextColours", (hasColumn && view.mColumns[column].mHighlighted) ?
             SKILL_TREE_HIGHLIGHT_TEXT : SKILL_TREE_NORMAL_TEXT);
         for(uint32_t tier = 1; tier <= CreatureSkillTree::MAX_TIER; ++tier)

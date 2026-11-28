@@ -135,12 +135,13 @@ std::string effectValueText(const std::string& kind, const std::string& value)
     return value;
 }
 
+//! \brief The tooltip lines of a skill at a rank; the first line is its name in the chosen language.
 std::vector<std::string> skillTooltip(const SkillDef& skill, uint32_t rank)
 {
     // A skill without a rank shows what rank 1 would give
     const std::size_t index = (rank == 0) ? 0 : static_cast<std::size_t>(rank - 1);
     std::vector<std::string> lines;
-    lines.push_back(skill.mName);
+    lines.push_back(skill.getDisplayText());
     const std::string value = (index < skill.mValues.size()) ? skill.mValues[index] :
         (skill.mValues.empty() ? std::string() : skill.mValues.back());
     lines.push_back(Translation::tr("ability.tooltip.effect",
@@ -154,10 +155,11 @@ std::vector<std::string> skillTooltip(const SkillDef& skill, uint32_t rank)
     return lines;
 }
 
+//! \brief The tooltip lines of a tier 4 skill; the first line is its name in the chosen language.
 std::vector<std::string> tierFourTooltip(const TierFourDef& skill)
 {
     std::vector<std::string> lines;
-    lines.push_back(skill.mName);
+    lines.push_back(skill.getDisplayText());
     lines.push_back(Translation::tr("ability.tooltip.effect",
         {{"kind", kindText(skill.mKind)}, {"value", effectValueText(skill.mKind, skill.mValue)}}));
     lines.push_back(skill.mMana.mSet ? Translation::tr("ability.tooltip.mana", {{"value", numberText(skill.mMana.mValue)}}) :
@@ -184,6 +186,7 @@ TreeView buildTreeView(const SkillTreeConfig& config, const TypeInfo& type, cons
     {
         ViewColumn column;
         column.mPath = *it;
+        column.mTitle = DisplayText::translated(DisplayText::makeKey("skill.path", *it), *it);
         column.mHighlighted = !primary.empty() && (lowerText(*it) == primary);
         // The group paths come first; a path the group does not have is the family path
         const std::string owner = config.findPathSkill(type.mGroup, *it, 1).empty() ? type.mFamily : type.mGroup;

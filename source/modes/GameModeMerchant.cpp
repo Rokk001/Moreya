@@ -248,7 +248,7 @@ void GameMode::receiveMerchantWindow(ODPacket& packet)
         {
             cell = new MerchantImageItem(items[index].second, items[index].first);
             // The item card of every item tooltip of the game (plan INGAME-QS-11 K6)
-            cell->setTooltipText(Gui::describeItemTooltip(items[index].second, mGameMap, nullptr));
+            cell->setTooltipText(Gui::toCeguiText(Gui::describeItemTooltip(items[index].second, mGameMap, nullptr)));
         }
         else
         {
@@ -274,7 +274,7 @@ bool GameMode::refreshMerchantSelection(const CEGUI::EventArgs&)
         {
             const double price = entry.second.getPrice(mGameMap);
             confirmation->getChild("Item")->setProperty("Image", "ItemImages/" + entry.second.getImageName());
-            confirmation->getChild("Name")->setText(entry.second.getDisplayName(mGameMap));
+            confirmation->getChild("Name")->setText(Gui::toCeguiText(entry.second.getDisplayName(mGameMap)));
             confirmation->getChild("Price")->setText(Helper::toString(price));
             confirmation->getChild("OK")->setEnabled(player != nullptr && player->getSeat() != nullptr && player->getSeat()->getGold() >= price);
             return true;

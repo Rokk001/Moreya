@@ -2152,7 +2152,8 @@ void EditorMode::notifyGuiAction(GuiAction guiAction)
     }
 }
 
-//! \brief Populates server-resolved item choices in the same order as the shared catalogue.
+//! \brief Populates server-resolved item choices in the same order as the shared catalogue, the item names in the
+//! chosen language.
 void EditorMode::initialiseItemBoxControls()
 {
     CEGUI::Combobox* choices = static_cast<CEGUI::Combobox*>(mRootWindow->getChild("MainTabControl/Boxes/ItemBoxContent"));
@@ -2166,11 +2167,12 @@ void EditorMode::initialiseItemBoxControls()
             const ItemQuality& values = definition->getQuality(quality);
             if(!values.mAvailable) continue;
             mItemBoxContents.push_back(definition->getId() + " " + qualityName(quality));
-            labels.push_back(values.mDisplay + " (" + qualityName(quality) + ")");
+            labels.push_back(definition->getDisplayText(quality) + " (" + qualityName(quality) + ")");
         }
     for(size_t index = 0; index < labels.size(); ++index)
     {
-        CEGUI::ListboxTextItem* item = new CEGUI::ListboxTextItem(labels[index], static_cast<uint32_t>(index));
+        CEGUI::ListboxTextItem* item = new CEGUI::ListboxTextItem(Gui::toCeguiText(labels[index]),
+            static_cast<uint32_t>(index));
         item->setSelectionBrushImage("OpenDungeonsSkin/SelectionBrush");
         choices->addItem(item);
     }

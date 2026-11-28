@@ -20,6 +20,7 @@
 #include "network/ODPacket.h"
 
 #include "utils/ConfigManager.h"
+#include "utils/DisplayText.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 
@@ -306,15 +307,27 @@ std::string Weapon::makeReadableName(const std::string& name)
 //! \brief The configured display name of the equipment, also for a copy received from the server without one.
 std::string Weapon::getDisplayName() const
 {
-    if(!mDisplayName.empty())
-        return mDisplayName;
-
     const Weapon* configured = ConfigManager::getSingletonPtr() == nullptr ? nullptr :
         ConfigManager::getSingleton().getWeapon(mName);
-    if(configured != nullptr && !configured->mDisplayName.empty())
-        return configured->mDisplayName;
+    const std::string configuredName = configured == nullptr ? std::string() : configured->mDisplayName;
 
-    return makeReadableName(mName);
+    // A name that differs from the configured one was written on purpose (for example into a level)
+    if(!mDisplayName.empty() && mDisplayName != configuredName)
+        return mDisplayName;
+
+    // The English name of the table is the fallback of the text in the language files
+    std::string fallback = mDisplayName;
+    if(fallback.empty())
+        fallback = configuredName;
+    if(fallback.empty())
+        fallback = makeReadableName(mName);
+    return DisplayText::translated(getNameKey(), fallback);
+}
+
+//! \brief Returns the key "equipment.<name>.name" of the language files, the name in lower case.
+std::string Weapon::getNameKey() const
+{
+    return DisplayText::makeKey("equipment", mName);
 }
 
 //! \brief Writes equipment differences, preserving type and occupied hands.

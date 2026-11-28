@@ -309,7 +309,8 @@ double ItemInstance::getBonus(const std::string& kind) const { return sumValues(
 //! \brief Returns this instance's contribution to one effect.
 double ItemInstance::getEffect(const std::string& id) const { return sumValues(mEffects, id); }
 
-//! \brief Resolves catalogue display names and the display name of the equipment of Poor spawn weapons.
+//! \brief Resolves catalogue display names and the display name of the equipment of Poor spawn weapons, in the
+//! chosen language (R7: the names of items, potions and equipment come from the language files).
 std::string ItemInstance::getDisplayName(const GameMap* map) const
 {
     if(mSoulCrystal) return Translation::tr("ui.item.soulcrystal");
@@ -319,11 +320,11 @@ std::string ItemInstance::getDisplayName(const GameMap* map) const
     if(!mPotionId.empty())
     {
         const PotionDefinition* potion = ConfigManager::getSingleton().getPotion(mPotionId);
-        return potion == nullptr ? std::string() : potion->getDisplay();
+        return potion == nullptr ? std::string() : potion->getDisplayText();
     }
     const ItemDefinition* definition = resolveItemDefinition(mDefinitionId, map);
     if(definition != nullptr)
-        return definition->getQuality(mQuality).mDisplay;
+        return definition->getDisplayText(mQuality);
     const Weapon* weapon = ConfigManager::getSingleton().getWeapon(mDefinitionId);
     return mQuality == Quality::poor && weapon != nullptr ? weapon->getDisplayName() : std::string();
 }

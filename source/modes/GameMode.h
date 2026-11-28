@@ -299,6 +299,9 @@ class GameMode final : public GameEditorModeBase, public InputCommand
     bool cycleLabMode(const CEGUI::EventArgs& e);
     //! \brief Displays a validated owner-seat laboratory snapshot.
     void setLabWindowData(const LabWindowData& data);
+    //! \brief Sets the item and potion names of the merchant stock and laboratory tooltips again after the language
+    //! changed (checked every frame, R2.4).
+    void refreshItemNameTexts();
     //! \brief Updates the mode label and client seat from an authoritative setting.
     void setLabModeShown(int32_t mode);
 
@@ -816,6 +819,12 @@ private:
     std::vector<std::string> mInfirmaryPatientNames;
     //! \brief Latest stock entries and stable indices received from the server.
     std::vector<std::pair<uint32_t, ItemInstance>> mMerchantItems;
+    //! \brief The latest laboratory snapshot, shown again when the language changes.
+    LabWindowData mLabWindowData;
+    //! \brief True once a laboratory snapshot was received.
+    bool mLabWindowDataReceived = false;
+    //! \brief The language the item and potion names of the merchant and laboratory windows were last set for.
+    std::string mItemNameLanguage;
     //! \brief Tracks the pending purchase across live stock snapshots.
     //! \brief Stable pending stock identity; snapshots never substitute another item.
     uint32_t mMerchantPendingId = 0;

@@ -2,6 +2,7 @@
 
 #include "network/ODPacket.h"
 #include "utils/Translation.h"
+#include "utils/DisplayText.h"
 
 #include <memory>
 #include <sstream>
@@ -168,6 +169,18 @@ ItemDefinition* ItemDefinition::load(std::stringstream& stream)
 const ItemQuality& ItemDefinition::getQuality(Quality quality) const
 {
     return mQualities.at(static_cast<size_t>(quality));
+}
+
+//! \brief Returns the key "item.<id>.<quality>.name" of the language files, id and quality in lower case.
+std::string ItemDefinition::getNameKey(Quality quality) const
+{
+    return DisplayText::makeKey("item", mId, QUALITY_NAMES.at(static_cast<size_t>(quality)));
+}
+
+//! \brief Returns the name of the quality from the language files, else the English Display of the catalogue.
+std::string ItemDefinition::getDisplayText(Quality quality) const
+{
+    return DisplayText::translated(getNameKey(quality), getQuality(quality).mDisplay);
 }
 
 //! \brief Writes every definition field and preserves the bonus roll order.
