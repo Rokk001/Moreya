@@ -32,6 +32,7 @@ root = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(root / "scripts"))
 import campaign_packages  # noqa: E402
 import content_packages  # noqa: E402
+import language_package_texts  # noqa: E402
 
 #: The game data files of the content packages the map parts need; without one of them (no content) only the code
 #: parts are checked and the others are named as not checked
@@ -251,8 +252,20 @@ guild_panel = function(mode, "void MenuModeCampaign::fillGuildPanel()")
 for token in ("findCurrentCave(", "guild.mBanner", "guild.mPortrait", "guild.mName", "getGuildDetailsText(guild)"):
     check(token in guild_panel, "the guild in front of the gate needs " + token)
 details = world_cpp[world_cpp.index("std::string CampaignWorld::getGuildDetailsText"):]
-for token in ('"Leader: "', '"Leaders: "', '"\\nRaid size: "', '"\\nOrigin: "'):
+# The words are the entries campaign.code.* of the English language package; the code asks for them by their keys
+for token in ('"campaign.code.leader"', '"campaign.code.leaders"', '"campaign.code.raid_size"', '"campaign.code.origin"',
+              '"\\n"'):
     check(token in details, "the guild details must contain " + token)
+if content_packages.has_content(root):
+    english = language_package_texts.english(root)
+    for key, text in (("campaign.code.leader", "Leader: {name}"), ("campaign.code.leaders", "Leaders: {first} and {second}"),
+                      ("campaign.code.raid_size", "Raid size: {text}"), ("campaign.code.origin", "Origin: {text}"),
+                      ("campaign.code.size_group_one", "one group of {size}"), ("campaign.code.size_group_two", "two groups of {size}"),
+                      ("campaign.code.size_group_many", "{count} groups of {size}"), ("campaign.code.size_raid_one", "one raid of {size}"),
+                      ("campaign.code.size_raid_two", "two raids of {size}"), ("campaign.code.size_raid_many", "{count} raids of {size}")):
+        check(english.get(key) == text, "the English entry %s must be %r" % (key, text))
+else:
+    content_packages.unchecked("check_campaign_map", ["the English texts campaign.code.*"])
 check("fillGuildPanel();" in fill, "the guild panel is drawn")
 if HAS_DATA:
     panel = world["guild_panel"]
@@ -407,9 +420,14 @@ titles = {f["File"]: f.get("Title", "") for f in levels}
 for wing in wings:
     for cave in wing["levels"]:
         titles.setdefault(cave["file"], campaign_packages.MISSING_WING_TEXT)
-check('MISSING_WING_TEXT = "%s"' % campaign_packages.MISSING_WING_TEXT
+check('Translation::tr("campaign.code.missing_wing")'
       in (root / "source/game/CampaignPackages.cpp").read_text(encoding="utf-8"),
-      "the game names a missing wing as the checks do")
+      "the game asks for the text of a missing wing by its key")
+if content_packages.has_content(root):
+    check(language_package_texts.english(root).get("campaign.code.missing_wing") == campaign_packages.MISSING_WING_TEXT,
+          "the English text of a missing wing is the one the checks use")
+else:
+    content_packages.unchecked("check_campaign_map", ["the English text campaign.code.missing_wing"])
 if HAS_DATA:
     map_texts = [("title", world["title_cartouche"], "FONT_TITLE", [constant("CAMPAIGN_TITLE")], False)]
     for wing in wings:

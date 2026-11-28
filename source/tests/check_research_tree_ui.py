@@ -20,6 +20,7 @@ args = parser.parse_args()
 repo = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(repo / 'scripts'))
 import content_packages  # noqa: E402
+import language_package_texts  # noqa: E402
 prefix = Path(os.environ['CMAKE_PREFIX_PATH'])
 game = (repo / 'source/modes/GameMode.cpp').read_text()
 manager = (repo / 'source/game/SkillManager.cpp').read_text()
@@ -85,6 +86,29 @@ def joined_gui_folders(base):
                 shutil.copyfile(file, target / file.name)
 
 
+# The research names come from the language package: the probe gets the English texts of the research entries as a table
+# in place of Translation (the game reads them from the language files with the same keys)
+translation_stub = r'''
+namespace Translation
+{
+static const std::map<std::string, std::string>& englishTable()
+{
+    static const std::map<std::string, std::string> table = {
+TABLE
+    };
+    return table;
+}
+inline std::string tr(const std::string& key)
+{
+    std::map<std::string, std::string>::const_iterator it = englishTable().find(key);
+    return (it == englishTable().end()) ? key : it->second;
+}
+}
+'''
+english_rows = ',\n'.join('{"%s", "%s"}' % (key, text.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n'))
+                          for key, text in sorted(language_package_texts.english(repo).items()) if key.startswith('research.'))
+translation_stub = translation_stub.replace('TABLE', english_rows)
+
 probe = r'''
 #include <CEGUI/CEGUI.h>
 #include <CEGUI/RendererModules/Null/Renderer.h>
@@ -98,6 +122,7 @@ probe = r'''
 #include <functional>
 #include <iostream>
 #include <map>
+TRANSLATIONS
 const std::string SKILL_BADGE_FONT_NORMAL="MedievalSharp-10";const std::string SKILL_BADGE_FONT_SMALL="MedievalSharp-8";const float SKILL_BADGE_NODE_GAP=16.0f;const float SKILL_BADGE_WIDTH_PADDING=8.0f;
 namespace Helper {template<class T>std::string toString(T v){return std::to_string(v);}}
 struct CreatureDefinition {std::string getMeshName()const{return "Kobold.mesh";}};
@@ -356,7 +381,7 @@ int main(int argc,char** argv){try{
  windows.destroyWindow(root);CEGUI::System::destroy();CEGUI::NullRenderer::destroy(renderer);
  std::cout<<"CHECKS="<<checks<<" FAILURES="<<failures<<'\n';return failures?1:0;
 }catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}
-'''.replace('METHODS', research_colours+chr(10)+function('void GameMode::refreshSkillButtonState(')+'\n'+function('void GameMode::refreshSkillConnections(')).replace('INITIALIZERS', initializers).replace('NAMES', skill_names[names_start:names_end])
+'''.replace('METHODS', research_colours+chr(10)+function('void GameMode::refreshSkillButtonState(')+'\n'+function('void GameMode::refreshSkillConnections(')).replace('INITIALIZERS', initializers).replace('NAMES', skill_names[names_start:names_end]).replace('TRANSLATIONS', translation_stub)
 if args.render:
     probe = probe.replace('#include <CEGUI/RendererModules/Null/Renderer.h>', '#include <CEGUI/RendererModules/Ogre/Renderer.h>\n#include <CEGUI/BasicImage.h>\n#include <Ogre.h>\n#include <OgreRenderTexture.h>\n#include <OgreHardwarePixelBuffer.h>\n#include <RTShaderSystem/OgreShaderGenerator.h>\n#include <Bites/OgreSGTechniqueResolverListener.h>')
     probe = probe.replace('auto& renderer=CEGUI::NullRenderer::create();renderer.setDisplaySize(CEGUI::Sizef(1920,1200));', r'''

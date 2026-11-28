@@ -20,8 +20,15 @@ def function(path, signature):
 probe = r'''
 #include <cstdint>
 #include <iostream>
+#include <map>
 #include <string>
 #include <vector>
+namespace Translation
+{
+//! \brief Stand-in of the language texts: the probes do not look at the hint texts, so a text is its key.
+inline std::string tr(const std::string& key) {return key;}
+inline std::string tr(const std::string& key, const std::map<std::string, std::string>&) {return key;}
+}
 namespace Ogre { struct ColourValue { static const int Red=0,White=1; }; }
 namespace Helper { template<class T>std::string toString(T value){return std::to_string(value);} }
 enum class InputCommandState { infoOnly,building,validated };

@@ -37,6 +37,9 @@ assert 'updateFilesList();' in delete_body and 'activate();' not in delete_body
 
 PROBE = r'''
 #include "modes/LoadGameFilter.h"
+#include "utils/Translation.h"
+//! \brief Stand-in of the language texts: the probe does not look at texts, so a text is its key.
+std::string Translation::tr(const std::string& key) { return key; }
 #include <sstream>
 #include <iostream>
 //! \brief Checks save categories with a locked second campaign level.

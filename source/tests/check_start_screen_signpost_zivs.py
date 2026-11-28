@@ -39,6 +39,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import check_menu_sky_below_horizon as scene  # noqa: E402  (numpy mesh reader of the menu scene check)
 sys.path.insert(0, os.path.join(ROOT, "scripts"))
 import content_packages  # noqa: E402
+import language_package_texts  # noqa: E402
 
 CHECK = "check_start_screen_signpost_zivs"
 #: The game data of the scene part that lies in the public tree or in a content package
@@ -551,16 +552,28 @@ def check_ziv_names(failures):
         "gui/ModeGame.layout": ('value="Zivs (J)"', 'value="Zivs: fixed Zivs per job, free Zivs, priority and carry order (J)"'),
         "gui/WindowWorkers.layout": ('<Property name="Text" value="Zivs" />', '<Property name="Text" value="Free Zivs" />'),
         "gui/WindowSkillTree.layout": ('value="Spell: Summon Ziv"',),
-        "source/game/SkillType.cpp": ('"The \'Summon Ziv\' Spell"',),
-        "source/spells/SpellSummonWorker.cpp": ('SpellSummonWorkerNameDisplay = "Summon Ziv";', '"Summon Zivs on your claimed ground."'),
-        "source/giftboxes/GiftBoxBonus.cpp": ('"Stun Zivs"', '"Receive Zivs"'),
         "source/render/SocialWindow.cpp": ('{"All", "Zivs", "Fighters", "Unhappy"}',),
         "source/render/CreaturePanel.cpp": ('count->setTooltipText("Zivs");',),
         "source/modes/GameMode.cpp": ('std::make_pair(Gui::BUTTON_CREATURE_WORKER, "Zivs")',),
         "source/game/Player.cpp": ('"You redeemed your Ziv into "', '"You have no Ziv to fulfill your dark wishes."'),
         "source/gamemap/GameMap.cpp": ('"Your Zivs vanished because the mana ran out"',),
-        "source/spells/SpellPlague.cpp": ('"Zivs and champions never get sick."',),
     }
+    # The names and hints of the code are entries of the English language package, found by their keys
+    shown_in_language = {
+        "research.spellsummonworker.name": "The 'Summon Ziv' Spell",
+        "spell.summonworker.name": "Summon Ziv",
+        "spell.hint.summon_on_claimed_ground": "Summon Zivs on your claimed ground.",
+        "gift.stunworkers.name": "Stun Zivs",
+        "gift.receiveworkers.name": "Receive Zivs",
+        "spell.hint.no_plague_on_ziv": "Zivs and champions never get sick.",
+    }
+    if content_packages.has_content(ROOT):
+        english = language_package_texts.english(ROOT)
+        for key, expected in shown_in_language.items():
+            if english.get(key) != expected:
+                failures.append("the English entry %s is not %r" % (key, expected))
+    else:
+        content_packages.unchecked(CHECK, sorted(shown_in_language))
     for path, texts in shown.items():
         if missing_data(path) or missing_own_rows(path):
             content_packages.unchecked(CHECK, [path])

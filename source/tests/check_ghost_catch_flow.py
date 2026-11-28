@@ -51,6 +51,7 @@ import sys
 sys.path.insert(0, str(repo / 'scripts'))
 import room_packages  # noqa: E402
 import content_packages  # noqa: E402
+import language_package_texts  # noqa: E402
 
 #: The assets of the ghost room come from its room package (scripts/room_packages.py); without the package only the code
 #: side is checked
@@ -265,7 +266,10 @@ def catch_timing():
     manager = read("source/game/SkillManager.cpp")
     has(manager, "CatchTime research is based on the transfer and the beam seconds",
         '{SkillType::roomGhostRoom, "CatchTime", ResearchBaseSource::rooms, "GhostTransferSeconds", "GhostBeamSeconds"}',
-        'texts[ResearchEffect::CatchTime] = "Beam and transfer time";')
+        '"research.effect." + lowerText(effect)')
+    # the effect text is the English entry research.effect.catchtime of the language package
+    if CONTENT:
+        assert language_package_texts.english(repo).get("research.effect.catchtime") == "Beam and transfer time"
     restore = body(action, "void CreatureActionHuntGhost::restore()")
     has(restore, "a loaded snap resumes with the beam lowered", "if(mState==10) mCreature.setAnimationState(EntityAnimation::idle_anim,")
     creature = read("source/entities/Creature.cpp")

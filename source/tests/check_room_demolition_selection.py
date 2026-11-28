@@ -5,6 +5,13 @@ import subprocess
 import tempfile
 
 repo = Path(__file__).resolve().parents[2]
+import sys
+sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
+import language_package_texts  # noqa: E402
+# The probe answers the hint of the dungeon heart with its English text, the entry of the language package
+if content_packages.has_content(repo):
+    assert language_package_texts.english(repo).get('room.hint.heart_not_sellable') == 'Dungeon hearts cannot be sold.'
 game = (repo / 'source/modes/GameMode.cpp').read_text()
 rooms = (repo / 'source/rooms/RoomManager.cpp').read_text()
 
@@ -31,6 +38,13 @@ probe = r'''
 #include <map>
 #include <string>
 #include <vector>
+namespace Translation
+{
+//! \brief Stand-in of the language texts: a text is its key, the hint of the dungeon heart is its English text (the
+//! check below reads it from the language package).
+inline std::string tr(const std::string& key) {return key == "room.hint.heart_not_sellable" ? "Dungeon hearts cannot be sold." : key;}
+inline std::string tr(const std::string& key, const std::map<std::string, std::string>&) {return key;}
+}
 namespace Ogre {struct ColourValue {static const int Red=0,White=1;};}
 enum class InputCommandState {infoOnly,building,validated};
 enum class TileVisual {normal,portalRoom,portalWaveRoom,dungeonTempleRoom};

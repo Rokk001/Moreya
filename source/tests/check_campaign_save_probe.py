@@ -11,6 +11,9 @@ ROOT = Path(__file__).resolve().parents[2]
 
 PROBE = r'''
 #include "game/Campaign.h"
+#include "utils/Translation.h"
+//! \brief Stand-in of the language texts: the probe does not look at texts, so a text is its key.
+std::string Translation::tr(const std::string& key) { return key; }
 #include "ai/KeeperAIType.h"
 #include <iostream>
 #include <sstream>

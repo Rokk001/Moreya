@@ -26,6 +26,7 @@ import sys
 # ODP_ASSETS_SRC (else <repo>/assets-src) holds the asset sources, see scripts/assets_src.py
 sys.path.insert(0, str(root / 'scripts'))
 import content_packages  # noqa: E402
+import language_package_texts  # noqa: E402
 import room_packages  # noqa: E402
 
 #: The assets of the tavern come from its room package (scripts/room_packages.py); without the package only the code
@@ -86,7 +87,9 @@ for name in ('roomTavern', 'tavernBeer'):
 # 2. The room class, factory, names, registration and the keys of its cost and hit points
 room_cpp = read('source/rooms/RoomTavern.cpp')
 assert 'const std::string RoomTavernName = "Tavern";' in room_cpp
-assert 'const std::string RoomTavernNameDisplay = "Tavern room";' in room_cpp
+assert 'const std::string RoomTavernNameKey = "room.tavern.name";' in room_cpp
+if WITH_CONTENT:
+    assert language_package_texts.english(root).get('room.tavern.name') == 'Tavern room'
 assert 'const RoomType RoomTavern::mRoomType = RoomType::tavern;' in room_cpp
 assert 'const TileVisual RoomTavern::mRoomVisual = TileVisual::tavernRoom;' in room_cpp
 assert 'class RoomTavernFactory : public RoomFactory' in room_cpp and 'RoomRegister' in room_cpp
@@ -146,7 +149,10 @@ assert registered.count('roomTavern') == 1 and registered.count('tavernBeer') ==
 # 65 entries and the six spells of the spells review
 assert len(registered) == 71, 'the research tree has 71 entries, found ' + str(len(registered))
 assert registered.index('roomCasino') < registered.index('tavernBeer'), 'Beer follows the casino in the tier II row'
-assert 'KEEPER_TITLE_BEER = "Beer"' in manager and 'Your taverns serve beer.' in manager
+assert 'KEEPER_TITLE_BEER = "research.keeper.beer.title"' in manager and '"research.keeper.beer.description"' in manager
+if WITH_CONTENT:
+    english = language_package_texts.english(root)
+    assert english.get('research.keeper.beer.title') == 'Beer' and english.get('research.keeper.beer.description') == 'Your taverns serve beer.'
 assert 'ResearchEffect::PortalCooldown' in manager or '"PortalCooldown"' in manager
 portal = read('source/rooms/RoomPortal.cpp')
 assert 'SkillType::tavernBeer' in portal and 'PortalCooldownSpawnMin' in portal and 'PortalCooldownSpawnMax' in portal
