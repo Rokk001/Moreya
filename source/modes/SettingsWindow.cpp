@@ -29,6 +29,7 @@
 #include "utils/ConfigManager.h"
 #include "utils/LogManager.h"
 #include "utils/Helper.h"
+#include "utils/Translation.h"
 
 #include <CEGUI/CEGUI.h>
 #include <CEGUI/widgets/ToggleButton.h>
@@ -329,6 +330,23 @@ void SettingsWindow::initConfig()
             keeperVoiceCb->setItemSelectState(item, true);
         }
         ++cptVoice;
+    }
+
+    // Every language package, named in its own language; the item id is the index in Translation::getLanguages()
+    CEGUI::Combobox* languageCb = static_cast<CEGUI::Combobox*>(
+            mRootWindow->getChild("SettingsWindow/MainTabControl/Game/GameSP/LanguageCombo"));
+    languageCb->resetList();
+    const std::vector<Translation::LanguageInfo>& languages = Translation::getLanguages();
+    for(uint32_t i = 0; i < languages.size(); ++i)
+    {
+        CEGUI::ListboxTextItem* item = new CEGUI::ListboxTextItem(Gui::toCeguiText(languages[i].mName), i);
+        item->setSelectionBrushImage(selImg);
+        languageCb->addItem(item);
+        if(languages[i].mCode == Translation::getLanguage())
+        {
+            languageCb->setText(item->getText());
+            languageCb->setItemSelectState(item, true);
+        }
     }
 
     CEGUI::Combobox* minimapTypes = static_cast<CEGUI::Combobox*>(
@@ -645,6 +663,18 @@ bool SettingsWindow::saveConfig()
         config.setGameValue(Config::KEEPERVOICE, keeperVoiceItem->getText().c_str());
     else
         config.setGameValue(Config::KEEPERVOICE, "");
+
+    // The chosen language is saved and applies at once to every window (localization plan R2.2, R2.4)
+    CEGUI::Combobox* languageCb = static_cast<CEGUI::Combobox*>(
+            mRootWindow->getChild("SettingsWindow/MainTabControl/Game/GameSP/LanguageCombo"));
+    CEGUI::ListboxItem* languageItem = languageCb->getSelectedItem();
+    const std::vector<Translation::LanguageInfo>& languages = Translation::getLanguages();
+    if(languageItem != nullptr && languageItem->getID() < languages.size())
+    {
+        const std::string& code = languages[languageItem->getID()].mCode;
+        config.setGameValue(Config::LANGUAGE, code);
+        Translation::setLanguage(code);
+    }
 
     CEGUI::Combobox* minimapTypes = static_cast<CEGUI::Combobox*>(
             mRootWindow->getChild("SettingsWindow/MainTabControl/Game/GameSP/MiniMapType"));

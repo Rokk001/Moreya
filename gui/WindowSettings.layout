@@ -216,6 +216,20 @@
                         <Property name="Visible" value="False" />
                         <Property name="Text" value="KO enemy creatures instead of killing" />
 <!--#@own 49-->
+                    <!-- Language of all texts of the game (localization plan R2); the texts are keys of the language files. -->
+                    <Window type="OD/StaticText" name="LanguageText" >
+                        <Property name="Area" value="{{0,32},{0,458},{0,190},{0,482}}" />
+                        <Property name="MaxSize" value="{{1,0},{1,0}}" />
+                        <Property name="Text" value="@settings.language" />
+                        <Property name="BackgroundEnabled" value="False" />
+                        <Property name="FrameEnabled" value="False" />
+                    </Window>
+                    <Window type="OD/Combobox" name="LanguageCombo" >
+                        <Property name="Area" value="{{0,200},{0,458},{0,360},{0,538}}" />
+                        <Property name="MaxSize" value="{{1,0},{1,0}}" />
+                        <Property name="ReadOnly" value="True" />
+                        <Property name="TooltipText" value="@settings.language.tooltip" />
+                    </Window>
                 </Window>
             </Window>
         </Window>

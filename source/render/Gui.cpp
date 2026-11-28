@@ -32,6 +32,7 @@
 #include "utils/ContentPackages.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
+#include "utils/Translation.h"
 
 #include <CEGUI/CEGUI.h>
 #include <CEGUI/BasicImage.h>
@@ -1898,6 +1899,7 @@ Gui::Gui(SoundEffectsManager* soundEffectsManager, const std::string& ceguiLogFi
   : mUserScale(1.0f),
     mFontScaledDisplaySize(0.0f, 0.0f),
     mFontsScaled(false),
+    mLanguageListener(0),
     mSoundEffectsManager(soundEffectsManager)
 {
     OD_LOG_INF("*** Initializing CEGUI ***");
@@ -2032,6 +2034,9 @@ Gui::Gui(SoundEffectsManager* soundEffectsManager, const std::string& ceguiLogFi
 
     for(const std::pair<const guiSheet, CEGUI::Window*>& sheet : mSheets)
         registerWindow(sheet.second);
+    // A language chosen in the settings applies at once to every sheet (localization plan R2.4)
+    const std::function<void()> languageChanged = std::bind(&Gui::translateAll, this);
+    mLanguageListener = Translation::addListener(languageChanged);
     for(const char* name : {"RoomManagerButton", "WorkersButton", "SandboxButton"})
     {
         CEGUI::Window* button = mSheets[inGameMenu]->getChild(name);
@@ -2065,6 +2070,7 @@ Gui::Gui(SoundEffectsManager* soundEffectsManager, const std::string& ceguiLogFi
 
 Gui::~Gui()
 {
+    Translation::removeListener(mLanguageListener);
     mDisplaySizeChangedConnection.disconnect();
     mWindowDestroyedConnection.disconnect();
     //This also calls CEGUI::System::destroy();
@@ -2194,6 +2200,8 @@ void Gui::registerWindowHierarchy(CEGUI::Window* window)
 
 void Gui::registerWindow(CEGUI::Window* window)
 {
+    // The texts are set before the scaling keeps the original text of the window
+    translateWindow(window);
     if(window->isPropertyPresent(NAVIGATION_FRAME_NAME))
     {
         for(CEGUI::Window* parent = window->getParent(); parent != nullptr; parent = parent->getParent())
@@ -2247,6 +2255,81 @@ void Gui::registerWindow(CEGUI::Window* window)
 
     for(size_t i = 0; i < window->getChildCount(); ++i)
         registerWindow(window->getChildAtIdx(i));
+}
+
+//! \brief A CEGUI string read as UTF-8.
+CEGUI::String Gui::toCeguiText(const std::string& text)
+{
+    return CEGUI::String(reinterpret_cast<const CEGUI::utf8*>(text.c_str()));
+}
+
+//! \brief The translated text of the key as a CEGUI string.
+CEGUI::String Gui::trCegui(const std::string& key)
+{
+    return toCeguiText(Translation::tr(key));
+}
+
+//! \brief Replaces a text or tooltip given as "@<key>" by its text and keeps the key for later language changes.
+void Gui::translateWindow(CEGUI::Window* window)
+{
+    static const CEGUI::String TEXT_KEY = "LocalizationTextKey";
+    static const CEGUI::String TOOLTIP_KEY = "LocalizationTooltipKey";
+    const CEGUI::String prefix = toCeguiText(TEXT_KEY_PREFIX);
+    bool textChanged = false;
+
+    if(!window->isUserStringDefined(TEXT_KEY))
+    {
+        const CEGUI::String& text = window->getText();
+        if(text.compare(0, prefix.length(), prefix) == 0)
+            window->setUserString(TEXT_KEY, text.substr(prefix.length()));
+    }
+    if(window->isUserStringDefined(TEXT_KEY))
+    {
+        window->setText(trCegui(window->getUserString(TEXT_KEY).c_str()));
+        textChanged = true;
+    }
+
+    if(!window->isUserStringDefined(TOOLTIP_KEY))
+    {
+        const CEGUI::String& tooltip = window->getTooltipText();
+        if(tooltip.compare(0, prefix.length(), prefix) == 0)
+            window->setUserString(TOOLTIP_KEY, tooltip.substr(prefix.length()));
+    }
+    if(window->isUserStringDefined(TOOLTIP_KEY))
+        window->setTooltipText(trCegui(window->getUserString(TOOLTIP_KEY).c_str()));
+
+    // A registered window keeps its text for the UI scale; it must hold the text of the new language
+    std::map<CEGUI::Window*, WindowScaleData>::iterator scaled = mScaledWindows.find(window);
+    if(textChanged && scaled != mScaledWindows.end())
+    {
+        scaled->second.text = window->getText();
+        scaled->second.hasFormattedImageSize =
+            std::string(scaled->second.text.c_str()).find("[image-size='") != std::string::npos;
+    }
+}
+
+//! \brief Translates the window and all windows below it.
+void Gui::translateWindowTree(CEGUI::Window* window)
+{
+    translateWindow(window);
+    for(size_t i = 0; i < window->getChildCount(); ++i)
+        translateWindowTree(window->getChildAtIdx(i));
+}
+
+//! \brief Translates every sheet (the open windows and dialogs lie on them) and applies the scale to the new texts.
+void Gui::translateAll()
+{
+    for(const std::pair<const guiSheet, CEGUI::Window*>& sheet : mSheets)
+        translateWindowTree(sheet.second);
+    if(CEGUI::System::getSingletonPtr() == nullptr)
+        return;
+    CEGUI::Window* root = CEGUI::System::getSingleton().getDefaultGUIContext().getRootWindow();
+    bool rootIsSheet = false;
+    for(const std::pair<const guiSheet, CEGUI::Window*>& sheet : mSheets)
+        rootIsSheet = rootIsSheet || (sheet.second == root);
+    if(root != nullptr && !rootIsSheet)
+        translateWindowTree(root);
+    applyScale(CEGUI::System::getSingleton().getRenderer()->getDisplaySize());
 }
 
 CEGUI::Window* Gui::createInfoWindow(const std::string& name)
@@ -2616,6 +2699,7 @@ bool Gui::playButtonClickSound(const CEGUI::EventArgs&)
 /* These constants are used to access the GUI element
  * NOTE: when add/remove/rename a GUI element, don't forget to change it here
  */
+const std::string Gui::TEXT_KEY_PREFIX = "@";
 const std::string Gui::INFO_WINDOW_TEXT = "TextDisplay";
 const std::string Gui::DISPLAY_GOLD = "HorizontalPipe/GoldDisplay";
 const std::string Gui::DISPLAY_MANA = "HorizontalPipe/ManaDisplay";

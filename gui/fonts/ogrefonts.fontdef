@@ -4,5 +4,5 @@ font MedievalSharp
     source      SourceSerif4-Semibold.ttf
     size        16
     resolution  72
-    code_points 9-166
+    code_points 9-255 8211-8212 8216-8222 8230-8230 8364-8364
 }
