@@ -37,8 +37,8 @@ HAS_CONTENT = content_packages.has_content(repo)
 EXPECTED_CASES = 7
 # Languages of the game at the start (plan D1) and entries of each language, counted once for this branch
 EXPECTED_LANGUAGES = {'de': 'Deutsch', 'en': 'English'}
-EXPECTED_ENTRIES = 633
-# Text keys of the layouts (prefix "layout.") in each language, counted once for this branch (entries 2 + 631)
+EXPECTED_ENTRIES = 9383
+# Text keys of the layouts (prefix "layout.") in each language, counted once for this branch
 EXPECTED_LAYOUT_KEYS = 631
 # The literal Text/TooltipText values with letters (two or more ASCII letters) that stay in the layouts, counted once
 # for this branch and named by the three rules below. All other values are "@<key>" or have no letters.
