@@ -61,7 +61,7 @@ def check(condition, message):
 #: True when the content packages are present: global.cfg and ODSkin.scheme are mixed files whose own rows come from them
 CONTENT = content_packages.has_content(ROOT)
 #: config/global.cfg as the game reads it, with its own rows from the content
-GLOBAL_CFG = content_packages.read_text(ROOT, "config/global.cfg")
+GLOBAL_CFG = content_packages.read_layout_text(ROOT, "config/global.cfg")
 CONFIG_MANAGER = read("source/utils/ConfigManager.cpp")
 CONFIG_MANAGER_H = read("source/utils/ConfigManager.h")
 RULES_H = read("source/game/HandLimitRules.h")
@@ -496,14 +496,14 @@ check("ServerNotificationType::chatServer" in refused and "displayText" not in r
       "K5: the refusal message appears in the message line only")
 # G11: the crossed-out hand is a text-free placeholder under its final image name
 if CONTENT:
-    check('filename="HandCooldown.imageset" name="HandCooldown"' in content_packages.read_text(ROOT, "gui/ODSkin.scheme"),
+    check('filename="HandCooldown.imageset" name="HandCooldown"' in content_packages.read_layout_text(ROOT, "gui/ODSkin.scheme"),
           "G11: the scheme loads the imageset")
 else:
     content_packages.unchecked("check_hand_limit", ["G11 the imageset entry of gui/ODSkin.scheme"])
 HAND_FILES = ("gui/HandCooldown.imageset", "gui/HandCooldownIcon.png")
 if content_packages.unchecked("check_hand_limit", [name for name in HAND_FILES
                                                    if content_packages.data_file(ROOT, name) is None]) == []:
-    imageset = content_packages.read_text(ROOT, "gui/HandCooldown.imageset")
+    imageset = content_packages.read_layout_text(ROOT, "gui/HandCooldown.imageset")
     check('name="HandCooldown"' in imageset and 'name="NoPickup"' in imageset and 'imagefile="HandCooldownIcon.png"' in imageset,
           "G11: the imageset HandCooldown/NoPickup exists")
     check(os.path.getsize(content_packages.resolve(ROOT, "gui/HandCooldownIcon.png")) > 100, "G11: the picture file exists")

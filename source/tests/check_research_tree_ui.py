@@ -83,7 +83,7 @@ def joined_gui_folders(base):
             mixed = file.suffix in ('.layout', '.looknfeel', '.scheme', '.imageset', '.font') and \
                 '#@own ' in file.read_text(encoding='utf-8')
             if mixed:
-                (target / file.name).write_text(content_packages.read_text(repo, path + '/' + file.name), encoding='utf-8')
+                (target / file.name).write_text(content_packages.read_layout_text(repo, path + '/' + file.name), encoding='utf-8')
             else:
                 shutil.copyfile(file, target / file.name)
 

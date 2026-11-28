@@ -4,7 +4,7 @@
 <!--#@own 1-->
         <Property name="AlwaysOnTop" value="True" />
         <Property name="SizingEnabled" value="False" />
-        <Property name="Text" value="Dungeon Management 101 for unruly minions" />
+        <Property name="Text" value="@layout.window_help.game_help_window.text" />
         <Window type="OD/StaticText" name="TextDisplay" >
             <Property name="Area" value="{{0.0,20},{0.0,30},{1.0,-20},{1.0,-30}}" />
             <Property name="FrameEnabled" value="False" />

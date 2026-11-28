@@ -114,7 +114,7 @@ def read(relative):
     interface file comes with its own rows of the content (scripts/content_packages.py)."""
     with open(data(relative), encoding="utf-8", errors="replace") as handle:
         text = handle.read()
-    return content_packages.read_text(ROOT, relative) if "#@own " in text else text
+    return content_packages.read_layout_text(ROOT, relative) if ("#@own " in text or '"@layout.' in text) else text
 
 
 def data(relative):

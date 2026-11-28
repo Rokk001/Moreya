@@ -13,7 +13,7 @@
 <!--#@own 3-->
                 <Property name="Text" value="0" />
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
-                <Property name="TooltipText" value="Your Gold" />
+                <Property name="TooltipText" value="@layout.mode_game.horizontal_pipe.gold_display.tooltip" />
                 <Property name="HorzFormatting" value="RightAligned" />
                 <Property name="ClippedByParent" value="False" />
                 <Property name="VerticalAlignment" value="Centre" />
@@ -21,7 +21,7 @@
 <!--#@own 4-->
                     <Property name="MaxSize" value="{{1,0},{1,0}}" />
                     <Property name="AlwaysOnTop" value="True" />
-                    <Property name="TooltipText" value="Your Gold" />
+                    <Property name="TooltipText" value="@layout.mode_game.horizontal_pipe.gold_display.icon.tooltip" />
                     <Property name="FrameEnabled" value="False" />
                     <Property name="ClippedByParent" value="False" />
                     <Property name="BackgroundEnabled" value="False" />
@@ -31,7 +31,7 @@
 <!--#@own 6-->
                 <Property name="Text" value="0" />
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
-                <Property name="TooltipText" value="Your Mana" />
+                <Property name="TooltipText" value="@layout.mode_game.horizontal_pipe.mana_display.tooltip" />
                 <Property name="HorzFormatting" value="RightAligned" />
                 <Property name="VertFormatting" value="TopAligned" />
                 <Property name="ClippedByParent" value="False" />

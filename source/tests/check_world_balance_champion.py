@@ -28,7 +28,7 @@ WITH_CONTENT = content_packages.has_content(ROOT)
 def read(path):
     """Returns the text of a repository file (a game data file also from the content packages); a mixed file of config/
     or gui/ comes joined with its own rows of the content."""
-    return content_packages.read_text(ROOT, path)
+    return content_packages.read_layout_text(ROOT, path)
 
 
 def png_size(path):

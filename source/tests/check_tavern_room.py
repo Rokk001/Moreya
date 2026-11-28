@@ -47,7 +47,7 @@ WITH_CONTENT = content_packages.has_content(root)
 # Returns the text of a repository file; a mixed file of config/ or gui/ comes joined with its own rows of the content.
 def read(path):
     if path.startswith(('config/', 'gui/')):
-        return content_packages.read_text(root, path)
+        return content_packages.read_layout_text(root, path)
     return resolve(root, path).read_text(encoding='utf-8')
 
 

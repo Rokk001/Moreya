@@ -2,25 +2,25 @@
 
 <GUILayout version="4" >
 <!--#@own 1-->
-        <Property name="Text" value="Editor Options" />
+        <Property name="Text" value="@layout.window_editor_options.editor_options_window.text" />
         <Property name="SizingEnabled" value="False" />
         <Window type="OD/IconButton" name="SaveLevelButton" >
 <!--#@own 2-->
-            <Property name="Text" value="Save Level" />
+            <Property name="Text" value="@layout.window_editor_options.editor_options_window.save_level_button.text" />
             <Property name="IconImage" value="OpenDungeonsIcons/SaveIcon" />
         </Window>
         <Window type="OD/IconButton" name="SettingsButton" >
 <!--#@own 3-->
-            <Property name="Text" value="Settings" />
+            <Property name="Text" value="@layout.window_editor_options.editor_options_window.settings_button.text" />
             <Property name="Disabled" value="False" />
             <Property name="IconImage" value="OpenDungeonsIcons/OptionsIcon" />
-            <Property name="TooltipText" value="Open the game settings window." />
+            <Property name="TooltipText" value="@layout.window_editor_options.editor_options_window.settings_button.tooltip" />
         </Window>
         <Window type="OD/IconButton" name="QuitEditorButton" >
 <!--#@own 4-->
-            <Property name="Text" value="Quit Editor" />
+            <Property name="Text" value="@layout.window_editor_options.editor_options_window.quit_editor_button.text" />
             <Property name="IconImage" value="OpenDungeonsIcons/AbortIcon" />
-            <Property name="TooltipText" value="Go back to main screen." />
+            <Property name="TooltipText" value="@layout.window_editor_options.editor_options_window.quit_editor_button.tooltip" />
         </Window>
     </Window>
 </GUILayout>

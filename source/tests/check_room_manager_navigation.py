@@ -131,7 +131,7 @@ def check_page_bounds(manager):
             page_w = (page_area[4] - page_area[0]) * client_w + (page_area[5] - page_area[1]) * scale
             page_h = (page_area[6] - page_area[2]) * client_h + (page_area[7] - page_area[3]) * scale
             for kind in PAGE_KINDS:
-                page = ET.parse(data('gui/RoomManager' + kind + 'Page.layout')).getroot().find('Window')
+                page = ET.ElementTree(ET.fromstring(content_packages.read_layout_text(ROOT, 'gui/RoomManager' + kind + 'Page.layout'))).getroot().find('Window')
                 assert page.get('type') == 'DefaultWindow', kind + ' is an embedded page'
                 for child in page.findall('Window'):
                     bounds = numbers(props(child)['Area'])
@@ -273,7 +273,7 @@ if '--runtime-only' in sys.argv:
 # The GUI contracts below bind the tested state to actual input handlers and layouts.
 window_data = data_present()
 if window_data:
-    layout = ET.parse(data('gui/WindowRoomManager.layout')).getroot().find('Window')
+    layout = ET.ElementTree(ET.fromstring(content_packages.read_layout_text(ROOT, 'gui/WindowRoomManager.layout'))).getroot().find('Window')
     assert layout.get('name') == 'RoomManagerWindow' and layout.get('type') == 'OD/SheetWindow'
     assert props(layout)['Text'] == 'Room Manager'
     assert props(layout)['Visible'] == 'False'
@@ -281,7 +281,7 @@ if window_data:
     rows = layout.find("Window[@name='Rows']")
     assert rows is not None
     assert len(rows.findall('Window')) == 8, 'fixed eight room-type row slots'
-    book = ET.parse(data('gui/WindowSocial.layout')).getroot().find('Window')
+    book = ET.ElementTree(ET.fromstring(content_packages.read_layout_text(ROOT, 'gui/WindowSocial.layout'))).getroot().find('Window')
     book_row = book.find("Window[@name='HomePage']/Window[@name='ListRows']/Window[@name='Row0']")
     for row in rows.findall('Window'):
         assert props(row.find("Window[@name='Highlight']")) == props(book_row.find("Window[@name='Highlight']")), 'Dungeonbook selection highlight'
@@ -291,7 +291,7 @@ if window_data:
         assert row.find("Window[@name='Icon']") is not None and row.find("Window[@name='Button']") is not None
     assert len(list(layout.iter('LayoutImport'))) == 8, 'eight room pages inside shared frame'
 if WITH_CONTENT:
-    hud = ET.fromstring(content_packages.read_text(ROOT, 'gui/ModeGame.layout'))
+    hud = ET.fromstring(content_packages.read_layout_text(ROOT, 'gui/ModeGame.layout'))
     windows = {node.get('name'): node for node in hud.iter('Window')}
     button = windows['RoomManagerButton']
     assert props(button)['TooltipText'] == 'Room Manager'
@@ -347,7 +347,7 @@ assert 'mRoomManagerNavigation.updateOwned(counts)' in refresh and 'closeRoomMan
 assert 'RoomManagerButton' in body(nav, 'void GameMode::initializeRoomManager(')
 assert '&GameMode::toggleRoomManager' in body(nav, 'void GameMode::initializeRoomManager(')
 if WITH_CONTENT:
-    options = ET.fromstring(content_packages.read_text(ROOT, 'gui/WindowGameOptions.layout'))
+    options = ET.fromstring(content_packages.read_layout_text(ROOT, 'gui/WindowGameOptions.layout'))
     assert options.find(".//Window[@name='ProductionButton']") is None and 'GameOptionsWindow/ProductionButton' not in game
 else:
     assert 'GameOptionsWindow/ProductionButton' not in game

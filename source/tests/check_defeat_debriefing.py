@@ -254,9 +254,13 @@ struct Campaign
     static Campaign& getSingleton() {static Campaign campaign;return campaign;}
     bool isActive() const {return active;}
 };
+// The Gui registration of the loaded layout (the "@key" texts are not translated in this probe)
+struct LayoutGui {void registerWindowHierarchy(CEGUI::Window*) {}};
 struct ModeManager
 {
     enum ModeType {NONE = 0, MENU_MAIN, MENU_CAMPAIGN};
+    LayoutGui mGui;
+    LayoutGui& getGui() {return mGui;}
     bool mOpenSkirmishSubMenu = false;
     bool mOpenMultiplayerSubMenu = false;
     void requestMode(ModeType mode, bool = true) {++gModeRequests;gLastMode = mode;}
@@ -277,6 +281,7 @@ public:
         mRoot.children.push_back(&subtitle);mRoot.children.push_back(&marker);
     }
     void addEventConnection(CEGUI::Event::Connection) {}
+    ModeManager& getModeManager() {return *mModeManager;}
     void onDefeatSequenceFinished();
     // The finished hook removes the scene objects of the sequence (checked in check_defeat_heart_burst.py)
     void stopDefeatEffects() {}
@@ -640,7 +645,7 @@ from PIL import Image
 if content_packages.data_file(repo, 'gui/ODSkin.imageset') is None or content_packages.data_file(repo, 'gui/ODSkin.png') is None:
     content_packages.unchecked('check_defeat_debriefing', ['gui/ODSkin.imageset', 'gui/ODSkin.png'])
 else:
-    skin = ElementTree.fromstring(content_packages.read_text(repo, 'gui/ODSkin.imageset'))
+    skin = ElementTree.fromstring(content_packages.read_layout_text(repo, 'gui/ODSkin.imageset'))
     arrow = skin.find("Image[@name='MouseArrow']")
     assert arrow is not None
     height, width, left, top = (int(arrow.attrib[key]) for key in ('height', 'width', 'xPos', 'yPos'))

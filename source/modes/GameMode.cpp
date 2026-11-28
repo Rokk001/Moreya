@@ -3938,11 +3938,13 @@ void GameMode::onDefeatSequenceFinished()
 }
 
 //! \brief Shows the existing result window for defeat or an acknowledged campaign victory.
+//! The window is registered with the Gui so that the "@key" texts of its layout are translated.
 void GameMode::showDefeatDebriefing()
 {
     mDefeatDebriefing = CEGUI::WindowManager::getSingleton().loadLayoutFromFile("WindowDefeatDebriefing.layout");
     mDefeatDebriefing->setAlwaysOnTop(true);
     mRootWindow->addChild(mDefeatDebriefing);
+    getModeManager().getGui().registerWindowHierarchy(mDefeatDebriefing);
 
     const std::string nick = mGameMap->getLocalPlayer()->getNick();
     mDefeatDebriefing->getChild("Panel/PlayerName")->setText(reinterpret_cast<const CEGUI::utf8*>(nick.c_str()));

@@ -70,7 +70,7 @@ def design_size():
 
 # The single manager replaces the separate room buttons at the original production slot (the joined game layout).
 def layout_button():
-    root = ET.fromstring(content_packages.read_text(repo, "gui/ModeGame.layout"))
+    root = ET.fromstring(content_packages.read_layout_text(repo, "gui/ModeGame.layout"))
     nodes = {n.get("name"): n for n in root.iter("Window")}
     button = nodes["RoomManagerButton"]
     p = props(button)
@@ -136,7 +136,7 @@ def icon():
     if any(content_packages.data_file(repo, name) is None for name in atlas_files):
         content_packages.unchecked("check_ghost_hunters_button", atlas_files)
         return
-    imageset = content_packages.read_text(repo, "gui/ODIcons.imageset")
+    imageset = content_packages.read_layout_text(repo, "gui/ODIcons.imageset")
     entry = re.search(r'<Image height="(\d+)" name="GhostHuntersButton" width="(\d+)" xPos="(\d+)" yPos="(\d+)" />', imageset)
     assert entry and entry.groups() == ("256", "256", "1280", "4352"), entry and entry.groups()
     assert re.search(r'name="MerchantButton" width="256"', imageset), "same size as the merchant button"
@@ -229,7 +229,7 @@ def game_code():
 # content, which holds the own rows of the game layout).
 def merchant_and_tooltips():
     if CONTENT:
-        root = ET.fromstring(content_packages.read_text(repo, "gui/ModeGame.layout"))
+        root = ET.fromstring(content_packages.read_layout_text(repo, "gui/ModeGame.layout"))
         nodes = {n.get("name"): n for n in root.iter("Window")}
         button = nodes["RoomManagerButton"]
         assert props(button)["TooltipText"] == "Room Manager"

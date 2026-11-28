@@ -9,7 +9,7 @@
 <!--#@own 2-->
         <Window type="OD/StaticText" name="LoadingText" >
 <!--#@own 3-->
-            <Property name="Text" value="Loading..." />
+            <Property name="Text" value="@layout.menu_load.loading_text.text" />
             <Property name="MaxSize" value="{{1,0},{1,0}}" />
             <Property name="FrameEnabled" value="False" />
 <!--#@own 4-->
@@ -31,7 +31,7 @@
         </Window>
 <!--#@own 7-->
             <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
-            <Property name="Text" value="Please choose a saved game..." />
+            <Property name="Text" value="@layout.menu_load.level_window_frame.text" />
             <Property name="AlwaysOnTop" value="True" />
 <!--#@own 8-->
             <Property name="MousePassThroughEnabled" value="True" />

@@ -29,7 +29,7 @@ def read_data(path):
         return None
     if not content_packages.has_content(repo) and '<!--#@own ' in found.read_text(encoding='utf-8'):
         return None
-    return content_packages.read_text(repo, path)
+    return content_packages.read_layout_text(repo, path)
 
 
 layout = read_data('gui/WindowCampaignSubMenu.layout')

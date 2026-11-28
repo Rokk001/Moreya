@@ -34,7 +34,7 @@ game_mode = read('source/modes/GameMode.cpp')
 notification_header = read('source/network/ServerNotification.h')
 notification_source = read('source/network/ServerNotification.cpp')
 # The layout is a mixed file: as the game reads it only with its own rows from the content, else None
-layout = content_packages.read_text(repo, 'gui/ModeGame.layout') if content_packages.has_content(repo) else None
+layout = content_packages.read_layout_text(repo, 'gui/ModeGame.layout') if content_packages.has_content(repo) else None
 rules = repo / 'source/game/HeartHealthRing.h'
 
 

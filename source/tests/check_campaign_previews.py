@@ -196,8 +196,8 @@ def compact_goal_fit_errors(root):
     from PIL import ImageFont
     import math
     errors = []
-    layout = ET.fromstring(content_packages.read_text(root, "gui/MenuCampaign.layout"))
-    hud = ET.fromstring(content_packages.read_text(root, "gui/WindowObjectives.layout"))
+    layout = ET.fromstring(content_packages.read_layout_text(root, "gui/MenuCampaign.layout"))
+    hud = ET.fromstring(content_packages.read_layout_text(root, "gui/WindowObjectives.layout"))
     properties = {}
     for tree, name in ((layout, "BriefingGoals"), (hud, "ObjectivesText")):
         window = tree.find(".//Window[@name='%s']" % name)
@@ -241,7 +241,7 @@ def compact_goal_fit_errors(root):
                  (548 * scale, 370 * scale))):
                 font_name = properties[name]["Font"]
                 # The font as the game reads it (a mixed font with its own rows from the content packages)
-                definition = ET.fromstring(content_packages.read_text(root, "gui/fonts/" + font_name + ".font"))
+                definition = ET.fromstring(content_packages.read_layout_text(root, "gui/fonts/" + font_name + ".font"))
                 font = ImageFont.truetype(str(content_packages.resolve(root, "gui/fonts/" + definition.get("filename"))), math.ceil(float(definition.get("size")) * 96 / 72 * font_scale))
                 used_height = 0
                 for icon_width, line in lines:
@@ -296,7 +296,7 @@ def check_repository(root):
             return failures + ["content files missing although the content is present: " + ", ".join(missing)]
         content_packages.unchecked("campaign previews", missing)
         return failures
-    layout = ET.fromstring(content_packages.read_text(root, "gui/MenuCampaign.layout"))
+    layout = ET.fromstring(content_packages.read_layout_text(root, "gui/MenuCampaign.layout"))
     if not any(window.get("name") == "BriefingImage" and window.get("type") == "OD/StaticImage"
                for window in layout.iter("Window")):
         failures.append("layout is missing the OD/StaticImage BriefingImage window")
@@ -340,7 +340,7 @@ def self_test():
         content_packages.unchecked("campaign preview self-test", ["gui/MenuCampaign.layout"])
         print("campaign preview checker self-tests passed")
         return
-    layout_text = content_packages.read_text(root, "gui/MenuCampaign.layout")
+    layout_text = content_packages.read_layout_text(root, "gui/MenuCampaign.layout")
     mode = (root / "source/modes/MenuModeCampaign.cpp").read_text(encoding="utf-8")
     gui = (root / "source/render/Gui.cpp").read_text(encoding="utf-8")
     assert not briefing_layout_errors(ET.fromstring(layout_text), mode, gui)

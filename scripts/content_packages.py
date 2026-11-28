@@ -165,3 +165,55 @@ def unchecked(check, names):
         shown = ', '.join(names[:8]) + (' and %d more' % (len(names) - 8) if len(names) > 8 else '')
         print('%s: content not present, not checked: %s' % (check, shown))
     return names
+
+
+#: Language texts already read, {(repository, language): {key: text}}
+_LANGUAGE_TEXTS = {}
+
+
+# The texts of a language package as {key: text} ("<key>=<text>" lines of its texts/*.txt files, "\n" kept as written).
+def language_texts(repo, language='en'):
+    cache_key = (str(Path(repo).resolve()), language)
+    if cache_key not in _LANGUAGE_TEXTS:
+        texts = {}
+        for root in package_roots(repo):
+            definition = (Path(root) / DEFINITION_FILE).read_text(encoding='utf-8', errors='replace')
+            if ('Language=' + language) not in definition.replace('\r', '').split('\n'):
+                continue
+            for path in sorted((Path(root) / 'texts').glob('*.txt')):
+                for line in path.read_text(encoding='utf-8-sig').replace('\r', '').split('\n'):
+                    if '=' in line and not line.strip().startswith('#'):
+                        key, value = line.split('=', 1)
+                        texts[key.strip()] = value
+        _LANGUAGE_TEXTS[cache_key] = texts
+    return _LANGUAGE_TEXTS[cache_key]
+
+
+# The text of a layout Text or TooltipText value: "@<key>" gives the text of the language package (the value itself when
+# the key or the content is missing), any other value is returned unchanged.
+def layout_text(repo, value, language='en'):
+    if value is not None and value.startswith('@'):
+        return language_texts(repo, language).get(value[1:], value)
+    return value
+
+
+# The text of a layout (a gui/*.layout game data file, see read_text) with every "@<key>" text value replaced by the text
+# of the language package, written as an XML attribute value. Checks that test the English wording of a layout read it
+# through this function (localization plan R11); the layout files themselves hold the keys. Any other file is read as
+# read_text does.
+def read_layout_text(repo, relative, language='en', encoding='utf-8'):
+    import re
+    if not str(relative).endswith('.layout'):
+        return read_text(repo, relative, encoding)
+    texts = language_texts(repo, language)
+
+    def replace(match):
+        key = match.group(2)
+        if key not in texts:
+            return match.group(0)
+        value = texts[key].replace('\\n', '\n').replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+        value = value.replace('"', '&quot;').replace('\n', '&#10;')
+        return match.group(1) + value + '"'
+
+    return re.sub(r'(<Property name="(?:Text|TooltipText)" value=")@([^"]+)"', replace,
+                  read_text(repo, relative, encoding))
