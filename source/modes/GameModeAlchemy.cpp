@@ -13,7 +13,9 @@
 #include "network/ClientNotification.h"
 #include "network/ODClient.h"
 #include "rooms/RoomType.h"
+#include "render/Gui.h"
 #include "utils/Helper.h"
+#include "utils/Translation.h"
 #include <CEGUI/Window.h>
 #include <CEGUI/widgets/ListboxTextItem.h>
 #include <CEGUI/widgets/MultiColumnList.h>
@@ -74,11 +76,11 @@ void GameMode::setLabModeShown(int32_t mode)
     Player* player = mGameMap->getLocalPlayer();
     if(player != nullptr && player->getSeat() != nullptr)
         player->getSeat()->setLabMode(mode);
-    static const char* const labels[] = {"Auto", "Healing/mana", "Combat potions"};
+    static const char* const labels[] = {"mode.game.alchemy.auto", "mode.game.alchemy.healing", "mode.game.alchemy.combat"};
     // Healing, mana and combat potion pictures: automatic brews all three kinds.
     static const bool potions[3][3] = {{true, true, true}, {true, true, false}, {false, false, true}};
     CEGUI::Window* button = mRootWindow->getChild("RoomManagerWindow/Pages/AlchemyPage/ModeButton");
-    button->getChild("Label")->setText(labels[mode]);
+    button->getChild("Label")->setText(Gui::trCegui(labels[mode]));
     for(int32_t index = 0; index < 3; ++index)
         button->getChild("Potion" + Helper::toString(index))->setVisible(potions[mode][index]);
 }

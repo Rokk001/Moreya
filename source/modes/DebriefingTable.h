@@ -20,8 +20,10 @@
 
 #include "game/LevelStatistics.h"
 #include "modes/DefeatSequence.h"
+#include "utils/Translation.h"
 
 #include <cstdint>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -48,22 +50,23 @@ struct DebriefingTableRow
     std::vector<DebriefingTableCell> mCells;
 };
 
-inline const char* debriefingTableLabel(size_t row)
+//! \brief The label of a row of the table in the language chosen in the settings
+inline std::string debriefingTableLabel(size_t row)
 {
     switch(row)
     {
         case 0:
-            return "Enemy keepers defeated";
+            return Translation::tr("mode.game.debrief.keepers");
         case 1:
-            return "Enemy creatures killed";
+            return Translation::tr("mode.game.debrief.creatures");
         case 2:
-            return "Heroes destroyed";
+            return Translation::tr("mode.game.debrief.heroes");
         case 3:
-            return "Rooms captured";
+            return Translation::tr("mode.game.debrief.rooms");
         case 4:
-            return "Items made";
+            return Translation::tr("mode.game.debrief.items");
         default:
-            return "Creatures converted";
+            return Translation::tr("mode.game.debrief.converted");
     }
 }
 
@@ -148,17 +151,19 @@ inline int64_t debriefingSeconds(bool hasStatistics, const LevelStatistics& stat
     return hasStatistics ? static_cast<int64_t>(statistics.mElapsedSeconds) : fallback;
 }
 
+//! \brief The outcome line of the debriefing in the language chosen in the settings
 inline std::string debriefingOutcomeText(bool levelWon)
 {
-    return levelWon ? "Level won: Yes" : "Level won: No";
+    return Translation::tr(levelWon ? "mode.game.debrief.won" : "mode.game.debrief.lost");
 }
 
 //! \brief The numbers of one seat as lines of text, for a debriefing without the table
 //! (the campaign menu): the outcome, the time and one line per row of the table.
 inline std::string debriefingSeatSummary(const LevelStatistics& statistics, int32_t seatId)
 {
-    std::string text = debriefingOutcomeText(statistics.mLevelWon) + "\nTime: "
-        + formatDebriefingTime(statistics.mElapsedSeconds);
+    std::map<std::string, std::string> timeValues;
+    timeValues["time"] = formatDebriefingTime(statistics.mElapsedSeconds);
+    std::string text = debriefingOutcomeText(statistics.mLevelWon) + "\n" + Translation::tr("mode.game.debrief.time", timeValues);
     for(size_t seat = 0; seat < statistics.mSeats.size(); ++seat)
     {
         if(statistics.mSeats[seat].mSeatId != seatId)
@@ -166,8 +171,10 @@ inline std::string debriefingSeatSummary(const LevelStatistics& statistics, int3
 
         for(size_t row = 0; row < DebriefingTableSettings::ROW_COUNT; ++row)
         {
-            text += "\n" + std::string(debriefingTableLabel(row)) + ": "
-                + std::to_string(debriefingTableValue(statistics.mSeats[seat], row));
+            std::map<std::string, std::string> rowValues;
+            rowValues["label"] = debriefingTableLabel(row);
+            rowValues["value"] = std::to_string(debriefingTableValue(statistics.mSeats[seat], row));
+            text += "\n" + Translation::tr("mode.game.debrief.row", rowValues);
         }
         break;
     }

@@ -35,6 +35,7 @@
 
 #include "utils/ConfigManager.h"
 #include <CEGUI/EventArgs.h>
+#include <CEGUI/String.h>
 #include <map>
 #include <chrono>
 #include <cstdint>
@@ -659,6 +660,24 @@ private:
     //! \brief Lists the game controls and their keyboard shortcuts.
     //! \brief Describes the current game controls, including the merchant shortcut.
     void setHelpWindowText();
+
+    //! \brief Sets the tooltips of the buttons of the worker and the fighter creature group.
+    void setCreatureGroupTooltips();
+
+    //! \brief Shows the hero level of the sandbox window on its button.
+    void setSandboxHeroLevelText();
+
+    //! \brief The title of the window that defines the user cameras, with the number of the chosen slot.
+    CEGUI::String getUserCameraTitle() const;
+
+    //! \brief Sets the texts again that this mode set once, after the language changed.
+    void onLanguageChanged();
+
+    //! \brief Id of the registered language listener of Translation (0 as long as none is registered)
+    unsigned int mLanguageListener = 0;
+
+    //! \brief True when the options window shows the end of the game page, false for the options page
+    bool mOptionsEndGame = false;
 
     //! \brief Picks room floors through walls and uses normal surface picking for other actions.
     //! While dragging, any tile (also a wall) may end the drag so the valid floors inside are built.

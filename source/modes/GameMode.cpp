@@ -90,6 +90,7 @@
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 #include "utils/ResourceManager.h"
+#include "utils/Translation.h"
 #include "utils/RunLevelTest.h"
 #include "utils/SelectionSize.h"
 #include "utils/EdgePlaces.h"
@@ -106,7 +107,10 @@
 #include <CEGUI/widgets/Scrollbar.h>
 #include <CEGUI/widgets/Slider.h>
 #include <CEGUI/widgets/MultiColumnList.h>
+#include <algorithm>
+#include <functional>
 #include <iomanip>
+#include <limits>
 #include <sstream>
 
 #include <OgreCamera.h>
@@ -140,15 +144,15 @@ static const char* const TIME_LIMIT_WARNING_COLOUR = "FFE05A4A";
 //! From this many seconds left the time limit is shown in the warning colour
 static const int32_t TIME_LIMIT_WARNING_SECONDS = 60;
 //! Tooltip of the display while it shows a countdown that ends without a defeat
-static const char* const TIME_LIMIT_TOOLTIP_COUNTDOWN = "Time left until the next stage of the level";
+static const char* const TIME_LIMIT_TOOLTIP_COUNTDOWN = "mode.game.timelimit.countdown";
 //! Tooltip of the display while it shows a time limit
-static const char* const TIME_LIMIT_TOOLTIP_LIMIT = "Time left until the level is lost";
-//! Hover text of a blood stain on the floor
-static const char* const BLOOD_HOVER_TEXT = "Blood";
-//! Start of the hover text of a pile on the floor; the name of the creature that left it and a closing bracket follow
-static const char* const PILE_HOVER_PREFIX = "Pile (";
-//! Start of the dirt part of the hover text of a room
-static const char* const ROOM_DIRT_HOVER_PREFIX = ". Dirt: ";
+static const char* const TIME_LIMIT_TOOLTIP_LIMIT = "mode.game.timelimit.limit";
+//! Text key of the hover text of a blood stain on the floor
+static const char* const BLOOD_HOVER_TEXT = "mode.game.hover.blood";
+//! Text key of the hover text of a pile on the floor; the placeholder {creature} is the name of the creature that left it
+static const char* const PILE_HOVER_TEXT = "mode.game.hover.pile";
+//! Text key of the hover text of a room with its dirt stage; the placeholders are {room} and {dirt}
+static const char* const ROOM_DIRT_HOVER_TEXT = "mode.game.hover.room_dirt";
 
 //! \brief Hover text for a pile or blood stain lying on a tile: "Pile (<creature name>)" or "Blood". A pile wins when
 //! both lie on the tile. The creature is named with the readable class name used in the creature windows.
@@ -160,11 +164,15 @@ static std::string getDirtPileHoverText(Tile* tile)
     if(pile == nullptr)
         pile = DirtPileEntity::getEntityOnTile(tile, DirtPileKind::bones);
     if(pile != nullptr)
-        return std::string(PILE_HOVER_PREFIX) + social::SocialGenerator::displayClassName(
-            social::SocialProfileCache::getSingleton().getData(), pile->getCreatureClass()) + ")";
+    {
+        std::map<std::string, std::string> values;
+        values["creature"] = social::SocialGenerator::displayClassName(
+            social::SocialProfileCache::getSingleton().getData(), pile->getCreatureClass());
+        return Translation::tr(PILE_HOVER_TEXT, values);
+    }
 
     if(DirtPileEntity::getEntityOnTile(tile, DirtPileKind::blood) != nullptr)
-        return BLOOD_HOVER_TEXT;
+        return Translation::tr(BLOOD_HOVER_TEXT);
 
     return std::string();
 }
@@ -182,7 +190,10 @@ static std::string getRoomDirtHoverText(Tile* tile)
     if(stage == 0)
         return std::string();
 
-    return RoomManager::getRoomReadableName(room->getType()) + ROOM_DIRT_HOVER_PREFIX + TileDirtSync::stageText(stage);
+    std::map<std::string, std::string> values;
+    values["room"] = RoomManager::getRoomReadableName(room->getType());
+    values["dirt"] = TileDirtSync::stageText(stage);
+    return Translation::tr(ROOM_DIRT_HOVER_TEXT, values);
 }
 
 // Message tabs are laid out in units of the message queue height; the queue is designed
@@ -274,9 +285,9 @@ const std::string DEFEAT_BURST_EFFECT_NAMES[DEFEAT_BURST_EFFECT_COUNT] = {DEFEAT
 const std::string DEFEAT_BURST_EFFECT_SCRIPTS[DEFEAT_BURST_EFFECT_COUNT] = {"HeartExplosion", "HeartExplosionFlash", "HeartExplosionSparks", "HeartExplosionSmoke"};
 const std::string DEFEAT_SWIRL_EFFECT_NAME = "DefeatSwirl";
 const std::string DEFEAT_CAMERA_MARKER_IMAGE = "OpenDungeonsIcons/CameraIcon";
-const std::string DEFEAT_FIRST_SUBTITLE = "Your dungeon heart has been destroyed.";
-const std::string DEFEAT_SECOND_SUBTITLE = "That's it for today. Until next time.";
-const std::string DEFEAT_DEBRIEFING_ELAPSED = "Time elapsed: ";
+const std::string DEFEAT_FIRST_SUBTITLE = "mode.game.defeat.first";
+const std::string DEFEAT_SECOND_SUBTITLE = "mode.game.defeat.second";
+const std::string DEFEAT_DEBRIEFING_ELAPSED = "mode.game.defeat.elapsed";
 
 //! \brief Number of possession skill keys in one row: 1 to 9 and 0 give the skill slots 0 to 9, the same keys with
 //! Shift held the slots 10 to 19 (the skills other than the basic attack, in the skill order of the creature)
@@ -299,7 +310,7 @@ const char* const POSSESSION_BAR_RECOVERY = "Recovery";
 const char* const POSSESSION_BAR_KEY = "Key";
 const char* const POSSESSION_BAR_EXIT_PLATE = "ExitPlate";
 //! \brief Text of the exit plate: Esc is the only way out of the creature
-const char* const POSSESSION_BAR_EXIT_TEXT = "Leave   Esc";
+const char* const POSSESSION_BAR_EXIT_TEXT = "mode.game.possession.exit";
 //! \brief The bar is made of the stone of the keeper's screen, darkened to the black iron of the game bar
 const char* const POSSESSION_BAR_SURFACE = "ODHudSurface/Stone";
 const char* const POSSESSION_BAR_SURFACE_COLOUR = "FF5A5652";
@@ -914,14 +925,9 @@ GameMode::GameMode(ModeManager *modeManager):
     SkillManager::connectSkills(this, mRootWindow);
 
     syncTabButtonTooltips(Gui::MAIN_TABCONTROL);
-    for(const std::pair<std::string, const char*>& entry : {std::make_pair(Gui::BUTTON_CREATURE_WORKER, "Zivs"),
-                            std::make_pair(Gui::BUTTON_CREATURE_FIGHTER, "Fighters")})
-    {
-        CEGUI::Window* button = mRootWindow->getChild(entry.first);
-        if(!button->isUserStringDefined(Gui::USER_STRING_CONTEXT_HELP))
-            button->setUserString(Gui::USER_STRING_CONTEXT_HELP, button->getTooltipText());
-        button->setTooltipText(entry.second);
-    }
+    setCreatureGroupTooltips();
+    std::function<void()> languageListener = std::bind(&GameMode::onLanguageChanged, this);
+    mLanguageListener = Translation::addListener(languageListener);
     mCreaturePanel.reset(new CreaturePanel(*mGameMap, modeManager->getGui(),
         mRootWindow->getChild(Gui::TAB_CREATURES)));
 
@@ -942,6 +948,7 @@ GameMode::GameMode(ModeManager *modeManager):
 //! \brief Ends the possession view, then releases the windows, pictures and states that belong to this game.
 GameMode::~GameMode()
 {
+    Translation::removeListener(mLanguageListener);
     // The interface, the mouse and the crosshair are given back if the game ends while possessing
     leavePossessionView();
     // The feed and the profiles belong to this game only
@@ -1068,7 +1075,7 @@ void GameMode::activate()
         if(!heroes.empty())
             heroList->setItemSelectState(static_cast<size_t>(0), true);
 
-        guiSheet->getChild("SandboxWindow/HeroLevelButton")->setText("Hero level: " + Helper::toString(mSandboxHeroLevel));
+        setSandboxHeroLevelText();
     }
 
     // Update available options
@@ -1626,7 +1633,7 @@ bool GameMode::mousePressed(const OIS::MouseEvent& arg, OIS::MouseButtonID id)
         {
             const InputCommandState previousState = inputManager.mCommandState;
             inputManager.mCommandState = InputCommandState::validated;
-            displayText(Ogre::ColourValue::Red, "Point at a tile inside the map.");
+            displayText(Ogre::ColourValue::Red, Translation::tr("mode.input.outside_map"));
             inputManager.mCommandState = previousState;
         }
         return true;
@@ -1653,7 +1660,7 @@ bool GameMode::mousePressed(const OIS::MouseEvent& arg, OIS::MouseButtonID id)
 
             if (curTile == nullptr)
             {
-                displayText(Ogre::ColourValue::Red, "Point at a tile inside the map.");
+                displayText(Ogre::ColourValue::Red, Translation::tr("mode.input.outside_map"));
                 return true;
             }
 
@@ -2161,7 +2168,9 @@ void GameMode::refreshMainUI()
     tempSS << mySeat->getGold();
     widget->setText(tempSS.str());
     tempSS << "/" << mySeat->getGoldMax();
-    widget->setUserString(Gui::USER_STRING_CONTEXT_HELP, "Your Gold: " + tempSS.str());
+    std::map<std::string, std::string> goldValues;
+    goldValues["gold"] = tempSS.str();
+    widget->setUserString(Gui::USER_STRING_CONTEXT_HELP, Gui::toCeguiText(Translation::tr("mode.game.gold.help", goldValues)));
     widget->getChild("Icon")->setUserString(Gui::USER_STRING_CONTEXT_HELP, widget->getUserString(Gui::USER_STRING_CONTEXT_HELP));
 
     widget = guiSheet->getChild(Gui::DISPLAY_MANA);
@@ -2421,7 +2430,7 @@ bool GameMode::zoomMiniMap(const CEGUI::EventArgs& arg)
 void GameMode::updateTimeLimitTooltip(bool isCountdown)
 {
     CEGUI::Window* timeLimitDisplay = mRootWindow->getChild("HorizontalPipe/TimeLimitDisplay");
-    timeLimitDisplay->setTooltipText(isCountdown ? TIME_LIMIT_TOOLTIP_COUNTDOWN : TIME_LIMIT_TOOLTIP_LIMIT);
+    timeLimitDisplay->setTooltipText(Gui::trCegui(isCountdown ? TIME_LIMIT_TOOLTIP_COUNTDOWN : TIME_LIMIT_TOOLTIP_LIMIT));
 }
 
 bool GameMode::clickHeartBadge(const CEGUI::EventArgs& arg)
@@ -2511,7 +2520,7 @@ bool GameMode::showUserCameras(const CEGUI::EventArgs&)
     CEGUI::Window* window = mRootWindow->getChild("UserCamerasWindow");
     window->show();
     window->moveToFront();
-    window->setText("Define user camera " + Helper::toString(mUserCameraSlot + 1));
+    window->setText(getUserCameraTitle());
     ODFrameListener::getSingleton().getCameraManager()->move(CameraManager::fullStop);
     return true;
 }
@@ -2528,7 +2537,7 @@ bool GameMode::selectUserCamera(const CEGUI::EventArgs& args)
     mUserCameraSlot = static_cast<const CEGUI::WindowEventArgs&>(args).window->getID();
     CameraManager* camera = ODFrameListener::getSingleton().getCameraManager();
     camera->loadUserView(mUserCameraSlot);
-    mRootWindow->getChild("UserCamerasWindow")->setText("Define user camera " + Helper::toString(mUserCameraSlot + 1));
+    mRootWindow->getChild("UserCamerasWindow")->setText(getUserCameraTitle());
     return true;
 }
 
@@ -2568,8 +2577,10 @@ void GameMode::refreshSpecialButtons()
         if(count > 1)
             tooltip += " (x" + Helper::toString(count) + ")";
 
-        tooltip += ". " + GiftBoxBonus::getDescription(type) + " Click to use.";
-        button->setTooltipText(tooltip);
+        std::map<std::string, std::string> specialValues;
+        specialValues["name"] = tooltip;
+        specialValues["description"] = GiftBoxBonus::getDescription(type);
+        button->setTooltipText(Gui::toCeguiText(Translation::tr("mode.game.special.tooltip", specialValues)));
     }
 }
 
@@ -2578,7 +2589,7 @@ bool GameMode::storeUserCamera(const CEGUI::EventArgs&)
     if(ODFrameListener::getSingleton().getCameraManager()->storeUserView(mUserCameraSlot))
         closeUserCameras();
     else
-        mRootWindow->getChild("UserCamerasWindow")->setText("Could not save camera settings");
+        mRootWindow->getChild("UserCamerasWindow")->setText(Gui::trCegui("mode.game.camera.save_failed"));
     return true;
 }
 
@@ -2671,12 +2682,12 @@ void GameMode::onFrameStarted(const Ogre::FrameEvent& evt)
     // Every frame, so that the text also survives the GUI being rebuilt
     if(heartBadge.mMaxHP > 0.0)
     {
-        std::ostringstream heartText;
-        heartText << "Dungeon heart at " << HeartHealthRing::healthPercent(heartBadge.mHP, heartBadge.mMaxHP)
-            << " %. Right-click moves the view to the heart.";
+        std::map<std::string, std::string> heartValues;
+        heartValues["percent"] = Helper::toString(HeartHealthRing::healthPercent(heartBadge.mHP, heartBadge.mMaxHP));
+        const CEGUI::String heartText = Gui::toCeguiText(Translation::tr("mode.game.heart.help", heartValues));
         CEGUI::Window* heartIcon = mRootWindow->getChild(Gui::DISPLAY_MANA)->getChild("Icon");
-        if(!heartIcon->isUserStringDefined("ContextHelp") || heartIcon->getUserString("ContextHelp") != heartText.str())
-            heartIcon->setUserString("ContextHelp", heartText.str());
+        if(!heartIcon->isUserStringDefined("ContextHelp") || heartIcon->getUserString("ContextHelp") != heartText)
+            heartIcon->setUserString("ContextHelp", heartText);
     }
 
     // The countdown of a level with a time limit (the server sends -1 when there is none)
@@ -2717,7 +2728,9 @@ void GameMode::onFrameStarted(const Ogre::FrameEvent& evt)
     else if(waveCountdownReceived != mWaveCountdownShown)
     {
         mWaveCountdownShown = waveCountdownReceived;
-        waveCountdownDisplay->setText("Next wave in " + formatDebriefingTime(waveCountdownReceived));
+        std::map<std::string, std::string> waveValues;
+        waveValues["time"] = formatDebriefingTime(waveCountdownReceived);
+        waveCountdownDisplay->setText(Gui::toCeguiText(Translation::tr("mode.game.wave.next", waveValues)));
         waveCountdownDisplay->show();
     }
 
@@ -2762,9 +2775,9 @@ void GameMode::popupExit(bool pause)
     if(pause)
     {
         if(mRestartLevel)
-            popup->setText("Do you really want to restart this level?");
+            popup->setText(Gui::trCegui("mode.game.popup.restart"));
         else
-            popup->setText("Do you really want to leave the underworld?");
+            popup->setText(Gui::trCegui("mode.game.popup.leave"));
         popup->show();
         popup->moveToFront();
     }
@@ -3167,9 +3180,11 @@ void GameMode::setTavernWindowShown(int tileX, int tileY, uint32_t payer, bool b
     page->getChild("BeerSlot")->setProperty("FrameColours", beerResearched ? "FFFFE08A" : "FF6E5530");
     page->getChild("WaterSlot")->setProperty("FrameColours", beerResearched ? "FF6E5530" : "FFFFE08A");
     page->getChild("WaterSlot/Water")->setAlpha(beerResearched ? 0.55f : 1.0f);
+    std::map<std::string, std::string> beerValues;
+    beerValues["price"] = Helper::toString(static_cast<int32_t>(beerPrice + 0.5));
     page->getChild("BeerSlot")->setTooltipText(beerResearched ?
-        "Beer: " + Helper::toString(static_cast<int32_t>(beerPrice + 0.5)) + " gold" : std::string("Beer: locked"));
-    page->getChild("WaterSlot")->setTooltipText("Water");
+        Gui::toCeguiText(Translation::tr("mode.game.tavern.beer", beerValues)) : Gui::trCegui("mode.game.tavern.beer_locked"));
+    page->getChild("WaterSlot")->setTooltipText(Gui::trCegui("mode.game.tavern.water"));
     setTavernPayerShown(tileX, tileY, payer);
 }
 
@@ -3259,7 +3274,7 @@ bool GameMode::onSandboxHeroLevelClicked(const CEGUI::EventArgs& e)
     else if((mouseArgs.button == CEGUI::RightButton) && (mSandboxHeroLevel > static_cast<uint32_t>(ConfigManager::getSingleton().getSandboxHeroLevelMin())))
         --mSandboxHeroLevel;
 
-    mRootWindow->getChild("SandboxWindow/HeroLevelButton")->setText("Hero level: " + Helper::toString(mSandboxHeroLevel));
+    setSandboxHeroLevelText();
     return true;
 }
 
@@ -3319,8 +3334,8 @@ void GameMode::updateRaidPanel()
     CEGUI::Window* button = panel->getChild("OpenGateButton");
     if(waits)
     {
-        countdown->setText("Raid waits at the gate");
-        const std::string waitTip = "The raid group comes only when you open the Moreya gate";
+        countdown->setText(Gui::trCegui("mode.game.raid.waits"));
+        const CEGUI::String waitTip = Gui::trCegui("mode.game.raid.wait_tip");
         countdown->setTooltipText(waitTip);
         icon->setTooltipText(waitTip);
         button->show();
@@ -3328,7 +3343,7 @@ void GameMode::updateRaidPanel()
     else if(gateClosed)
     {
         countdown->setText(formatDebriefingTime(seconds));
-        const std::string arrivalTip = "Time left until the raid comes through the Moreya gate";
+        const CEGUI::String arrivalTip = Gui::trCegui("mode.game.raid.arrival_tip");
         countdown->setTooltipText(arrivalTip);
         icon->setTooltipText(arrivalTip);
         button->show();
@@ -3336,7 +3351,7 @@ void GameMode::updateRaidPanel()
     else
     {
         countdown->setText(formatDebriefingTime(seconds));
-        const std::string nextGroupTip = "Time left until the next raid group comes through the Moreya gate";
+        const CEGUI::String nextGroupTip = Gui::trCegui("mode.game.raid.next_tip");
         countdown->setTooltipText(nextGroupTip);
         icon->setTooltipText(nextGroupTip);
         button->hide();
@@ -3361,7 +3376,9 @@ void GameMode::updateSandboxStatus()
     if(status.mIsReceived)
     {
         // Score and target, on the HUD and in the sandbox window
-        std::string scoreText = "Score " + Helper::toString(status.mScore);
+        std::map<std::string, std::string> scoreValues;
+        scoreValues["score"] = Helper::toString(status.mScore);
+        std::string scoreText = Translation::tr("mode.game.sandbox.score", scoreValues);
         if(status.mTarget > 0)
             scoreText += " / " + Helper::toString(status.mTarget);
 
@@ -3369,9 +3386,9 @@ void GameMode::updateSandboxStatus()
         {
             mSandboxScoreShown = scoreText;
             CEGUI::Window* scoreDisplay = mRootWindow->getChild("HorizontalPipe/SandboxScoreDisplay");
-            scoreDisplay->setText(scoreText);
+            scoreDisplay->setText(Gui::toCeguiText(scoreText));
             scoreDisplay->show();
-            mRootWindow->getChild("SandboxWindow/ScoreText")->setText(scoreText);
+            mRootWindow->getChild("SandboxWindow/ScoreText")->setText(Gui::toCeguiText(scoreText));
             std::string bonusText;
             for(const ODClient::SandboxBonusStatus& bonus : status.mBonuses)
             {
@@ -3379,11 +3396,15 @@ void GameMode::updateSandboxStatus()
                     bonusText += "\n";
 
                 if(bonus.mAwarded)
-                    bonusText += "[done] " + bonus.mText;
+                {
+                    std::map<std::string, std::string> bonusValues;
+                    bonusValues["text"] = bonus.mText;
+                    bonusText += Translation::tr("mode.game.sandbox.bonus_done", bonusValues);
+                }
                 else
                     bonusText += "+" + Helper::toString(bonus.mPoints) + ": " + bonus.mText;
             }
-            mRootWindow->getChild("SandboxWindow/BonusText")->setText(bonusText);
+            mRootWindow->getChild("SandboxWindow/BonusText")->setText(Gui::toCeguiText(bonusText));
         }
 
         // The next room and the time until it becomes available
@@ -3392,16 +3413,23 @@ void GameMode::updateSandboxStatus()
         {
             roomText = status.mNextRoom;
             if(status.mSecondsLeft > 0)
-                roomText += " in " + formatDebriefingTime(status.mSecondsLeft);
+            {
+                std::map<std::string, std::string> roomTimeValues;
+                roomTimeValues["time"] = formatDebriefingTime(status.mSecondsLeft);
+                roomText += Translation::tr("mode.game.sandbox.room_in", roomTimeValues);
+            }
         }
 
         if(roomText != mSandboxRoomShown)
         {
             mSandboxRoomShown = roomText;
             CEGUI::Window* roomDisplay = mRootWindow->getChild("HorizontalPipe/SandboxRoomDisplay");
-            roomDisplay->setText(roomText);
+            roomDisplay->setText(Gui::toCeguiText(roomText));
             roomDisplay->setVisible(!roomText.empty());
-            mRootWindow->getChild("SandboxWindow/RoomTimerText")->setText(roomText.empty() ? "" : "Next room: " + roomText);
+            std::map<std::string, std::string> nextRoomValues;
+            nextRoomValues["room"] = roomText;
+            mRootWindow->getChild("SandboxWindow/RoomTimerText")->setText(roomText.empty() ? CEGUI::String() :
+                Gui::toCeguiText(Translation::tr("mode.game.sandbox.next_room", nextRoomValues)));
         }
     }
 
@@ -3415,7 +3443,8 @@ void GameMode::updateSandboxStatus()
         realmWindow->getChild("RealmText")->setText(client.getSandboxRealmText());
         // The last realm has no next one to go to
         realmWindow->getChild("NextRealmButton")->setVisible(!mSandboxNextLevel.empty());
-        realmWindow->getChild("StayButton")->setText(mSandboxNextLevel.empty() ? "Continue" : "Stay here");
+        realmWindow->getChild("StayButton")->setText(Gui::trCegui(mSandboxNextLevel.empty() ?
+            "mode.game.sandbox.continue" : "mode.game.sandbox.stay"));
         realmWindow->show();
         realmWindow->moveToFront();
         client.clearSandboxRealmComplete();
@@ -3585,8 +3614,12 @@ void GameMode::refreshTrapProductionQueue(const TrapProductionData& data)
         const float progress = workshop.required > 0 ? static_cast<float>(workshop.points) / workshop.required : 0.0f;
         // Workshop and trap pictures with the bar only, as in the chosen mockup; the values stay in the tooltip.
         RoomManagerListItem* item = new RoomManagerListItem("", 0, pictures, progress);
-        item->setTooltipText(workshop.name + (workshop.type == TrapType::nullTrapType ? std::string(": Idle") :
-            ": " + Helper::toString(workshop.points) + " / " + Helper::toString(workshop.required)));
+        std::map<std::string, std::string> workshopValues;
+        workshopValues["name"] = workshop.name;
+        workshopValues["points"] = Helper::toString(workshop.points);
+        workshopValues["required"] = Helper::toString(workshop.required);
+        item->setTooltipText(Gui::toCeguiText(Translation::tr(workshop.type == TrapType::nullTrapType ?
+            "mode.game.workshop.idle" : "mode.game.workshop.progress", workshopValues)));
         workshops->addItem(item);
     }
     mProductionRequestPending = false;
@@ -3834,9 +3867,9 @@ void GameMode::updateDefeatSequence(std::chrono::steady_clock::time_point now)
     mDefeatTint->setAlpha(DefeatSequence::redTintAlphaAt(time));
     mDefeatFade->setAlpha(DefeatSequence::blackAlphaAt(time));
     if(DefeatSequence::isSecondSubtitleVisibleAt(time))
-        mDefeatSubtitle->setText(DEFEAT_SECOND_SUBTITLE);
+        mDefeatSubtitle->setText(Gui::trCegui(DEFEAT_SECOND_SUBTITLE));
     else if(DefeatSequence::isFirstSubtitleVisibleAt(time))
-        mDefeatSubtitle->setText(DEFEAT_FIRST_SUBTITLE);
+        mDefeatSubtitle->setText(Gui::trCegui(DEFEAT_FIRST_SUBTITLE));
     else
         mDefeatSubtitle->setText("");
 
@@ -3915,10 +3948,12 @@ void GameMode::showDefeatDebriefing()
     // The statistics snapshot taken by the server at the defeat wins over the client's own values
     const bool hasStatistics = ODClient::getSingleton().hasLevelStatistics();
     const LevelStatistics& statistics = ODClient::getSingleton().getLevelStatistics();
-    mDefeatDebriefing->getChild("Panel/Outcome")->setText(debriefingOutcomeText(debriefingLevelWon(hasStatistics, statistics, false)));
+    mDefeatDebriefing->getChild("Panel/Outcome")->setText(Gui::toCeguiText(debriefingOutcomeText(debriefingLevelWon(hasStatistics, statistics, false))));
     const int64_t clientSeconds = debriefingElapsedSeconds(mGameMap->getTurnNumber(), ODApplication::turnsPerSecond);
     const int64_t seconds = debriefingSeconds(hasStatistics, statistics, clientSeconds);
-    mDefeatDebriefing->getChild("Panel/Elapsed")->setText(DEFEAT_DEBRIEFING_ELAPSED + formatDebriefingTime(seconds));
+    std::map<std::string, std::string> elapsedValues;
+    elapsedValues["time"] = formatDebriefingTime(seconds);
+    mDefeatDebriefing->getChild("Panel/Elapsed")->setText(Gui::toCeguiText(Translation::tr(DEFEAT_DEBRIEFING_ELAPSED, elapsedValues)));
     if(hasStatistics)
         fillDefeatStatistics(buildDebriefingTable(statistics));
 
@@ -4076,7 +4111,8 @@ void GameMode::setOptionsPage(bool endGame)
         options->getChild(name)->setVisible(!endGame);
     for(const char* name : {"QuitGameButton", "ExitGameButton", "RestartLevelButton", "BackButton"})
         options->getChild(name)->setVisible(endGame);
-    options->setText(endGame ? "End Game" : "Options");
+    mOptionsEndGame = endGame;
+    options->setText(Gui::trCegui(endGame ? "mode.game.options.end_game" : "mode.game.options.title"));
 
     std::vector<const char*> entries = endGame ?
         std::vector<const char*>{"QuitGameButton", "ExitGameButton", "RestartLevelButton", "BackButton", "ContinueButton"} :
@@ -4191,8 +4227,8 @@ void GameMode::receiveEventShortNotice(EventMessage* event)
     CEGUI::Window* tab = CEGUI::WindowManager::getSingleton().createWindow("OD/GameTabButton");
     tab->setProperty("NavigationFrame", "True");
     tab->setProperty("NormalImage", MESSAGE_TAB_IMAGE);
-    tab->setTooltipText("Message");
-    tab->setUserString(Gui::USER_STRING_CONTEXT_HELP, "Message: left-click to read, right-click to dismiss");
+    tab->setTooltipText(Gui::trCegui("mode.game.message.tab"));
+    tab->setUserString(Gui::USER_STRING_CONTEXT_HELP, Gui::trCegui("mode.game.message.tab_help"));
     tab->setRiseOnClickEnabled(false);
     tab->setUserData(event);
     tab->subscribeEvent(CEGUI::PushButton::EventClicked,
@@ -4499,6 +4535,66 @@ bool GameMode::toggleHelpWindow(const CEGUI::EventArgs& e)
     return true;
 }
 
+//! \brief Sets the tooltips of the buttons of the worker and the fighter creature group; the tooltip of the layout stays
+//! as the context help.
+void GameMode::setCreatureGroupTooltips()
+{
+    const std::string workerKey = "mode.game.group.workers";
+    const std::string fighterKey = "mode.game.group.fighters";
+    const std::pair<std::string, std::string> groups[2] = {std::make_pair(Gui::BUTTON_CREATURE_WORKER, workerKey),
+        std::make_pair(Gui::BUTTON_CREATURE_FIGHTER, fighterKey)};
+    for(uint32_t index = 0; index < 2; ++index)
+    {
+        CEGUI::Window* button = mRootWindow->getChild(groups[index].first);
+        if(!button->isUserStringDefined(Gui::USER_STRING_CONTEXT_HELP))
+            button->setUserString(Gui::USER_STRING_CONTEXT_HELP, button->getTooltipText());
+        button->setTooltipText(Gui::trCegui(groups[index].second));
+    }
+}
+
+//! \brief Shows the hero level of the sandbox window on its button.
+void GameMode::setSandboxHeroLevelText()
+{
+    std::map<std::string, std::string> values;
+    values["level"] = Helper::toString(mSandboxHeroLevel);
+    mRootWindow->getChild("SandboxWindow/HeroLevelButton")->setText(
+        Gui::toCeguiText(Translation::tr("mode.game.sandbox.hero_level", values)));
+}
+
+//! \brief The title of the window that defines the user cameras, with the number of the chosen slot.
+CEGUI::String GameMode::getUserCameraTitle() const
+{
+    std::map<std::string, std::string> values;
+    values["slot"] = Helper::toString(mUserCameraSlot + 1);
+    return Gui::toCeguiText(Translation::tr("mode.game.camera.define", values));
+}
+
+//! \brief Sets the texts again that this mode set once, after the language changed, and makes the texts that are only
+//! updated when their value changes (countdowns, sandbox status, specials) be written again.
+void GameMode::onLanguageChanged()
+{
+    if(mRootWindow == nullptr)
+        return;
+
+    setHelpWindowText();
+    setCreatureGroupTooltips();
+    mRootWindow->getChild("GameOptionsWindow")->setText(
+        Gui::trCegui(mOptionsEndGame ? "mode.game.options.end_game" : "mode.game.options.title"));
+    if(mGameMap->isSandbox())
+        setSandboxHeroLevelText();
+    if(mPossessionBar != nullptr && mPossessionBar->isChild(POSSESSION_BAR_EXIT_PLATE))
+        mPossessionBar->getChild(POSSESSION_BAR_EXIT_PLATE)->setText(Gui::trCegui(POSSESSION_BAR_EXIT_TEXT));
+    // The values shown are compared with the received ones, so that they are written again in the next frame
+    mTimeLimitShown = -1;
+    mWaveCountdownShown = -1;
+    mRaidCountdownShown = -1;
+    mSandboxScoreShown.clear();
+    mSandboxRoomShown.clear();
+    std::fill(mSpecialCountsShown.begin(), mSpecialCountsShown.end(), std::numeric_limits<uint32_t>::max());
+    if(mGameMap->getLocalPlayer() != nullptr && mGameMap->getLocalPlayer()->getSeat() != nullptr)
+        refreshGuiSkill(true);
+}
+
 //! \brief Lists the game controls and their keyboard shortcuts.
 //! \brief Lists the current camera, keeper and room-window controls in the help page.
 //! \brief Lists the game controls, including merchant, laboratory and full-map shortcuts.
@@ -4508,52 +4604,17 @@ void GameMode::setHelpWindowText()
     const std::string formatTitleOn = "[font='MedievalSharp-12'][colour='FFF2C860']";
     const std::string formatTitleOff = "[font='MedievalSharp-10'][colour='FFE8DCC0']";
     std::stringstream txt("");
-    txt << "Always skipping classes to play with kobolds in the torture room, were you?" << std::endl
-        << "Well, at least you don't seem as dumb as a pit demon, so let's cover the basics again." << std::endl << std::endl;
-    txt << formatTitleOn << "Camera controls" << formatTitleOff << std::endl
-        << "The camera is your eyes - be watchful! Take the time to learn how to use it efficiently:" << std::endl
-        << "  - Pan: Arrow keys or WASD; hold Shift to scroll faster." << std::endl
-        << "  - Rotate: Delete / Page Down, Ctrl+Left / Right, or hold X and move the mouse." << std::endl
-        << "  - Zoom: Home / End, Ctrl+Up / Down, wheel, or hold Z and move the mouse vertically." << std::endl
-        << "  - Views: F1 isometric, F2 top down, F3 oblique; F4/F6 user cameras 1/3." << std::endl
-        << "  - F5 saves the game; all three user cameras remain available in Options." << std::endl
-        << "  - Define user cameras in Options; H focuses the dungeon heart; P cycles portals; F focuses fights." << std::endl
-        << "  - M opens the map: left-click to move there, right-click or M to close; V cycles views." << std::endl
-        << "  - B opens the Dungeonbook: creature profiles and the posts of your minions." << std::endl
-        << "  - I opens the infirmary window: payer, discharge health, healing switch, patients." << std::endl
-        << "  - J or the Zivs icon above the minimap opens the Zivs window: fixed Zivs per job, free Zivs, priority and carry order." << std::endl
-        << "  - K opens the merchant: stock, purchases and trading settings." << std::endl
-        << "  - L opens the alchemy lab overview." << std::endl
-        << "  - Minimap +/-: left-click to zoom in, right-click to zoom out." << std::endl << std::endl;
-    txt << formatTitleOn << "Keeper hand controls" << formatTitleOff << std::endl
-        << "Use your hand wisely to keep all minions under control and let your dungeon thrive!" << std::endl
-        << "  - Mouse left click: Select an action, Confirm an action." << std::endl
-        << "  - Mouse right click: Unselect an action, Slap a creature (grin)." << std::endl
-        << "  - Mouse middle click (on a creature): Show the creature profile." << std::endl
-        << "You can select multiple tiles for some actions by left clicking and dragging the mouse." << std::endl << std::endl;
-    txt << formatTitleOn << "Basic workflow" << formatTitleOff << std::endl
-        << "As an overlord of the underworld, your evil plan is to build a strong dungeon and to crush your neighbours."
-        << "To do so, you need to deploy your shadow arts to their full extent:" << std::endl
-        << "  - Summon Zivs to do the dirty job: dirt digging and gold mining. Zivs will also claim ground "
-        << "and wall tiles for your glory when they have nothing better to do. You can order Zivs around by marking "
-        << "dirt and gold tiles for digging and mining." << std::endl
-        << "  - Build rooms on claimed tiles. Building rooms costs gold, so make sure to have at least one treasury tile "
-        << "in place (thanks to your evil tricks, the first tile is free!) so that your Zivs can store the gold they mine." << std::endl
-        << "Be sure to build a dormitory and a hatchery to fulfill your creatures' lowest needs, and a library to skill "
-        << "new buildings, spells and traps. Varied buildings, wealth and great dungeons will attract more powerful creatures." << std::endl
-        << "  - Use the Skill Manager in Options to set the priority for the various skills that can be uncovered at the library."
-        << "Make sure to have intelligent creatures always at work at your library - if you can find any among your dumb minions!" << std::endl
-        << "  - Once you have a workshop, set traps to protect your dungeon - your creatures will then craft them at the workshop." << std::endl
-        << "  - Use spells to macro-manage your creatures more efficiently." << std::endl << std::endl;
-    txt << formatTitleOn << "Tips and tricks" << formatTitleOff << std::endl
-        << "You can left-click on one of your creatures to pick it up and right click somewhere else to put it back. "
-        << "Very useful to help a creature in battle or force a Ziv to do a specific task..." << std::endl
-        << "Note that you can place Zivs on any of your claimed tiles and unclaimed dirt tiles, "
-        << "but you can only place fighters on allied claimed tiles and nothing at all on enemy claimed tiles." << std::endl
-        << "Your Zivs will fortify walls, turning them into your color. Those cannot be broken by enemies until no more "
-        << "claimed tiles around are of your color." << std::endl;
-    txt << std::endl << std::endl << "Be evil, be cunning, your opponents will do the same... and have fun! ;)" << std::endl;
-    textWindow->setText(reinterpret_cast<const CEGUI::utf8*>(txt.str().c_str()));
+    txt << Translation::tr("mode.game.help.intro");
+    txt << formatTitleOn << Translation::tr("mode.game.help.camera.title") << formatTitleOff << std::endl
+        << Translation::tr("mode.game.help.camera.body");
+    txt << formatTitleOn << Translation::tr("mode.game.help.hand.title") << formatTitleOff << std::endl
+        << Translation::tr("mode.game.help.hand.body");
+    txt << formatTitleOn << Translation::tr("mode.game.help.workflow.title") << formatTitleOff << std::endl
+        << Translation::tr("mode.game.help.workflow.body");
+    txt << formatTitleOn << Translation::tr("mode.game.help.tips.title") << formatTitleOff << std::endl
+        << Translation::tr("mode.game.help.tips.body");
+    txt << std::endl << std::endl << Translation::tr("mode.game.help.closing") << std::endl;
+    textWindow->setText(Gui::toCeguiText(txt.str()));
 }
 
 //! \brief Updates research icons, progress and the plain-language hover state without changing research rules.
@@ -4757,31 +4818,43 @@ void GameMode::refreshSkillButtonState(const std::string& skillButtonName, const
         skillButton->addChild(levelBadge);
     }
     levelBadge->setText(Helper::toString(level) + "/3");
-    std::string description = Skills::skillTypeToPlayerVisibleString(resType) + " - level " +
-        Helper::toString(level) + "/3";
+    std::map<std::string, std::string> researchValues;
+    researchValues["name"] = Skills::skillTypeToPlayerVisibleString(resType);
+    researchValues["level"] = Helper::toString(level);
+    std::string description = Translation::tr("mode.game.research.title", researchValues);
     if(level > 0)
-        description += "\nLearned " + Helper::toString(level) + "/3";
+        description += "\n" + Translation::tr("mode.game.research.learned", researchValues);
     if(!isAllowed)
-        description += "\nNot available in this level.";
+        description += "\n" + Translation::tr("mode.game.research.not_allowed");
     else if(isLockedByLibrary)
-        description += "\nCannot be cast: the library was lost.";
+        description += "\n" + Translation::tr("mode.game.research.library_lost");
     else if(level >= 3)
-        description += "\nMaximum level. " + SkillManager::getResearchDescription(resType, level);
+    {
+        researchValues["description"] = SkillManager::getResearchDescription(resType, level);
+        description += "\n" + Translation::tr("mode.game.research.maximum", researchValues);
+    }
     else
     {
-        description += "\nNext: level " + Helper::toString(level + 1) + " - " +
-            Helper::toString(localPlayerSeat->getSkillCost(resType, level + 1)) + " research points.\n" +
-            SkillManager::getResearchDescription(resType, level + 1);
+        researchValues["nextlevel"] = Helper::toString(level + 1);
+        researchValues["cost"] = Helper::toString(localPlayerSeat->getSkillCost(resType, level + 1));
+        researchValues["description"] = SkillManager::getResearchDescription(resType, level + 1);
+        description += "\n" + Translation::tr("mode.game.research.next", researchValues);
         if(queueNumber > 0)
-            description += "\nQueue position: " + Helper::toString(queueNumber) + ".";
+        {
+            researchValues["position"] = Helper::toString(queueNumber);
+            description += "\n" + Translation::tr("mode.game.research.queue", researchValues);
+        }
         if(resType == curResType)
-            description += " Progress: " + Helper::toString(static_cast<int>(curSkillProgress * 100)) + "%.";
+        {
+            researchValues["percent"] = Helper::toString(static_cast<int>(curSkillProgress * 100));
+            description += " " + Translation::tr("mode.game.research.progress", researchValues);
+        }
     }
     const std::vector<const Skill*>& dependencies = SkillManager::getSkill(resType)->getDependencies();
     bool prerequisitesReady = true;
     if(!dependencies.empty())
     {
-        description += "\nRequires all (level 1):";
+        description += "\n" + Translation::tr("mode.game.research.requires");
         for(size_t i = 0; i < dependencies.size(); ++i)
         {
             // A parent the level does not allow counts as fulfilled
@@ -4792,26 +4865,30 @@ void GameMode::refreshSkillButtonState(const std::string& skillButtonName, const
             if(parentTab != SkillManager::getSkillTab(resType))
             {
                 // A parent in another tab has no path in this tab: it is named with its tab
-                description += "\n  Needs: " + Skills::skillTypeToPlayerVisibleString(dependencies[i]->getType()) +
-                    " (" + SkillManager::getTabTitle(parentTab) + ")" + (ready ? "" : " - MISSING");
+                std::map<std::string, std::string> needValues;
+                needValues["name"] = Skills::skillTypeToPlayerVisibleString(dependencies[i]->getType());
+                needValues["tab"] = SkillManager::getTabTitle(parentTab);
+                description += "\n" + Translation::tr(ready ? "mode.game.research.needs" : "mode.game.research.needs_missing", needValues);
             }
             else
             {
-                description += std::string(ready ? "\n  READY: " : "\n  MISSING: ") +
-                    Skills::skillTypeToPlayerVisibleString(dependencies[i]->getType());
+                std::map<std::string, std::string> parentValues;
+                parentValues["name"] = Skills::skillTypeToPlayerVisibleString(dependencies[i]->getType());
+                description += "\n" + Translation::tr(ready ? "mode.game.research.ready" : "mode.game.research.missing", parentValues);
             }
         }
     }
     else
-        description += "\nNo prerequisites.";
+        description += "\n" + Translation::tr("mode.game.research.none");
     // Levels 2 and 3 of an entry wait until enough entries of its tab have level 1
     const std::vector<std::pair<SkillType, int> > nothingQueued;
     const bool isTabLocked = (level >= 1) && (level < 3) && isAllowed &&
         !localPlayerSeat->canResearchLevel(resType, static_cast<int>(level) + 1, nothingQueued);
     if(isTabLocked)
     {
-        description += "\nLocked: more entries of the " + SkillManager::getTabTitle(SkillManager::getSkillTab(resType)) +
-            " tab need level 1 first.";
+        std::map<std::string, std::string> lockedValues;
+        lockedValues["tab"] = SkillManager::getTabTitle(SkillManager::getSkillTab(resType));
+        description += "\n" + Translation::tr("mode.game.research.locked", lockedValues);
     }
     std::string state = "Available";
     if(!isAllowed)
@@ -4824,14 +4901,15 @@ void GameMode::refreshSkillButtonState(const std::string& skillButtonName, const
         state = "Queued";
     else if(!prerequisitesReady || isTabLocked)
         state = "Locked";
-    const std::string status = isAllowed ? state : "Not available in this level";
-    description = "Status: " + status + (mIsSkillWindowOpen && queueNumber > 0 && resType != curResType ?
-        " (Apply saves queue changes)." : ".") + "\n" + description;
-    skillButton->setUserString("ResearchDetails", description);
+    std::map<std::string, std::string> statusValues;
+    statusValues["status"] = Translation::tr(isAllowed ? "mode.game.research.state." + state : "mode.game.research.status_not_allowed");
+    description = Translation::tr(mIsSkillWindowOpen && queueNumber > 0 && resType != curResType ?
+        "mode.game.research.status_apply" : "mode.game.research.status", statusValues) + "\n" + description;
+    skillButton->setUserString("ResearchDetails", Gui::toCeguiText(description));
     skillButton->setUserString("ResearchState", state);
     // Keep explanations optional; the main tree communicates through its nodes and paths.
-    skillButton->setTooltipText(description);
-    skillButton->setUserString("ContextHelp", Skills::skillTypeToPlayerVisibleString(resType));
+    skillButton->setTooltipText(Gui::toCeguiText(description));
+    skillButton->setUserString("ContextHelp", Gui::toCeguiText(Skills::skillTypeToPlayerVisibleString(resType)));
     skillButton->setProperty("ResearchTileImage", getResearchTileImage(state, level));
     skillProgressBar->setArea(CEGUI::UVector2(CEGUI::UDim(.12f, 0), CEGUI::UDim(.82f, 0)),
         CEGUI::USize(CEGUI::UDim(.76f, 0), CEGUI::UDim(.09f, 0)));
@@ -5420,14 +5498,14 @@ void GameMode::refreshActionFeedback(float elapsed)
         if(mGameMap->getGamePaused())
         {
             unselectAllTiles();
-            displayText(Ogre::ColourValue::Red, "The game is paused.");
+            displayText(Ogre::ColourValue::Red, Translation::tr("mode.game.cursor.paused"));
         }
         else
             checkInputCommand();
         inputManager.mCommandState = previousState;
     }
 
-    mRootWindow->getChild("ContextInfo")->setText(mActionTargetText);
+    mRootWindow->getChild("ContextInfo")->setText(Gui::toCeguiText(mActionTargetText));
     CEGUI::Window* icon = mRootWindow->getChild("HandActionIcon");
     const bool overGui = isMouseDownOnCEGUIWindow();
     Player* player = mGameMap->getLocalPlayer();
@@ -5733,7 +5811,7 @@ void GameMode::displayText(const Ogre::ColourValue& txtColour, const std::string
     // Callers supply both eligibility and context; do not discard the former with the old label.
     mActionTargetValid = txtColour != Ogre::ColourValue::Red;
     mActionTargetText = txt;
-    mRootWindow->getChild("ContextInfo")->setText(txt);
+    mRootWindow->getChild("ContextInfo")->setText(Gui::toCeguiText(txt));
     TextRenderer::getSingleton().setText(ODApplication::POINTER_INFO_STRING, "");
 }
 
@@ -6129,7 +6207,7 @@ void GameMode::createPossessionBar()
 
     // The plate at the right end tells that Esc leaves the creature
     CEGUI::Window* plate = windowManager.createWindow("OD/MenuPlate", POSSESSION_BAR_EXIT_PLATE);
-    plate->setText(POSSESSION_BAR_EXIT_TEXT);
+    plate->setText(Gui::trCegui(POSSESSION_BAR_EXIT_TEXT));
     plate->setMousePassThroughEnabled(true);
     mPossessionBar->addChild(plate);
 }
@@ -6211,7 +6289,7 @@ void GameMode::checkInputCommand()
        mGameMap->getTile(inputManager.mXPos, inputManager.mYPos) == nullptr &&
        !isDigEdgePlace(inputManager.mXPos, inputManager.mYPos))
     {
-        displayText(Ogre::ColourValue::Red, "Point at a tile inside the map.");
+        displayText(Ogre::ColourValue::Red, Translation::tr("mode.input.outside_map"));
         unselectAllTiles();
         return;
     }
@@ -6322,7 +6400,7 @@ void GameMode::handlePlayerActionSell()
     else if(tile != nullptr && tile->getIsRoom())
         RoomManager::checkSellRoomTiles(mGameMap, inputManager, *this, {tile});
     else
-        displayText(Ogre::ColourValue::Red, "Select a room, trap or door owned by you to sell.");
+        displayText(Ogre::ColourValue::Red, Translation::tr("mode.game.cursor.sell"));
 }
 
 //! \brief The creature of the Dungeonbook roster on the tile nearest to the keeper hand, else null.
@@ -6361,7 +6439,7 @@ void GameMode::handlePlayerActionQuery()
     Creature* creature = getQueryTarget(mGameMap->getTile(inputManager.mXPos, inputManager.mYPos));
     if(creature == nullptr)
     {
-        displayText(Ogre::ColourValue::Red, "Point at your own or an allied creature to view its information.");
+        displayText(Ogre::ColourValue::Red, Translation::tr("mode.game.cursor.creature_info"));
         return;
     }
 
@@ -6399,7 +6477,7 @@ void GameMode::handlePlayerActionNone()
         if(tile == nullptr && isDigEdgePlace(inputManager.mXPos, inputManager.mYPos))
         {
             // A place beyond the map edge reads exactly like an undiscovered tile
-            displayText(Ogre::ColourValue::White, "Unexplored. Click or drag to mark for digging.");
+            displayText(Ogre::ColourValue::White, Translation::tr("mode.game.cursor.unexplored"));
             mPreviewEdgePlaces.push_back(std::pair<int, int>(inputManager.mXPos, inputManager.mYPos));
             InputManager& edgeInput = mModeManager->getInputManager();
             if(edgeInput.mHighlightedCreature != nullptr)
@@ -6411,7 +6489,7 @@ void GameMode::handlePlayerActionNone()
         }
         if(tile != nullptr && (!tile->getEverVisible() || tile->getHasFogOfWar()))
         {
-            displayText(Ogre::ColourValue::White, "Unexplored. Click or drag to mark for digging.");
+            displayText(Ogre::ColourValue::White, Translation::tr("mode.game.cursor.unexplored"));
             selectSquaredTiles(tile->getX(), tile->getY(), tile->getX(), tile->getY());
             InputManager& mutableInput = mModeManager->getInputManager();
             if(mutableInput.mHighlightedCreature != nullptr)
@@ -6444,9 +6522,9 @@ void GameMode::handlePlayerActionNone()
             {
                 Creature* creature = dynamic_cast<Creature*>(closest);
                 if(closest->getObjectType() == GameEntityType::chickenEntity)
-                    displayText(Ogre::ColourValue::White, "Chicken");
+                    displayText(Ogre::ColourValue::White, Translation::tr("mode.game.cursor.chicken"));
                 else if(closest->getObjectType() == GameEntityType::treasuryObject)
-                    displayText(Ogre::ColourValue::White, "Gold");
+                    displayText(Ogre::ColourValue::White, Translation::tr("mode.game.cursor.gold"));
                 else if(closest->getObjectType() == GameEntityType::itemBagEntity)
                 {
                     // The item is described by its tooltip (showItemContext), not by text in the info bar
@@ -6472,7 +6550,7 @@ void GameMode::handlePlayerActionNone()
             else if(tile->isDiggable(player->getSeat()))
             {
                 displayText(Ogre::ColourValue::White, tile->getMarkedForDigging(player) ?
-                    "Marked wall. Click or drag to remove digging marks." : "Wall. Click or drag to mark for digging.");
+                    Translation::tr("mode.game.cursor.wall_marked") : Translation::tr("mode.game.cursor.wall"));
                 selectSquaredTiles(tile->getX(), tile->getY(), tile->getX(), tile->getY());
             }
             else if(tile->getLocalPlayerHasVision() && tile->getIsRoom() && !getRoomDirtHoverText(tile).empty())
@@ -6486,16 +6564,16 @@ void GameMode::handlePlayerActionNone()
                 if(tile->isClaimed())
                 {
                     if(tile->getSeat() == player->getSeat())
-                        mActionTargetText += ". Your territory.";
+                        mActionTargetText += Translation::tr("mode.game.cursor.territory_own");
                     else if(tile->isClaimedForSeat(player->getSeat()))
-                        mActionTargetText += ". Allied territory.";
+                        mActionTargetText += Translation::tr("mode.game.cursor.territory_allied");
                     else
-                        mActionTargetText += ". Enemy territory.";
+                        mActionTargetText += Translation::tr("mode.game.cursor.territory_enemy");
                 }
                 if(tile->isBuildableUpon(player->getSeat()))
-                    mActionTargetText += " You can build here.";
+                    mActionTargetText += Translation::tr("mode.game.cursor.can_build");
                 else if(tile->getType() == TileType::dirt && !tile->isFullTile() && !tile->isClaimed())
-                    mActionTargetText += ". Claim this ground before building.";
+                    mActionTargetText += Translation::tr("mode.game.cursor.claim_first");
             }
         }
         setHighlightedCreature(dynamic_cast<Creature*>(closest));
@@ -6507,21 +6585,21 @@ void GameMode::handlePlayerActionNone()
 
     Tile* tile = mGameMap->getTile(inputManager.mXPos, inputManager.mYPos);
     if(tile == nullptr)
-        displayText(Ogre::ColourValue::Red, "Point at a tile inside the map.");
+        displayText(Ogre::ColourValue::Red, Translation::tr("mode.input.outside_map"));
     else if(player->isDropHandPossible(tile))
     {
-        displayText(Ogre::ColourValue::White, "Right-click to place the first object in hand.");
+        displayText(Ogre::ColourValue::White, Translation::tr("mode.game.cursor.drop_first"));
         selectTiles({tile});
     }
     else if(tile->isFullTile())
-        displayText(Ogre::ColourValue::Red, "Dig out this tile before dropping an object.");
+        displayText(Ogre::ColourValue::Red, Translation::tr("mode.game.cursor.drop_dig"));
     else if(!player->getSeat()->hasVisionOnTile(tile))
-        displayText(Ogre::ColourValue::Red, "You cannot drop objects outside your vision.");
+        displayText(Ogre::ColourValue::Red, Translation::tr("mode.game.cursor.drop_vision"));
     else if(tile->getCoveringRoom() != nullptr && tile->getCoveringRoom()->getType() == RoomType::arena &&
             player->getObjectsInHand().front()->getObjectType() == GameEntityType::creature)
-        displayText(Ogre::ColourValue::Red, "The arena has no available place for this creature.");
+        displayText(Ogre::ColourValue::Red, Translation::tr("mode.game.cursor.drop_arena"));
     else
-        displayText(Ogre::ColourValue::Red, "This object needs ground claimed by you or an ally.");
+        displayText(Ogre::ColourValue::Red, Translation::tr("mode.game.cursor.drop_claimed"));
 }
 
 void GameMode::handlePlayerActionSelectTile()
@@ -6550,19 +6628,19 @@ void GameMode::handlePlayerActionSelectTile()
     {
         Tile* tile = mGameMap->getTile(inputManager.mXPos, inputManager.mYPos);
         if(!mDigSetBool)
-            displayText(Ogre::ColourValue::Red, "No marked walls in this selection.");
+            displayText(Ogre::ColourValue::Red, Translation::tr("mode.game.cursor.no_marked_walls"));
         else if(tile != nullptr && !tile->isFullTile())
-            displayText(Ogre::ColourValue::Red, "This ground is already dug out.");
+            displayText(Ogre::ColourValue::Red, Translation::tr("mode.game.cursor.already_dug"));
         else if(tile != nullptr && tile->isClaimed() && !tile->isClaimedForSeat(player->getSeat()))
-            displayText(Ogre::ColourValue::Red, "You cannot dig an enemy's claimed wall.");
+            displayText(Ogre::ColourValue::Red, Translation::tr("mode.game.cursor.enemy_wall"));
         else
-            displayText(Ogre::ColourValue::Red, "This wall cannot be dug out.");
+            displayText(Ogre::ColourValue::Red, Translation::tr("mode.game.cursor.cannot_dig"));
         if(inputManager.mCommandState == InputCommandState::validated)
             mPlayerSelection.setCurrentAction(SelectedAction::none);
         return;
     }
-    displayText(Ogre::ColourValue::White, mDigSetBool ? "Release to mark selected walls for digging." :
-        "Release to remove the digging marks.");
+    displayText(Ogre::ColourValue::White, mDigSetBool ? Translation::tr("mode.game.cursor.release_mark") :
+        Translation::tr("mode.game.cursor.release_unmark"));
     if(inputManager.mCommandState != InputCommandState::validated)
     {
         selectTiles(diggableTiles);
