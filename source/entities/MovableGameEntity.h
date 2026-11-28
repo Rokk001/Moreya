@@ -135,12 +135,6 @@ namespace EntityAnimation
     {
         return (clip == drink_anim) || (clip == sit_drink_anim);
     }
-    //! \brief True for the clips that show no attached weapon: the seated tavern clips (a sword or a staff would reach
-    //! through the table) and the standing Drink (the mug sits on the same hand bone as the weapon, decision 863).
-    inline bool hidesWeapons(const std::string& clip)
-    {
-        return isSeatClip(clip) || (clip == drink_anim);
-    }
     //! \brief True for the clip in which a worker sweeps with the cleaning broom in its right hand (Clean, INGAME-QS-10
     //! K26): the client shows the broom and puts the worker's own tool away while it plays.
     inline bool holdsBroom(const std::string& clip)
@@ -168,6 +162,30 @@ namespace EntityAnimation
     static const std::string throw_anim = "Throw";
     //! A hunter tips its box over the press rim; the client falls back to Attack when absent.
     static const std::string empty_anim = "Empty";
+    //! A resting creature lies on the floor (cosmetic reaction clip, source/render/CreatureReactions.cpp)
+    static const std::string ambient_lie_anim = "AmbientLie";
+    //! A creature dances (cosmetic reaction clip; the infirmary shaman dances too)
+    static const std::string dance_anim = "Dance";
+    //! A creature cheers (cosmetic reaction clip)
+    static const std::string happy_anim = "Happy";
+    //! A creature stretches its limbs (cosmetic reaction clip)
+    static const std::string stretch_anim = "Stretch";
+    //! \brief True for the clips in which a creature lies, sleeps, bathes, relieves itself, vomits, dances, cheers,
+    //! stretches or throws (AmbientLie, Sleep, Bathe, RelievePit, Vomit, Dance, Happy, Stretch, Throw): its hands and
+    //! body move so far that a weapon or shield in its hands would reach through its own body or the floor.
+    inline bool hidesWeaponsAtRest(const std::string& clip)
+    {
+        return (clip == ambient_lie_anim) || (clip == sleep_anim) || (clip == bathe_anim) ||
+            (clip == relieve_pit_anim) || (clip == vomit_anim) || (clip == dance_anim) || (clip == happy_anim) ||
+            (clip == stretch_anim) || (clip == throw_anim);
+    }
+    //! \brief True for the clips that show no attached weapon: the seated tavern clips (a sword or a staff would reach
+    //! through the table), the standing Drink (the mug sits on the same hand bone as the weapon, decision 863) and the
+    //! lying, sleeping, bathing, toilet, vomiting, dance, cheer, stretch and throw clips (hidesWeaponsAtRest).
+    inline bool hidesWeapons(const std::string& clip)
+    {
+        return isSeatClip(clip) || (clip == drink_anim) || hidesWeaponsAtRest(clip);
+    }
 };
 
 //! \brief Moves and animates an entity while keeping deferred strikes synchronized with its displayed pose.
