@@ -31,9 +31,9 @@ EXPECTED_SOCIAL_TEXTS = {'bio': 28, 'dislike': 50, 'job': 38, 'like': 65, 'mood'
                          'relation': 14}
 EXPECTED_NAME_ENTRIES = {'agejoke': 5, 'hometown': 112, 'title': 136}
 EXPECTED_QUIRKS = 4678
-# The German remarks name the feature with words: a few tags that differ only in a spelling (gray/grey, blond/blonde)
+# Some tags that differ only in a spelling (gray/grey, blond/blonde) or in a dropped helper word (image)
 # give the same German remark. The choice of the remarks uses the texts of the table, so this does not change it.
-EXPECTED_DISTINCT_GERMAN_QUIRKS = 4615
+EXPECTED_DISTINCT_GERMAN_QUIRKS = 4490
 EXPECTED_TOTAL = 718 + 253 + 4678
 MAX_BIO_LENGTH = 160
 
