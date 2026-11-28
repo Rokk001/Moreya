@@ -466,6 +466,22 @@ public:
     //! one. Used on the client for the bomb a creature throws: hidden while the bomb flies (see MissileBomb).
     void rrSetCreatureSubMeshVisible(Creature& creature, const std::string& meshMaterial, bool visible);
 
+    //! \brief Shows or hides the scene node of the entity with everything attached to it (its mesh and particles).
+    void rrSetEntityNodeVisible(GameEntity& entity, bool visible);
+
+    //! \brief Creates the particle system with the given name and script on the given bone of the creature model.
+    //! Returns nullptr when the model or the bone is missing. Destroy it with rrDestroyBoneParticle.
+    Ogre::ParticleSystem* rrAttachCreatureBoneParticle(Creature& creature, const std::string& boneName,
+        const std::string& particleName, const std::string& particleScript);
+
+    //! \brief Destroys a particle system made by rrAttachCreatureBoneParticle, also when the model is gone.
+    void rrDestroyBoneParticle(Ogre::ParticleSystem* particleSystem);
+
+    //! \brief Gives the position of the bone of the creature model in the coordinates the entity frame is placed in.
+    //! Returns false (and leaves position as it is) when the model, the bone or the node of frame is missing.
+    bool rrGetCreatureBonePosition(Creature& creature, const std::string& boneName, GameEntity& frame,
+        Ogre::Vector3& position);
+
     //! \brief Returns the name of a copy of the given material that is tinted with the given colour.
     //! The copy is created on the first request and reused afterwards.
     std::string rrBuildTintedMaterial(const std::string& materialNameBase,

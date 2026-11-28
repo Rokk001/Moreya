@@ -9929,6 +9929,63 @@ void RenderManager::rrSetCreatureSubMeshVisible(Creature& creature, const std::s
     }
 }
 
+void RenderManager::rrSetEntityNodeVisible(GameEntity& entity, bool visible)
+{
+    Ogre::SceneNode* node = entity.getEntityNode();
+    if(node != nullptr)
+        node->setVisible(visible);
+}
+
+Ogre::ParticleSystem* RenderManager::rrAttachCreatureBoneParticle(Creature& creature, const std::string& boneName,
+        const std::string& particleName, const std::string& particleScript)
+{
+    const std::string entityName = creature.getOgreNamePrefix() + creature.getName();
+    if(!mSceneManager->hasEntity(entityName))
+        return nullptr;
+
+    Ogre::Entity* entity = mSceneManager->getEntity(entityName);
+    if((entity->getSkeleton() == nullptr) || !entity->getSkeleton()->hasBone(boneName))
+        return nullptr;
+
+    Ogre::ParticleSystem* particleSystem = mSceneManager->createParticleSystem(particleName, particleScript);
+    entity->attachObjectToBone(boneName, particleSystem);
+    return particleSystem;
+}
+
+//! \brief A model that was destroyed meanwhile has already detached the particle system from its bone.
+void RenderManager::rrDestroyBoneParticle(Ogre::ParticleSystem* particleSystem)
+{
+    if(particleSystem == nullptr)
+        return;
+
+    if(particleSystem->isAttached())
+        particleSystem->detachFromParent();
+    mSceneManager->destroyParticleSystem(particleSystem);
+}
+
+//! \brief Samples the animated bone in world space and converts it into the space of the parent node of frame.
+bool RenderManager::rrGetCreatureBonePosition(Creature& creature, const std::string& boneName, GameEntity& frame,
+        Ogre::Vector3& position)
+{
+    const std::string entityName = creature.getOgreNamePrefix() + creature.getName();
+    if(!mSceneManager->hasEntity(entityName))
+        return false;
+
+    Ogre::Entity* entity = mSceneManager->getEntity(entityName);
+    Ogre::SceneNode* frameNode = frame.getEntityNode();
+    if(!entity->hasSkeleton() || (entity->getParentSceneNode() == nullptr) || (frameNode == nullptr) ||
+       (frameNode->getParentSceneNode() == nullptr) || !entity->getSkeleton()->hasBone(boneName))
+    {
+        return false;
+    }
+
+    entity->_updateAnimation();
+    const Ogre::Vector3 world = entity->getParentSceneNode()->convertLocalToWorldPosition(
+        entity->getSkeleton()->getBone(boneName)->_getDerivedPosition());
+    position = frameNode->getParentSceneNode()->convertWorldToLocalPosition(world);
+    return true;
+}
+
 void RenderManager::rrToggleHandSelectorVisibility()
 {
     rrCancelIdleHandAnimation();

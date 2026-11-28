@@ -54,13 +54,18 @@ const Ogre::Real THROWN_BOMB_HEIGHT = 0.3;
 //! \brief Below this squared distance the target counts as on the thrower's tile: the bomb gets a fixed direction
 const Ogre::Real THROWN_BOMB_MIN_SQUARED_DISTANCE = 0.0001f;
 
-//! \brief Throws the bomb of a creature type with the key ThrownBomb at the attacked creature. Look only: the bomb
-//! lands on the target tile in the turn of the throw and has no effect; the explosion was applied by the skill.
-void launchThrownBomb(GameMap& gameMap, Creature& thrower, Creature& target, Tile* targetTile)
+//! \brief Throws the bomb of a creature type with the key ThrownBomb at the attacked creature (the first of targets,
+//! the creatures the blast hit). Look only: the bomb lands on the target tile in the turn of the throw and has no
+//! effect; the explosion was applied by the skill. The clients show the explosions of all targets when it lands.
+void launchThrownBomb(GameMap& gameMap, Creature& thrower, const std::vector<Creature*>& targets, Tile* targetTile)
 {
     Tile* throwerTile = thrower.getPositionTile();
-    if((throwerTile == nullptr) || (targetTile == nullptr))
+    if((throwerTile == nullptr) || (targetTile == nullptr) || targets.empty())
         return;
+
+    std::vector<std::string> targetNames;
+    for(Creature* target : targets)
+        targetNames.push_back(target->getName());
 
     const CreatureDefinition* definition = thrower.getDefinition();
     Ogre::Vector3 position = thrower.getPosition();
@@ -76,7 +81,7 @@ void launchThrownBomb(GameMap& gameMap, Creature& thrower, Creature& target, Til
 
     MissileBomb* bomb = new MissileBomb(&gameMap, thrower.getSeat(), thrower.getName(),
         definition->getThrownBombMesh(), definition->getThrownBombParticle(), definition->getThrownBombMaterial(),
-        direction, MissileBomb::flightSpeed(distance), &target, targetTile);
+        direction, MissileBomb::flightSpeed(distance), targets.front(), targetTile, targetNames);
     bomb->addToGameMap();
     bomb->createMesh();
     bomb->setPosition(position);
@@ -172,7 +177,7 @@ bool CreatureSkillExplosion::tryUseFight(GameMap& gameMap, Creature* creature, f
 
     // Look only: a creature type with the key ThrownBomb throws its bomb at the target; the hit above is unchanged
     if(creature->getDefinition()->throwsBomb())
-        launchThrownBomb(gameMap, *creature, *attackedCreature, attackedTile);
+        launchThrownBomb(gameMap, *creature, targets, attackedTile);
 
     return true;
 }

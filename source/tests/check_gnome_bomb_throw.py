@@ -25,7 +25,13 @@ BOMB_LAUNCH_BLOCK = ('\n'
                      '    // Look only: a creature type with the key ThrownBomb throws its bomb at the target; the hit above'
                      ' is unchanged\n'
                      '    if(creature->getDefinition()->throwsBomb())\n'
-                     '        launchThrownBomb(gameMap, *creature, *attackedCreature, attackedTile);\n')
+                     '        launchThrownBomb(gameMap, *creature, targets, attackedTile);\n')
+# Client steps of the throw in parts of a turn, the arc of the flight and the hand bone of the bomb
+WIND_UP_TURNS = 0.35
+CLIENT_FLIGHT_TURNS = 0.45
+ARC_HEIGHT = 0.3
+ARC_HEIGHT_PER_TILE = 0.06
+HAND_BONE = 'Weapon_R'
 MISSILE_TYPES = ['oneHit', 'boulder', 'blast', 'stone', 'skillBomb']
 # Range of Bomb Hail (BaseLine field RangeMax) and its whole BaseLine in the content skill table
 BOMB_HAIL_RANGE = 6
@@ -108,6 +114,9 @@ check(hashlib.sha256(unchanged.encode('utf-8')).hexdigest() == TRY_USE_FIGHT_MAI
 launcher = function(explosion_source, 'void launchThrownBomb(')
 check('new MissileBomb(' in launcher and 'MissileBomb::flightSpeed(distance)' in launcher,
       'the launcher creates the bomb with the speed rule')
+check('for(Creature* target : targets)\n        targetNames.push_back(target->getName());' in launcher and
+      'targets.front(), targetTile, targetNames);' in launcher,
+      'the bomb carries every creature the blast hit, the target first')
 for token in ('CreatureEffect', 'Damage', 'hurt(', 'rollCritical', 'addCreatureEffect'):
     check(token not in launcher, 'the launcher has no effect on the fight (%s)' % token)
 launch_order = ('bomb->addToGameMap();', 'bomb->createMesh();', 'bomb->setPosition(position);',
@@ -128,21 +137,48 @@ check('virtual void hitTargetEntity(Tile* tile, GameEntity* entityTarget) overri
 check('MissileObject(gameMap, seat, throwerName, meshName, direction, speed, target, false, false)' in bomb,
       'the bomb hurts no allies and knocks out no one')
 create = function(bomb, 'void MissileBomb::createMeshLocal(')
+release = function(bomb, 'void MissileBomb::release(')
+land = function(bomb, 'void MissileBomb::land(')
 destroy = function(bomb, 'void MissileBomb::destroyMeshLocal(')
-check('rrSetCreatureSubMeshVisible(*thrower, mHiddenMaterial, false)' in create, 'createMeshLocal hides the bomb part')
-check('getIsOnServerMap()' in create, 'the hide runs on the client only')
-check('rrSetCreatureSubMeshVisible(*thrower, mHiddenMaterial, true)' in destroy, 'destroyMeshLocal shows it again')
-check('target->showHeldParticleEffect(effectName);' in destroy, 'destroyMeshLocal shows the held explosion')
-check(destroy.index('showHeldParticleEffect') < destroy.index('MissileObject::destroyMeshLocal(nt);'),
-      'the held explosion shows before the bomb mesh goes')
+client_update = function(bomb, 'void MissileBomb::update(')
+check("const std::string MissileBomb::HAND_BONE = \"%s\";" % HAND_BONE in bomb, 'the bomb is held at %s' % HAND_BONE)
+check('getIsOnServerMap()' in create and create.index('getIsOnServerMap()') < create.index('rrSetEntityNodeVisible'),
+      'the throw is shown on the clients only')
+check('rrSetEntityNodeVisible(*this, false);' in create, 'wind-up: the missile is not seen while the bomb is in the hand')
+check('rrAttachCreatureBoneParticle(*thrower, HAND_BONE,' in create and 'mEntityParticleEffects.front()->mScript' in create,
+      'wind-up: the fuse of the hand bomb sparks with the particle of the bomb')
+check('rrSetCreatureSubMeshVisible' not in create, 'wind-up: the bomb stays in the hand')
+check('removeHandSparks();' in release and 'rrSetCreatureSubMeshVisible(*thrower, mHiddenMaterial, false)' in release,
+      'release: the sparks in the hand end and the hand bomb is hidden')
+check('rrGetCreatureBonePosition(*thrower, HAND_BONE, *this, mReleasePosition)' in release and
+      'setPosition(mReleasePosition);' in release and 'rrSetEntityNodeVisible(*this, true);' in release,
+      'release: the bomb starts its visible flight at the hand')
+check('MissileObject::update(timeSinceLastFrame);' in client_update and
+      client_update.index('getIsOnServerMap()') < client_update.index('MissileObject::update(timeSinceLastFrame);'),
+      'the server moves the bomb like every missile')
+check('position.z += static_cast<Ogre::Real>(arcHeight(fraction, distance));' in client_update and
+      'setPosition(position);' in client_update, 'flight: the bomb flies on an arc from the hand to the target')
+check('creature->showHeldParticleEffect(held.second);' in land, 'landing: the held explosions show')
+check('rrSetEntityNodeVisible(*this, false);' in land, 'landing: the thrown bomb is gone')
+check('rrSetCreatureSubMeshVisible(*thrower, mHiddenMaterial, true)' in land, 'landing: a new bomb lies in the hand')
+check('if(mThrowPhase != ThrowPhase::landed)\n            land();' in destroy and
+      destroy.index('land();') < destroy.index('MissileObject::destroyMeshLocal(nt);'),
+      'a bomb removed before it landed ends the throw at once')
+hold = function(bomb, 'bool MissileBomb::holdImpactParticle(')
+check('if(bomb->mThrowPhase == ThrowPhase::landed)\n            continue;' in hold and
+      'bomb->mTargetNames.begin(), bomb->mTargetNames.end(), entity.getName()' in hold,
+      'every creature the blast hit holds its explosion until the bomb lands')
 check("os << \"Bomb\\t\";" in bomb, 'the stream marks the bomb fields')
 packet_out = function(bomb, 'void MissileBomb::exportToPacket(')
 packet_in = function(bomb, 'void MissileBomb::importFromPacket(')
-for field in ('mThrowerName', 'mTargetName', 'mHiddenMaterial'):
-    check('os << %s;' % field in packet_out and 'is >> %s' % field in packet_in, 'packet round trip of %s' % field)
-check(packet_out.index('mThrowerName') < packet_out.index('mTargetName') < packet_out.index('mHiddenMaterial') and
-      packet_in.index('mThrowerName') < packet_in.index('mTargetName') < packet_in.index('mHiddenMaterial'),
-      'packet reads the names in the order it writes them')
+PACKET_FIELDS = ('mThrowerName', 'mHiddenMaterial', 'mTargetX', 'nbTargets', 'name')
+for field in PACKET_FIELDS:
+    check(('os << %s' % field) in packet_out and ('is >> %s' % field) in packet_in, 'packet round trip of %s' % field)
+check([packet_out.index('os << %s' % field) for field in PACKET_FIELDS] ==
+      sorted(packet_out.index('os << %s' % field) for field in PACKET_FIELDS) and
+      [packet_in.index('is >> %s' % field) for field in PACKET_FIELDS] ==
+      sorted(packet_in.index('is >> %s' % field) for field in PACKET_FIELDS),
+      'packet reads the bomb fields in the order it writes them')
 check("const std::string MissileBomb::IMPACT_PARTICLE_SCRIPT = \"SpellCreatureExplosion\";" in bomb and
       'new CreatureEffectExplosion(mEffectDuration, mEffectValue * targetFactor,\n            "SpellCreatureExplosion");'
       in explosion_source, 'the held particle is the particle of the explosion effect')
@@ -173,7 +209,9 @@ check('sub->getSubMesh()->getMaterialName() == meshMaterial' in sub_mesh,
 rename = ('MissileBomb::', 'ProbeBomb::')
 methods = ''.join(function(bomb, signature, rename) for signature in (
     'void MissileBomb::addFlightParticle(', 'double MissileBomb::flightSpeed(', 'void MissileBomb::updateDirection(',
-    'void MissileBomb::exportToStream(', 'bool MissileBomb::importFromStream('))
+    'void MissileBomb::exportToStream(', 'bool MissileBomb::importFromStream(',
+    'MissileBomb::ThrowPhase MissileBomb::phaseAt(', 'double MissileBomb::flightFraction(',
+    'double MissileBomb::arcHeight('))
 methods = methods.replace('MissileObject::exportToStream(os);', 'baseExport(os);')
 methods = methods.replace('MissileObject::importFromStream(is)', 'baseImport(is)')
 constants = '\n'.join(line.replace('MissileBomb::', 'ProbeBomb::') for line in bomb.split('\n')
@@ -194,7 +232,13 @@ static int checks=0,failures=0;
 static void check(bool ok,const char* what){++checks;if(!ok){++failures;std::cout<<"FAIL: "<<what<<'\n';}}
 struct ProbeBomb {
  static const double MIN_FLIGHT_SPEED;static const uint32_t MAX_FLIGHT_TURNS;
- std::string mThrowerName,mTargetName,mHiddenMaterial;int32_t mTargetX=-1,mTargetY=-1;uint32_t mTurnsLeft=MAX_FLIGHT_TURNS;
+ static const double WIND_UP_TURNS,CLIENT_FLIGHT_TURNS,ARC_HEIGHT,ARC_HEIGHT_PER_TILE;
+ enum class ThrowPhase {windUp,flight,landed};
+ static ThrowPhase phaseAt(double seconds,double turnSeconds);
+ static double flightFraction(double seconds,double turnSeconds);
+ static double arcHeight(double fraction,double distance);
+ std::string mThrowerName,mHiddenMaterial;std::vector<std::string> mTargetNames;
+ int32_t mTargetX=-1,mTargetY=-1;uint32_t mTurnsLeft=MAX_FLIGHT_TURNS;
  std::vector<EntityParticleEffect*> mEntityParticleEffects;int mParticles=0;bool mStopped=false;
  ~ProbeBomb(){for(EntityParticleEffect* e:mEntityParticleEffects)delete e;}
  void stopMissile(){mStopped=true;}
@@ -219,26 +263,43 @@ int main(){
  ProbeBomb flight;int upkeeps=0;
  while(!flight.mStopped&&upkeeps<10){flight.updateDirection();++upkeeps;}
  check(upkeeps==3,"a bomb that did not land stops at its third upkeep (two turns of flight)");
- ProbeBomb original;original.mThrowerName="Snapper_3";original.mTargetName="Target_7";
+ const double turn=@TURN@;
+ check(ProbeBomb::phaseAt(0.0,turn)==ProbeBomb::ThrowPhase::windUp,"the throw starts with the wind-up");
+ check(ProbeBomb::phaseAt(@WIND@*turn-0.001,turn)==ProbeBomb::ThrowPhase::windUp,"the fuse sparks in the hand until the release");
+ check(ProbeBomb::phaseAt(@WIND@*turn,turn)==ProbeBomb::ThrowPhase::flight,"the bomb leaves the hand after the wind-up");
+ check(ProbeBomb::phaseAt((@WIND@+@FLIGHT@)*turn-0.001,turn)==ProbeBomb::ThrowPhase::flight,"the bomb flies until it lands");
+ check(ProbeBomb::phaseAt((@WIND@+@FLIGHT@)*turn,turn)==ProbeBomb::ThrowPhase::landed,"the bomb lands after its flight");
+ check(@WIND@+@FLIGHT@<1.0,"the bomb lands within the turn of the throw, before the server removes it");
+ check(ProbeBomb::flightFraction(0.0,turn)==0.0&&ProbeBomb::flightFraction(@WIND@*turn,turn)==0.0,"the flight starts at the hand");
+ check(std::fabs(ProbeBomb::flightFraction((@WIND@+@FLIGHT@/2.0)*turn,turn)-0.5)<1e-9,"the flight runs evenly");
+ check(ProbeBomb::flightFraction(2.0*turn,turn)==1.0,"the flight ends at the target");
+ check(ProbeBomb::arcHeight(0.0,range)==0.0&&ProbeBomb::arcHeight(1.0,range)==0.0,"the arc starts at the hand and ends at the target");
+ check(std::fabs(ProbeBomb::arcHeight(0.5,range)-(@ARC@+@ARCTILE@*range))<1e-9,"the arc is highest in the middle");
+ ProbeBomb original;original.mThrowerName="Snapper_3";original.mTargetNames={"Target_7","Area_2"};
  original.mHiddenMaterial="GnomeBombMeshy";original.mTargetX=4;original.mTargetY=9;original.mTurnsLeft=1;
  original.addFlightParticle("GnomeBombFuse");original.addFlightParticle("");
  std::ostringstream out;original.exportToStream(out);
  ProbeBomb loaded;std::istringstream in(out.str());
  check(loaded.importFromStream(in),"the saved bomb reads back");
- check(loaded.mThrowerName=="Snapper_3"&&loaded.mTargetName=="Target_7"&&loaded.mHiddenMaterial=="GnomeBombMeshy",
+ check(loaded.mThrowerName=="Snapper_3"&&loaded.mHiddenMaterial=="GnomeBombMeshy"&&
+  loaded.mTargetNames==std::vector<std::string>({"Target_7","Area_2"}),
   "names survive the round trip");
  check(loaded.mTargetX==4&&loaded.mTargetY==9&&loaded.mTurnsLeft==1,"target tile and turns survive the round trip");
  check(loaded.mEntityParticleEffects.size()==1&&loaded.mEntityParticleEffects[0]->mScript=="GnomeBombFuse",
   "the fuse particle survives the round trip, an empty script adds none");
  ProbeBomb empty;std::ostringstream emptyOut;empty.exportToStream(emptyOut);
  ProbeBomb emptyLoaded;emptyLoaded.mHiddenMaterial="x";std::istringstream emptyIn(emptyOut.str());
- check(emptyLoaded.importFromStream(emptyIn)&&emptyLoaded.mThrowerName.empty()&&emptyLoaded.mHiddenMaterial.empty()&&
+ check(emptyLoaded.importFromStream(emptyIn)&&emptyLoaded.mThrowerName.empty()&&emptyLoaded.mHiddenMaterial.empty()&&emptyLoaded.mTargetNames.empty()&&
   emptyLoaded.mEntityParticleEffects.empty(),"empty names are saved as none and read back empty");
- ProbeBomb broken;std::istringstream brokenIn("base\tSnapper_3\tTarget_7\tnone\t4\t9\t1\t0");
+ ProbeBomb broken;std::istringstream brokenIn("base\tSnapper_3\tnone\t4\t9\t1\t1\tTarget_7\t0");
  check(!broken.importFromStream(brokenIn),"a record without the bomb marker is refused");
  std::cout<<"CHECKS="<<checks<<" FAILURES="<<failures<<'\n';return failures?1:0;
 }
 '''.replace('CONSTANTS', constants).replace('METHODS', methods).replace('RANGE', '%d.0' % BOMB_HAIL_RANGE)
+# The real turn length does not matter for the steps: they are parts of a turn; one second stands for it
+probe = probe.replace('@TURN@', '1.0').replace('@WIND@', repr(WIND_UP_TURNS))
+probe = probe.replace('@FLIGHT@', repr(CLIENT_FLIGHT_TURNS)).replace('@ARCTILE@', repr(ARC_HEIGHT_PER_TILE))
+probe = probe.replace('@ARC@', repr(ARC_HEIGHT))
 
 
 def phase(name, seconds):
@@ -293,6 +354,9 @@ else:
     if 'creatures' in roots:
         gnome = Path(roots['creatures']) / 'models/Gnome.mesh'
         check(gnome.is_file() and b'GnomeBombMeshy' in gnome.read_bytes(), 'Gnome.mesh has the part GnomeBombMeshy')
+        skeleton = Path(roots['creatures']) / 'models/Gnome.skeleton'
+        check(skeleton.is_file() and HAND_BONE.encode('ascii') in skeleton.read_bytes(),
+              'the Gnome skeleton has the hand bone %s' % HAND_BONE)
     if 'effects' in roots:
         particle = (Path(roots['effects']) / 'particles/GnomeBombFuse.particle')
         check(particle.is_file() and 'particle_system GnomeBombFuse\n' in particle.read_text(encoding='utf-8')
