@@ -208,9 +208,13 @@ def compact_goal_fit_errors(root):
     rectangle = re.search(r"CEGUI::URect BRIEFING_PREVIEW_GOALS_AREA\((.*?)\);", mode, re.S)
     area = [float(n) for n in re.findall(r"-?\d+(?:\.\d+)?", rectangle[1])]
     descriptions = {}
-    for kind in ("KillAllEnemies", "ProtectDungeonTemple"):
-        text = (root / ("source/goals/Goal" + kind + ".cpp")).read_text(encoding="utf-8")
-        descriptions[kind] = re.search(r"getDescription\([^)]*\)\s*\{\s*return \"([^\"]+)\";", text)[1]
+    # The goal descriptions are text references (keys goal.<name>.description); the fit is measured with the English text
+    goal_texts = (content_packages.packages(root)["lang-en"] / "texts" / "goals.txt").read_text(encoding="utf-8")
+    for kind, key in (("KillAllEnemies", "goal.killall.description"), ("ProtectDungeonTemple", "goal.protecttemple.description")):
+        source = (root / ("source/goals/Goal" + kind + ".cpp")).read_text(encoding="utf-8")
+        if 'Translation::makeReference("' + key + '")' not in source:
+            errors.append("Goal" + kind + ".cpp does not describe the goal with the key " + key)
+        descriptions[kind] = re.search(r"^" + re.escape(key) + r"=(.*)$", goal_texts, re.M)[1].rstrip("\r")
     for entry in campaign_packages.entries(root):
         text = entry["_path"].read_text(encoding="utf-8")
         classic = [descriptions[row.split()[0]] for row in text.split("[Goals]", 1)[1].split("[/Goals]", 1)[0].splitlines() if row.strip() and not row.lstrip().startswith("#")]
