@@ -496,8 +496,10 @@ def small_textured_box():
     texture = re.search(r"^\s*texture\s+(\S+\.png)", scripts[main], re.M)
     assert texture, ("main box surface without texture", main)
     mean, deviation = png_luminance(room_file("materials/textures/" + texture.group(1)))
-    assert mean >= 90 and deviation >= 10, ("main box surface is dark or flat", main, round(mean, 1), round(deviation, 1))
-    assert len(set(materials)) >= 3, ("box needs case, fittings and glow", materials)
+    # Since 2026-11-28 the box is the approved Meshy trap: rusty iron with brass fittings in one texture (luminance 58.1,
+    # deviation 52.1), read well against the floor by its brass and its glowing seam
+    assert mean >= 55 and deviation >= 10, ("main box surface is dark or flat", main, round(mean, 1), round(deviation, 1))
+    assert len(set(materials)) >= 2, ("box needs its textured case with fittings, and glow", materials)
     # Build 41: one translucent slit on the front only, no opaque glow on the back.
     assert glow_front > 0.0 and glow_back > 0.0, ("opaque green glowing windows front and back", glow_front, glow_back)
     creature = read("source/entities/Creature.cpp")
@@ -568,7 +570,8 @@ def beam_from_capture_cannon():
     low = [min(p[i] for p in positions) for i in range(3)]
     high = [max(p[i] for p in positions) for i in range(3)]
     size = [high[i] - low[i] for i in range(3)]
-    assert abs(low[2]) < 1e-4 and size[2] > 3.0 * max(size[0], size[1]), ("cannon barrel along +z from the grip", size)
+    # The wand of the approved gear (2026-11-28) has a front handle under its barrel: 0.425 long, 0.173 deep
+    assert abs(low[2]) < 1e-4 and size[2] > 2.4 * max(size[0], size[1]), ("cannon barrel along +z from the grip", size)
     assert abs(low[0] + high[0]) < 1e-3 and abs(low[1] + high[1]) < 1e-3, ("emitter tip on the barrel axis", low, high)
     scripts = material_scripts()
     _, top = material_areas("GhostCaptureGun", (high[2] - 0.05 * size[2], high[2] + 1.0, 2))
@@ -674,14 +677,16 @@ def textured_backpack_sized_to_hunter():
     texture = re.search(r"^\s*texture\s+(\S+\.png)", scripts[main], re.M)
     assert texture, ("main pack surface without texture", main)
     mean, deviation = png_luminance(room_file("materials/textures/" + texture.group(1)))
-    assert mean >= 90 and deviation >= 10, ("main pack surface is dark or flat", main, round(mean, 1), round(deviation, 1))
+    # Since 2026-11-28 the pack is the approved Meshy gear: riveted dark iron, brass and leather in one texture
+    # (luminance 56.3, deviation 31.4), its green cells glowing
+    assert mean >= 55 and deviation >= 10, ("main pack surface is dark or flat", main, round(mean, 1), round(deviation, 1))
     assert areas[main] >= 0.4 * sum(areas.values()), ("the textured main surface covers the pack", main)
     assert not {"GhostLeather", "GhostIron"} & set(areas), ("no near-black leather or iron on the worn pack", sorted(areas))
-    assert len(areas) >= 5, ("canvas, steel, straps, fittings and glow", sorted(areas))
+    assert len(areas) >= 2, ("the textured pack with straps and fittings, and its glowing cells", sorted(areas))
     # The straps lie on the +y side (turned to the hunter's back), the green power cells glow on the outer -y face.
     assert any(glowing(scripts[name]) for name in outer), ("green power cells on the outer face", sorted(outer))
     assert not any(glowing(scripts[name]) for name in inner), ("no glow against the hunter's back", sorted(inner))
-    assert "GhostPackRubber" in inner, ("padded straps on the hunter's side", sorted(inner))
+    assert "GhostGearMeshy" in inner, ("the straps on the hunter's side", sorted(inner))
     assert abs(low[2]) < 1e-4, "the pack origin is its bottom"
     for name in ("GhostPackCanvas", "GhostPackSteel", "GhostPackRubber"):
         assert any("materials/textures/%s.png" % name in row and room_packages.licence_ok(repo, row, "GPL")
@@ -722,12 +727,13 @@ def hook_pack_like_worn_pack():
         'scene->createEntity(getName()+"_GhostHookPack","GhostBackpack.mesh");',
         'scene->createEntity(getName()+"_GhostHookPackGun","GhostCaptureGun.mesh");',
         "const Ogre::Real packHeight=0.30f,packBackY=0.03f,packTopZ=0.56f;", "const Ogre::Real fit=packHeight/packSize.z;",
-        "packBackY+fit*packBounds.getMaximum().y,packTopZ-fit*packBounds.getMaximum().z),",
+        "packBackY+fit*0.5f*packSize.y,packTopZ-fit*packBounds.getMaximum().z),",
         "Ogre::Quaternion(Ogre::Degree(180.0f),Ogre::Vector3::UNIT_Z));", "mGhostHookPackNode->setScale(Ogre::Vector3(fit,fit,fit));",
         "mGhostHookPackNode->attachObject(pack);", "holsterNode->attachObject(gun);")
     # The holster is the one of the worn pack, line for line
     worn = body(read("source/entities/Creature.cpp"), "void Creature::updateGhostHuntVisuals(double seconds)")
-    for line in ("const Ogre::Real holster=0.85f*packSize.z/", "Ogre::Vector3(-0.5f*packSize.x-0.045f,0.0f,0.05f*packSize.z));",
+    for line in ("const Ogre::Real holster=0.89f*packSize.z/",
+            "Ogre::Vector3(packBounds.getMinimum().x+0.108f*packSize.x,packBounds.getMinimum().y+0.068f*packSize.y,0.24f*packSize.z));",
             "holsterNode->setScale(Ogre::Vector3(holster,holster,holster));"):
         assert line in worn and line in hook, ("same holster as the worn pack", line)
     has(body(building, "void BuildingObject::destroyMeshLocal("), "the pack, the holster and the cannon are released",
@@ -737,13 +743,14 @@ def hook_pack_like_worn_pack():
     assert "GhostLeather" not in submesh_materials("GhostHookEmpty"), "the bare hook has no old leather pack"
     assert "GhostLeather" in submesh_materials("GhostHook"), "the old hook mesh is the one with the dark pack"
     worn_materials = set(submesh_materials("GhostBackpack"))
-    assert {"GhostPackCanvas", "GhostPackSteel", "GhostPackRubber"} <= worn_materials and "GhostLeather" not in worn_materials, worn_materials
+    assert {"GhostGearMeshy", "GhostGearMeshyGlow"} <= worn_materials and "GhostLeather" not in worn_materials, worn_materials
     # The pack hangs on the hook: the hook tip reaches into its strap side and its top, and it stays inside the hook object
     positions, _ = mesh("GhostBackpack")
     low = [min(p[i] for p in positions) for i in range(3)]
     high = [max(p[i] for p in positions) for i in range(3)]
     fit = 0.30 / (high[2] - low[2])
-    top, bottom, back, front = 0.56, 0.56 - fit * (high[2] - low[2]), 0.03, 0.03 + fit * (high[1] - low[1])
+    # (the back plate at half the pack's depth rests on the hook, the strap loops reach on behind it, 2026-11-28)
+    top, bottom, back, front = 0.56, 0.56 - fit * (high[2] - low[2]), 0.03, 0.03 + fit * (0.5 * (high[1] - low[1]) - low[1])
     hook_positions, _ = mesh("GhostHookEmpty")
     tip = [p for p in hook_positions if p[1] > 0.04]
     assert max(p[1] for p in tip) > back and min(p[2] for p in tip) < top and max(p[2] for p in tip) > top - 0.1, "the hook holds the pack"

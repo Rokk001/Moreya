@@ -142,12 +142,13 @@ socket_body = body(room, 'Ogre::Vector3 RoomGhostRoom::getTrapSocketPosition(con
 has(socket_body, 'the exact offset of the seat',
     'return Ogre::Vector3(static_cast<float>(anchor.getX())+0.5f+TRAP_SOCKET_OFFSET_X,',
     'static_cast<float>(anchor.getY())+0.5f+TRAP_SOCKET_OFFSET_Y,TRAP_SOCKET_OFFSET_Z);')
-has(room, 'the measured offset', 'static const float TRAP_SOCKET_OFFSET_X=0.5f;', 'static const float TRAP_SOCKET_OFFSET_Y=0.82f;',
-    'static const float TRAP_SOCKET_OFFSET_Z=1.1f;')
+# Since 2026-11-28 the seat is the stone shelf of the approved closed cauldron, under its suction nozzle
+has(room, 'the measured offset', 'static const float TRAP_SOCKET_OFFSET_X=-0.4935f;',
+    'static const float TRAP_SOCKET_OFFSET_Y=0.5779f;', 'static const float TRAP_SOCKET_OFFSET_Z=0.4433f;')
 for old in ('TRAP_SOCKET_HEIGHT', '1.574', 'GhostDeliveryHandReach', 'GhostDeliveryHeight', 'standing.getX()'):
     assert old not in room, ('no socket over the middle of the mouth, no device beside the hunter', old)
 standing_body = body(room, 'Tile* RoomGhostRoom::getTrapStandingTile(GameMap& map, const Tile& anchor)')
-has(standing_body, 'the +Y side of the block', 'return map.getTile(anchor.getX()+1,anchor.getY()+2);')
+has(standing_body, 'the +Y side of the block', 'return map.getTile(anchor.getX(),anchor.getY()+2);')
 reserve = body(room, 'Tile* RoomGhostRoom::reserveCauldron(Creature& hunter)')
 has(reserve, 'the hunter walks to the one place beside the seat', 'Tile* best=getTrapStandingTile(*getGameMap(),*cauldron.anchor);')
 assert 'for(int y=-1;y<=2;++y)' not in reserve, 'no choice of any ring tile any more'
@@ -158,7 +159,8 @@ has(read('source/rooms/RoomGhostRoom.h'), 'declarations', 'static Ogre::Vector3 
 has(body(room, 'Ogre::Vector3 RoomGhostRoom::getCauldronMouthPosition('), 'mouth on the mesh', 'static const float ECTOPLASM_SURFACE_HEIGHT=1.049f;')
 has(body(room, 'float RoomGhostRoom::getCauldronRimRadius()'), 'rim on the mesh', 'static const float RIM_RADIUS=0.68f;')
 rim_radius, rim_top, surface_height = 0.68, 1.14, 1.049
-seat_offset = (0.5, 0.82, 1.1)
+seat_offset = (-0.4935, 0.5779, 0.4433)
+nozzle_offset = (-0.4792, 0.5706, 0.7515)
 
 
 # Model of getTrapSocketPosition and getTrapStandingTile for the block with its anchor in (0, 0); the middle of the block is (0.5, 0.5)
@@ -166,18 +168,19 @@ def device_for(anchor_x, anchor_y):
     return anchor_x + 0.5 + seat_offset[0], anchor_y + 0.5 + seat_offset[1], seat_offset[2]
 
 
-stand = (1, 2)
+stand = (0, 2)
 hand_reach = math.hypot(device_for(0, 0)[0] - stand[0], device_for(0, 0)[1] - stand[1])
-assert abs(hand_reach - 0.68) < 1e-9, hand_reach
-assert abs(device_for(0, 0)[0] - stand[0]) < 1e-9 and device_for(0, 0)[1] < stand[1], 'the hunter faces -Y towards the seat'
-assert 0 < hand_reach <= 0.7, 'the hand reaches the seat without a step'
+# The shelf lies 0.42 inside the block's front edge: measured once, 0.922 from the middle of the nearest outside tile
+assert abs(hand_reach - 0.9221) < 1e-4, hand_reach
+assert abs(device_for(0, 0)[0] - stand[0]) < 0.01 and device_for(0, 0)[1] < stand[1], 'the hunter faces -Y towards the seat'
 dx, dy, dz = device_for(0, 0)
-assert math.hypot(dx - 0.5, dy - 0.5) > rim_radius, 'the seat lies on the rim neck, outside the rolled rim, not over the mouth'
-assert dz <= rim_top and dz >= 1.0, dz
+assert abs(dz - 0.4433) < 1e-9, 'the seat is the top of the stone shelf'
+nx, ny, nz = nozzle_offset
+assert math.hypot(nx - seat_offset[0], ny - seat_offset[1]) < 0.02 and nz - dz > 0.25, 'the nozzle hangs over the seat'
 assert stand not in [(x, y) for x in range(2) for y in range(2)], 'the standing tile lies outside the block'
 has(body(room, 'void RoomGhostRoom::createCauldronObjects()'), 'cauldron centred on its block', 'tile->getX()+0.5f,tile->getY()+0.5f,0.0f,0.0f,false);')
 assets = read('source/tests/check_ghost_assets.py')
-has(assets, 'the seat marker of the export is checked there', 'zip(offset,(.5,.82,1.1))')
+has(assets, 'the seat marker of the export is checked there', 'zip(offset,(-.4935,.5779,.4433))')
 if ROOM_ASSETS:
     mesh = room_file('models/GhostCauldron.mesh').read_bytes()
     assert b'GhostEctoplasm\n' in mesh

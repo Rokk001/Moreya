@@ -10,6 +10,9 @@ The liquid in the cauldron mouth was one flat mint-green GhostEctoplasm disc wit
 - unchanged: the trap seat glow stays GhostEctoplasm (and every other apparatus keeps GhostEctoplasm), all positions,
   normals, bones and bounds, and the fill level path in BuildingObject.cpp (child node behind the window, height
   scaled by the fill fraction).
+Since 2026-11-28 the cauldron is the approved closed cauldron (Meshy model of the Codex template): its lid is shut, so
+it has no mouth surface any more; the window fill keeps the swirl, the trap seat glow moved with the seat onto the
+stone shelf and the fill sits behind the new glass, its full height the height of the glass (GHOST_FILL_HEIGHT).
 Pure file inspection, nothing is compiled or rendered. Ghost.material is content (core-models package, found through
 scripts/content_packages.py); without it the material part is named as not checked.
 """
@@ -164,22 +167,15 @@ def meshes():
     cauldron = mesh('GhostCauldron')
     positions, normals, uvs = cauldron['vertices']
     materials = [name for name, _ in cauldron['submeshes']]
-    assert materials == ['GhostIron', 'GhostEctoplasm', MATERIAL, 'GhostBrass', 'GhostCoal', 'GhostEmbers',
-                         'GhostWindow'], materials
+    assert materials == ['GhostCauldronMeshy', 'GhostCauldronMeshyGlow', 'GhostWindow', 'GhostCauldronMeshyInner',
+                         'GhostEctoplasm', 'GhostCoal', 'GhostEmbers'], materials
     submeshes = dict(cauldron['submeshes'])
-    mouth, seat = set(submeshes[MATERIAL]), set(submeshes['GhostEctoplasm'])
-    assert len(mouth) == 664 and len(submeshes[MATERIAL]) == 380*3, 'measured mouth surface'
+    assert MATERIAL not in submeshes, 'the closed lid has no mouth surface'
+    seat = set(submeshes['GhostEctoplasm'])
     assert len(seat) == 280 and len(submeshes['GhostEctoplasm']) == 108*3, 'measured trap seat glow'
-    assert not mouth & seat
-    assert all(1.0 < positions[i][2] < 1.06 and (positions[i][0]**2+positions[i][1]**2)**0.5 < 0.57 for i in mouth)
-    assert all(abs(positions[i][0]-0.5) < 0.08 and abs(positions[i][1]-0.82) < 0.08 and positions[i][2] > 1.09
-               for i in seat), 'seat glow stays on the corner seat'
-    assert sum(normals[i][2] > 0.8 for i in mouth) >= 200, 'mouth faces up'
+    assert all(abs(positions[i][0]+0.4935) < 0.08 and abs(positions[i][1]-0.5779) < 0.08 and positions[i][2] > 0.44
+               for i in seat), 'seat glow on the shelf seat'
     span = 2*0.565
-    for i in mouth:
-        u, v = uvs[i]
-        assert abs(u-(0.5+positions[i][0]/span)) < 1e-5 and abs(v-(0.5-positions[i][1]/span)) < 1e-5, 'planar mouth UVs'
-        assert (u-0.5)**2+(v-0.5)**2 <= 0.5**2+1e-4, 'mouth inside the inscribed circle of the swirl texture'
     fill = mesh('GhostCauldronFill')
     assert [name for name, _ in fill['submeshes']] == [MATERIAL], 'window fill uses the cauldron ectoplasm'
     positions, _, uvs = fill['vertices']
@@ -196,9 +192,10 @@ def meshes():
 def fill_path():
     building = read('source/entities/BuildingObject.cpp')
     assert 'createEntity(getName()+"_GhostFill","GhostCauldronFill.mesh")' in building, 'fill entity'
-    assert 'createChildSceneNode(getName()+"_GhostFillNode",Ogre::Vector3(0.0f,0.74f,0.40f));' in building
-    assert 'mGhostFillNode->setScale(1.0f,1.0f,static_cast<float>(std::max(0.0,mGhostFill)));' in building
-    assert 'mGhostFillNode->setScale(1.0f,1.0f,static_cast<float>(std::max(0.0,std::min(1.0,mGhostFill))));' in building
+    assert 'createChildSceneNode(getName()+"_GhostFillNode",Ogre::Vector3(0.02f,0.64f,0.38f));' in building
+    assert 'static const float GHOST_FILL_HEIGHT=0.68f;' in building, 'the full fill is the height of the glass'
+    assert 'mGhostFillNode->setScale(1.0f,1.0f,GHOST_FILL_HEIGHT*static_cast<float>(std::max(0.0,mGhostFill)));' in building
+    assert 'mGhostFillNode->setScale(1.0f,1.0f,GHOST_FILL_HEIGHT*static_cast<float>(std::max(0.0,std::min(1.0,mGhostFill))));' in building
     assert 'setMaterial' not in building.split('"GhostCauldronFill.mesh"')[1].split('}')[0], 'mesh material is used'
 
 

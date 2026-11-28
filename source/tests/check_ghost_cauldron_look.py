@@ -9,7 +9,11 @@ models/GhostCauldron.skeleton (the later parts of the exported mesh are checked 
 models/GhostCauldron.mesh uses exactly these seven materials (decision 998 point 6 gave the mouth surface its own
 GhostCauldronEctoplasm, see check_ghost_cauldron_ectoplasm.py) and keeps its two-tile footprint (2.0 x 2.0 x 1.14,
 read from the mesh bounds chunk; the old 1.6 high mesh had the funnel);
-the client fill sits behind the new glass; the CREDITS line names the rework. Fixed values measured once on the
+the client fill sits behind the new glass; the CREDITS line names the rework.
+Since 2026-11-28 the exported mesh is the approved closed cauldron (Meshy model of the Codex template): a closed pot in
+a stone hearth with a suction tower, the trap seat on a stone shelf; it uses its Meshy texture, a glowing copy of it, a
+dark plate behind the window, the kept coal, embers and seat glow and the glass of the window (2.0 x 2.0 x 1.5944, the
+height follows the approved proportions). The generator lines above keep checking the earlier source. Fixed values measured once on the
 export of this branch. Ghost.material is content (core-models package, found through scripts/content_packages.py);
 without it the material names of the mesh are named as not checked.
 """
@@ -49,8 +53,8 @@ assert "'GhostCauldron'}" in generator.split('OUTSIDE_GIT = ')[1].split('\n')[0]
 if ROOM_ASSETS:
     mesh = room_file('models/GhostCauldron.mesh').read_bytes()
     materials = sorted(set(m.decode() for m in re.findall(rb'(Ghost[A-Za-z]+)\n', mesh)))
-    assert materials == ['GhostBrass', 'GhostCauldronEctoplasm', 'GhostCoal', 'GhostEctoplasm', 'GhostEmbers', 'GhostIron',
-                         'GhostWindow'], materials
+    assert materials == ['GhostCauldronMeshy', 'GhostCauldronMeshyGlow', 'GhostCauldronMeshyInner', 'GhostCoal',
+                         'GhostEctoplasm', 'GhostEmbers', 'GhostWindow'], materials
     bounds = None
     position = 0
     while True:
@@ -61,22 +65,25 @@ if ROOM_ASSETS:
             bounds = struct.unpack('<7f', mesh[position + 6:position + 34])
         position += 1
     assert bounds is not None
-    assert [round(v, 2) for v in bounds[:6]] == [-1.0, -1.0, 0.0, 1.0, 1.0, 1.14], bounds
+    assert [round(v, 4) for v in bounds[:6]] == [-1.0, -1.0, 0.0, 1.0, 1.0, 1.5944], bounds
     assert b'GhostCauldron.skeleton' in mesh, 'the cauldron has the rig of the trap seat'
 
     if GHOST_MATERIAL:
-        material_script = content_packages.read_text(repo, 'materials/scripts/Ghost.material')
+        material_script = (content_packages.read_text(repo, 'materials/scripts/Ghost.material')
+                           + content_packages.read_text(repo, 'materials/scripts/GhostMeshyGear.material'))
         for name in materials:
             assert re.search(r'^material ' + name + r'\s*$', material_script, re.M), name
     else:
         content_packages.unchecked('check_ghost_cauldron_look', ['materials/scripts/Ghost.material'])
 
 building = (repo / 'source/entities/BuildingObject.cpp').read_text(encoding='utf-8')
-assert 'createChildSceneNode(getName()+"_GhostFillNode",Ogre::Vector3(0.0f,0.74f,0.40f));' in building
+assert 'createChildSceneNode(getName()+"_GhostFillNode",Ogre::Vector3(0.02f,0.64f,0.38f));' in building
 
 if ROOM_ASSETS:
     credits = room_packages.credits_text(repo)
     assert re.search(r'^models/GhostCauldron\.mesh\s+AI-generated with Claude Code\s+(?:GPLv3\+|All rights reserved)\s+'
                      r'Ghost cauldron reworked so it no '
                      r'longer reads as a press \(owner decision 845\)', credits, re.M)
+    assert re.search(r'^packages/room-ghost-room/models/GhostCauldron\.mesh Mario\s+All rights reserved\s+'
+                     r'AI-generated \(Codex design, Meshy model\): Meshy model geisterkessel', credits, re.M)
 print('ghost cauldron look: ok' + ('' if ROOM_ASSETS else ' (ghost room package not present: mesh and credits not checked)'))

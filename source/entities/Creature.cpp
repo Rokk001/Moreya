@@ -15350,7 +15350,8 @@ void Creature::updateGhostHuntVisuals(double seconds)
         const Ogre::Real creatureHeight=creatureBounds.getSize().z;
         // Sized to the hunter (decision 791): the pack is 36 % of the hunter's height and sits between 38 % and 74 % of
         // it, whatever the size of the creature mesh; the creature's level growth applies through the entity node.
-        const Ogre::Vector3 packSize=pack->getMesh()->getBounds().getSize();
+        const Ogre::AxisAlignedBox packBounds=pack->getMesh()->getBounds();
+        const Ogre::Vector3 packSize=packBounds.getSize();
         const Ogre::Real fit=0.36f*creatureHeight/packSize.z;
         // Worn on the back (decision 733): creatures face the negative y axis of their node, so the back is +y. The
         // pack's straps sit on its +y side and turn half round to lie against the hunter's back. The back is the rear
@@ -15361,12 +15362,14 @@ void Creature::updateGhostHuntVisuals(double seconds)
             Ogre::Quaternion(Ogre::Degree(180.0f),Ogre::Vector3::UNIT_Z));
         mGhostBackpackNode->setScale(Ogre::Vector3(fit,fit,fit));
         mGhostBackpackNode->attachObject(pack);
-        // The capture cannon waits upright in its holster on the pack's side, at the end of the pack's hose.
+        // The capture cannon waits upright in the holster cup on the pack's side, at the end of the pack's hose: its rear
+        // end where the docked wand of the approved gear stands (0.108 of the pack's width from its holster side, 0.068
+        // of its depth from the outer face, 0.24 of its height), as long as 0.89 of the pack's height.
         mGhostPackGun=scene->createEntity(getName()+"_GhostPackGun","GhostCaptureGun.mesh");
         mGhostPackGun->setQueryFlags(0);mGhostPackGun->setCastShadows(true);
-        const Ogre::Real holster=0.85f*packSize.z/mGhostPackGun->getMesh()->getBounds().getSize().z;
+        const Ogre::Real holster=0.89f*packSize.z/mGhostPackGun->getMesh()->getBounds().getSize().z;
         Ogre::SceneNode* holsterNode=mGhostBackpackNode->createChildSceneNode(getName()+"_GhostHolsterNode",
-            Ogre::Vector3(-0.5f*packSize.x-0.045f,0.0f,0.05f*packSize.z));
+            Ogre::Vector3(packBounds.getMinimum().x+0.108f*packSize.x,packBounds.getMinimum().y+0.068f*packSize.y,0.24f*packSize.z));
         holsterNode->setScale(Ogre::Vector3(holster,holster,holster));
         holsterNode->attachObject(mGhostPackGun);
     }
@@ -15451,8 +15454,9 @@ void Creature::updateGhostHuntVisuals(double seconds)
         ghostCannonHandBone(body->hasSkeleton()?body->getSkeleton():nullptr),ghostBeamAimPoint(scene,*target),
         mGhostCannonAim,seconds*getGameMap()->getGameSpeedFactor());
     else mGhostCannonAim=Ogre::Vector3::ZERO;
-    // Decision 894: the flexible hose runs from the port on the pack's side to the rear end of the cannon, in its
-    // holster or in the hand, and follows both
+    // Decision 894: the flexible hose runs from the port on the pack to the rear end of the cannon, in its holster or in
+    // the hand, and follows both. The port is the round cable outlet at the lower corner of the pack's outer face
+    // opposite the holster (0.727 of the width, 0.103 of the depth, 0.16 of the height); the hose leaves it outward.
     Ogre::Entity* hoseGun=beaming?mGhostCaptureGun:mGhostPackGun;
     if(hoseGun!=nullptr && mGhostBackpackNode!=nullptr && scene->hasEntity(getName()+"_GhostBackpack"))
     {
@@ -15471,9 +15475,9 @@ void Creature::updateGhostHuntVisuals(double seconds)
             }
         }
         const Ogre::AxisAlignedBox packBounds=scene->getEntity(getName()+"_GhostBackpack")->getMesh()->getBounds();
-        const Ogre::Vector3 port=mGhostBackpackNode->_getFullTransform()*Ogre::Vector3(packBounds.getMinimum().x,packBounds.getCenter().y,
-            packBounds.getMinimum().z+0.7f*packBounds.getSize().z);
-        const Ogre::Vector3 portOut=mGhostBackpackNode->_getDerivedOrientation()*Ogre::Vector3::NEGATIVE_UNIT_X;
+        const Ogre::Vector3 port=mGhostBackpackNode->_getFullTransform()*Ogre::Vector3(packBounds.getMinimum().x+0.727f*packBounds.getSize().x,
+            packBounds.getMinimum().y+0.103f*packBounds.getSize().y,packBounds.getMinimum().z+0.16f*packBounds.getSize().z);
+        const Ogre::Vector3 portOut=mGhostBackpackNode->_getDerivedOrientation()*Ogre::Vector3::NEGATIVE_UNIT_Y;
         const Ogre::AxisAlignedBox gunBounds=hoseGun->getMesh()->getBounds();
         const Ogre::Matrix4 gunTransform=hoseGun->_getParentNodeFullTransform();
         const Ogre::Vector3 rear=gunTransform*Ogre::Vector3(gunBounds.getCenter().x,gunBounds.getCenter().y,gunBounds.getMinimum().z);

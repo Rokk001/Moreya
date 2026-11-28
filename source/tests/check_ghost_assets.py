@@ -89,15 +89,16 @@ def clips(credits):
             assert any(kind==0x4100 for kind,bone,track in children), (creature,name,'no bone track')
         assert 'Idle' in animations and 'Walk' in animations, (creature,'prior clips lost')
 
-# Check the actual cauldron export, its reachable seat, material set and timed clips (decision 894).
+# Check the actual cauldron export, its reachable seat, material set and timed clips (decision 894). Since the approved
+# closed cauldron (Meshy model of the Codex template, 2026-11-28) the seat is its stone shelf under the suction nozzle.
 def cauldron_delivery(credits, chunks_module):
     credited('models/GhostCauldron.skeleton', credits)
     mesh = room_file('models/GhostCauldron.mesh').read_bytes()
     assert b'GhostCauldron.skeleton\n' in mesh, 'cauldron rig link'
     materials = sorted(set(name.decode() for name in re.findall(rb'(Ghost[A-Za-z]+)\n', mesh)))
-    assert materials == ['GhostBrass','GhostCauldronEctoplasm','GhostCoal','GhostEctoplasm','GhostEmbers','GhostIron',
+    assert materials == ['GhostCauldronMeshy','GhostCauldronMeshyGlow','GhostCauldronMeshyInner','GhostCoal','GhostEctoplasm','GhostEmbers',
         'GhostWindow'], materials
-    material_script = read('materials/scripts/Ghost.material')
+    material_script = read('materials/scripts/Ghost.material') + read('materials/scripts/GhostMeshyGear.material')
     for name in materials:
         assert re.search(r'^material '+name+r'\s*$', material_script, re.M), name
 
@@ -114,12 +115,12 @@ def cauldron_delivery(credits, chunks_module):
     assert len(root) == 1 and root[0][0] == 0x3000
     parts = list(children(mesh, root[0][1]+1, root[0][2]))
     bounds = next(struct.unpack_from('<7f',mesh,start) for kind,start,end in parts if kind == 0x9000)
-    assert [round(value,4) for value in bounds[:6]] == [-1,-1,0,1,1,1.14], bounds
-    assert re.search(r'\{"GhostCauldron", -1\.0f, -1\.0f, 1\.0f, 1\.0f, 1\.14f\}',
+    assert [round(value,4) for value in bounds[:6]] == [-1,-1,0,1,1,1.5944], bounds
+    assert re.search(r'\{"GhostCauldron", -1\.0f, -1\.0f, 1\.0f, 1\.0f, 1\.5944f\}',
                      read('source/gamemap/RoomObjectBounds.h')), 'cauldron metadata'
     geometry = next((start,end) for kind,start,end in parts if kind == 0x5000)
     count = struct.unpack_from('<I',mesh,geometry[0])[0]
-    assert count == 44549, count
+    assert count == 6403, count
     positions = []
     for kind,start,end in children(mesh,geometry[0]+4,geometry[1]):
         if kind == 0x5200:
@@ -130,8 +131,8 @@ def cauldron_delivery(credits, chunks_module):
                 assert payload[0][2]-payload[0][1] == count*stride
                 positions = [struct.unpack_from('<3f',mesh,payload[0][1]+i*stride) for i in range(count)]
     assert positions, 'missing positions'
-    assert not any(x*x+y*y < .3**2 and z > 1.09 for x,y,z in positions), 'centre funnel or arms remain'
-    assert any(abs(x-.5)<.08 and abs(y-.82)<.08 and abs(z-1.1)<.01 for x,y,z in positions), 'corner seat missing'
+    assert any(x*x+y*y < .3**2 and z > 1.5 for x,y,z in positions), 'suction tower on the closed lid missing'
+    assert any(abs(x+.4935)<.08 and abs(y-.5779)<.08 and abs(z-.4433)<.01 for x,y,z in positions), 'shelf seat missing'
     assignments = [struct.unpack_from('<IHf',mesh,start) for kind,start,end in parts if kind == 0x7000]
     assert len({vertex for vertex,bone,weight in assignments if weight > 0}) == count, 'unweighted vertices'
     assert all(bone in (0,2) and abs(weight-1)<1e-6 for vertex,bone,weight in assignments), 'rigid body or inset glow weights'
@@ -141,7 +142,7 @@ def cauldron_delivery(credits, chunks_module):
     assert set(bones) == {'Root','DeliverySocket','DeliveryGlow'}, set(bones)
     socket = bones['DeliverySocket']
     offset = struct.unpack_from('<3f',socket,socket.index(b'\n',6)+3)
-    assert all(abs(a-b)<1e-6 for a,b in zip(offset,(.5,.82,1.1))), offset
+    assert all(abs(a-b)<1e-6 for a,b in zip(offset,(-.4935,.5779,.4433))), offset
     animations = {name:data for kind,name,data in chunks if kind == chunks_module.ANIMATION}
     assert set(animations) == {'Idle','Fill','Fill16','Fill13_3'}, set(animations)
     for name,expected in (('Idle',1),('Fill',20),('Fill16',16),('Fill13_3',13.3)):

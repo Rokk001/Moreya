@@ -169,10 +169,11 @@ void RoomGhostRoom::layoutCauldrons()
     std::sort(mCauldrons.begin(),mCauldrons.end(),cauldronOrder);
 }
 
-//! Where the trap seat of the cauldron lies from the middle of the cauldron (models/GhostCauldron.mesh, bone DeliverySocket)
-static const float TRAP_SOCKET_OFFSET_X=0.5f;
-static const float TRAP_SOCKET_OFFSET_Y=0.82f;
-static const float TRAP_SOCKET_OFFSET_Z=1.1f;
+//! Where the trap seat of the cauldron lies from the middle of the cauldron (models/GhostCauldron.mesh, bone DeliverySocket):
+//! the top of the stone shelf on the front left of the closed cauldron, under its suction nozzle
+static const float TRAP_SOCKET_OFFSET_X=-0.4935f;
+static const float TRAP_SOCKET_OFFSET_Y=0.5779f;
+static const float TRAP_SOCKET_OFFSET_Z=0.4433f;
 
 void RoomGhostRoom::createCauldronObjects()
 {
@@ -1113,8 +1114,8 @@ Tile* RoomGhostRoom::getHunterCauldron(const Creature& hunter) const
 
 Ogre::Vector3 RoomGhostRoom::getTrapSocketPosition(const Tile& anchor)
 {
-    // Decision 894: the cauldron has a permanent trap seat on its rim (models/GhostCauldron.mesh, bone DeliverySocket,
-    // measured on the export): the offset below from the middle of the 2x2 block, where the cauldron stands
+    // Decision 894: the cauldron has a permanent trap seat, the stone shelf of the closed cauldron (models/GhostCauldron.mesh,
+    // bone DeliverySocket, measured on the export): the offset below from the middle of the 2x2 block, where the cauldron stands
     // (createCauldronObjects). The cauldron is never turned, so the offset needs no rotation.
     return Ogre::Vector3(static_cast<float>(anchor.getX())+0.5f+TRAP_SOCKET_OFFSET_X,
         static_cast<float>(anchor.getY())+0.5f+TRAP_SOCKET_OFFSET_Y,TRAP_SOCKET_OFFSET_Z);
@@ -1122,14 +1123,17 @@ Ogre::Vector3 RoomGhostRoom::getTrapSocketPosition(const Tile& anchor)
 
 Tile* RoomGhostRoom::getTrapStandingTile(GameMap& map, const Tile& anchor)
 {
-    // The seat is open on the +Y side: the hunter stands on the tile of the ring round the block that lies there, one
-    // tile right of the block's left edge, and faces -Y. That tile is 0.68 from the seat, within reach of his hand.
-    return map.getTile(anchor.getX()+1,anchor.getY()+2);
+    // The seat is open on the +Y side: the hunter stands on the tile of the ring round the block that lies there, in
+    // front of the block's left tile, and faces -Y. That tile is 0.92 from the seat (the shelf lies 0.42 inside the
+    // block's front edge), within reach of his hand.
+    return map.getTile(anchor.getX(),anchor.getY()+2);
 }
 
 Ogre::Vector3 RoomGhostRoom::getCauldronMouthPosition(const Ogre::Vector3& cauldron)
 {
     // The glowing ectoplasm surface fills the mouth 1.049 above the floor (models/GhostCauldron.mesh, measured on the export)
+    // The closed cauldron of 2026-11-28 has its lid there instead (1.06 high at the foot of its suction tower): the ghost
+    // still circles down into the middle of the cauldron and fades as it reaches the lid.
     static const float ECTOPLASM_SURFACE_HEIGHT=1.049f;
     return Ogre::Vector3(cauldron.x,cauldron.y,ECTOPLASM_SURFACE_HEIGHT);
 }

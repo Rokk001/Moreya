@@ -416,7 +416,8 @@ has(shape, 'a tube along a cubic curve with sag, rebuilt in place', 'hose.begin(
     'hose.position(centre+normal*ribRadius);', 'hose.colour(shadeGhostHose(look.mHose,normal,look.mGlow));', 'hose.end();')
 has(visuals, 'the hose joins the pack port and the rear end of the cannon, in the holster or in the hand and follows both every frame',
     'Ogre::Entity* hoseGun=beaming?mGhostCaptureGun:mGhostPackGun;', 'mGhostHose->setDynamic(true);',
-    'const Ogre::Vector3 port=mGhostBackpackNode->_getFullTransform()*Ogre::Vector3(packBounds.getMinimum().x,',
+    'const Ogre::Vector3 port=mGhostBackpackNode->_getFullTransform()*Ogre::Vector3(packBounds.getMinimum().x+0.727f*packBounds.getSize().x,',
+    'const Ogre::Vector3 portOut=mGhostBackpackNode->_getDerivedOrientation()*Ogre::Vector3::NEGATIVE_UNIT_Y;',
     'const Ogre::Vector3 rear=gunTransform*Ogre::Vector3(gunBounds.getCenter().x,gunBounds.getCenter().y,gunBounds.getMinimum().z);',
     'const Ogre::Real radius=0.025f*body->getBoundingBox().getSize().z*getEntityNode()->_getDerivedScale().z;',
     'shapeGhostHose(*mGhostHose,port,portOut,rear,')

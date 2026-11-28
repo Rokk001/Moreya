@@ -324,18 +324,20 @@ def run_outlet(building):
 spec = importlib.util.spec_from_file_location('ghost_meshes', repo / 'source/tests/check_ghost_apparatus_visible.py')
 meshes = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(meshes)
-CAULDRON_MATERIALS = ({material for material, _ in meshes.read_mesh('GhostCauldron')['submeshes']} if ROOM_ASSETS
-                      else set())
+# The materials of the cauldron and its window fill (the closed cauldron of 2026-11-28 keeps the ectoplasm in its fill)
+CAULDRON_MATERIALS = ({material for name in ('GhostCauldron', 'GhostCauldronFill')
+                       for material, _ in meshes.read_mesh(name)['submeshes']} if ROOM_ASSETS else set())
 
 
 def check_outlet(building):
     """Every outlet section is a resolved, textured cauldron material and every triangle covers texture area."""
     outlet = run_outlet(building)
-    assert [section['material'] for section in outlet.sections] == ['GhostBrass', 'GhostIron', 'GhostCauldronEctoplasm']
-    assert [len(section['vertices']) for section in outlet.sections] == [150, 50, 8]
+    # The spout is part of the closed cauldron mesh since 2026-11-28; the builder draws only the green liquid in it
+    assert [section['material'] for section in outlet.sections] == ['GhostCauldronEctoplasm']
+    assert [len(section['vertices']) for section in outlet.sections] == [8]
     for section in outlet.sections:
         material, group = section['material'], section['group']
-        assert material in CAULDRON_MATERIALS, (material, 'the cauldron itself uses this material')
+        assert material in CAULDRON_MATERIALS, (material, 'the cauldron or its window fill uses this material')
         assert resolve(material, group) == material, (material, group, 'not found: drawn white')
         deviation, _ = texture_detail(group, material)
         assert max(deviation) > 1.0, (material, 'its texture has surface detail')
@@ -371,23 +373,21 @@ def main():
     check_outlet(building)
     # The reported state: no group in begin(), and the outlet bore and lip on one texel.
     reported_creature = creature.replace(',"Graphics");', ');')
-    reported_building = building.replace(',"Graphics");', ');').replace(
-        'outlet.textureCoord(static_cast<float>(side)/sides,0.94f+0.08f);', 'outlet.textureCoord(0.0f,0.0f);')
+    reported_building = building.replace(',"Graphics");', ');')
     for check, text in ((check_hose, reported_creature), (check_outlet, reported_building)):
         try:
             check(text)
         except AssertionError:
             continue
         raise AssertionError((check.__name__, 'the reported white state must fail'))
-    flat = building.replace(
-        'outlet.textureCoord(static_cast<float>(side)/sides,ring==0?0.60f:0.94f);', 'outlet.textureCoord(0.0f,0.0f);')
+    flat = re.sub(r'outlet\.textureCoord\([^)]*\);', 'outlet.textureCoord(0.0f,0.0f);', building)
     try:
         check_outlet(flat)
     except AssertionError:
         pass
     else:
-        raise AssertionError('a bore on one texel must fail')
-    print('ghost hose and outlet materials: 2 hose sections, 5 wires coloured, 3 outlet sections textured: ok')
+        raise AssertionError('a liquid on one texel must fail')
+    print('ghost hose and outlet materials: 2 hose sections, 5 wires coloured, 1 outlet section textured: ok')
 
 
 if __name__ == '__main__':

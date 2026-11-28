@@ -126,19 +126,20 @@ struct RoomGhostRoom {
     code += rules.function(room, "bool tileOrder(")
     code += rules.function(room, "Tile* RoomGhostRoom::findDropTile(")
     code += r"""
-//! \brief Checks the actual brass spout, open dark bore, green liquid, and floor destinations.
+//! \brief Checks the green liquid in the spout of the closed cauldron mesh (2026-11-28: the spout itself is part of the
+//! mesh, its mouth at y 1.0, z 0.14 to 0.31), and floor destinations.
 int main(){
  Ogre::ManualObject outlet;buildGhostCauldronOutlet(outlet);
- check(outlet.sections.size()==3,"three outlet surfaces");
- const size_t vertices[]={150,50,8},indices[]={720,144,12};
- const char* materials[]={"GhostBrass","GhostIron","GhostCauldronEctoplasm"};
- for(size_t s=0;s<3;++s){
+ check(outlet.sections.size()==1,"one outlet surface, the liquid");
+ const size_t vertices[]={8},indices[]={12};
+ const char* materials[]={"GhostCauldronEctoplasm"};
+ for(size_t s=0;s<1;++s){
   const Ogre::ManualObject::Section& section=outlet.sections[s];
-  check(section.material==materials[s],"brass casing, dark bore, wet liquid");
+  check(section.material==materials[s],"wet liquid");
   check(section.group=="Graphics","outlet material is looked up in the group that loads Ghost.material");
   check(section.vertices.size()==vertices[s]&&section.indices.size()==indices[s],"fixed complete geometry");
   for(const Ogre::ManualObject::Vertex& v:section.vertices){
-   check(std::abs(v.p.x)<=.201f&&v.p.y>=.479f&&v.p.y<=.991f&&v.p.z>=.039f&&v.p.z<=.481f,"outlet under the glass in the cauldron footprint");
+   check(std::abs(v.p.x)<=.081f&&v.p.y>=.829f&&v.p.y<=1.021f&&v.p.z>=.039f&&v.p.z<=.306f,"liquid in the spout under the glass in the cauldron footprint");
   }
   for(size_t i=0;i<section.indices.size();i+=3){
    const Ogre::ManualObject::Vertex& a=section.vertices.at(section.indices[i]);
@@ -151,16 +152,13 @@ int main(){
    check(a.u>=0.0f&&b.u>=0.0f&&c.u>=0.0f,"every outlet vertex has texture coordinates");
    const float uvArea=(b.u-a.u)*(c.v-a.v)-(c.u-a.u)*(b.v-a.v);
    check(std::abs(uvArea)>1e-6f,"every outlet triangle covers texture area, no flat untextured face");
-   if(s==0&&i>=576)check(ny>0,"lip faces out of the open bore");
-   else check(nx*a.n.x+ny*a.n.y+nz*a.n.z>0,"visible face winding matches its normal");
-   if(s==0&&i>=576)for(const Ogre::ManualObject::Vertex* v:{&a,&b,&c})
-    check(v->p.x*v->p.x+(v->p.z-.28f)*(v->p.z-.28f)>=.00999f,"lip leaves the bore open");
+   check(nx*a.n.x+ny*a.n.y+nz*a.n.z>0,"visible face winding matches its normal");
   }
  }
- const Ogre::ManualObject::Section& liquid=outlet.sections[2];
- check(liquid.vertices[6].p.y==.99f&&liquid.vertices[7].p.y==.99f&&
+ const Ogre::ManualObject::Section& liquid=outlet.sections[0];
+ check(liquid.vertices[6].p.y==1.02f&&liquid.vertices[7].p.y==1.02f&&
        liquid.vertices[6].p.z==.04f&&liquid.vertices[7].p.z==.04f,
-       "green discharge extends outside and below the brass lip");
+       "green discharge extends outside and below the spout lip");
  Tile anchor{0,0},back{0,-1},front{0,2},frontRight{1,2},side{-1,1},inside{0,1};
  RoomGhostRoom room;room.mCauldrons.push_back({&anchor});
  room.mCoveredTiles={&back,&front,&frontRight,&side,&inside};
