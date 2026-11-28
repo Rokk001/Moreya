@@ -74,6 +74,10 @@ struct NameGroup
     std::string getDisplayAgeJoke(std::size_t index) const;
 };
 
+//! \brief A text of the social code (room names of the posts, relationship states, fallbacks of the generator) in the
+//! chosen language: the text of the key in the language files, else the given English text.
+std::string getSocialCodeText(const std::string& key, const std::string& english);
+
 //! \brief A text of config/social-texts.cfg together with the scope it applies to
 //! ("*", a group name, a creature class name, "worker" or "fighter").
 struct ScopedText

@@ -2,7 +2,8 @@
 class names), config/social-names.cfg (epithets, hometowns, age jokes) and config/dungeonbook-quirks.cfg are shown from
 the language packages. Checked:
   * the keys of the language files are exactly the keys the game derives from the tables (SocialData::makeTextKey,
-    NameGroup::getDisplay*, DungeonbookQuirks::getDisplayText), counted per type, in German and in English;
+    NameGroup::getDisplay*, DungeonbookQuirks::getDisplayText) and the 31 texts of the social code (social.code.*),
+    counted per type, in German and in English;
   * the English text of every key is the text of the table (R1.6: no wording changes), the German text exists, is not
     empty, has the same placeholders and no control characters;
   * German has as many different texts as English in every pool of the social texts and names (the generator draws
@@ -34,7 +35,26 @@ EXPECTED_QUIRKS = 4678
 # Some tags that differ only in a spelling (gray/grey, blond/blonde) or in a dropped helper word (image)
 # give the same German remark. The choice of the remarks uses the texts of the table, so this does not change it.
 EXPECTED_DISTINCT_GERMAN_QUIRKS = 4490
-EXPECTED_TOTAL = 718 + 253 + 4678
+# The texts of the social code (CreaturePosts room names and relationship states, fallbacks of SocialGenerator): the
+# English text is the text the code showed before the language files
+CODE_TEXTS = {
+    'social.code.room.temple': 'temple', 'social.code.room.dormitory': 'dormitory',
+    'social.code.room.treasury': 'treasury', 'social.code.room.portal': 'portal',
+    'social.code.room.workshop': 'workshop', 'social.code.room.traininghall': 'training hall',
+    'social.code.room.library': 'library', 'social.code.room.hatchery': 'hatchery', 'social.code.room.crypt': 'crypt',
+    'social.code.room.prison': 'prison', 'social.code.room.bridge': 'bridge', 'social.code.room.arena': 'arena',
+    'social.code.room.casino': 'casino', 'social.code.room.torture': 'torture chamber',
+    'social.code.room.guardroom': 'guard room', 'social.code.room.toilet': 'toilet room',
+    'social.code.room.tavern': 'tavern', 'social.code.room.spa': 'lava spa', 'social.code.room.dungeon': 'dungeon',
+    'social.code.status.partner': 'In a relationship', 'social.code.status.enemies': 'Sworn enemies',
+    'social.code.status.complicated': "It's complicated", 'social.code.status.single': 'Single',
+    'social.code.fallback.name': 'Nameless', 'social.code.fallback.relation': 'Single',
+    'social.code.fallback.hometown': 'Somewhere', 'social.code.fallback.job': 'Dungeon Resident',
+    'social.code.fallback.like': 'quiet days', 'social.code.fallback.dislike': 'loud noises',
+    'social.code.fallback.quirk': 'daydreaming', 'social.code.fallback.bio': 'A mysterious minion from {hometown}.',
+}
+EXPECTED_CODE_TEXTS = 31
+EXPECTED_TOTAL = 718 + 253 + 4678 + EXPECTED_CODE_TEXTS
 MAX_BIO_LENGTH = 160
 
 failures = []
@@ -175,9 +195,10 @@ else:
         count = len([1 for key, _ in names if key.split('.')[3] == kind])
         check(count == expected, 'social-names.cfg: %d %s entries, expected %d' % (count, kind, expected))
     check(len(quirks) == EXPECTED_QUIRKS, 'dungeonbook-quirks.cfg: %d lines, expected %d' % (len(quirks), EXPECTED_QUIRKS))
-    check(len(social) + len(names) + len(quirks) == EXPECTED_TOTAL, 'the tables hold %d entries, expected %d' %
-          (len(social) + len(names) + len(quirks), EXPECTED_TOTAL))
-    table = dict(social + names + quirks)
+    check(len(CODE_TEXTS) == EXPECTED_CODE_TEXTS, '%d code texts, expected %d' % (len(CODE_TEXTS), EXPECTED_CODE_TEXTS))
+    check(len(social) + len(names) + len(quirks) + len(CODE_TEXTS) == EXPECTED_TOTAL, 'the tables hold %d entries, expected %d' %
+          (len(social) + len(names) + len(quirks) + len(CODE_TEXTS), EXPECTED_TOTAL))
+    table = dict(social + names + quirks + list(CODE_TEXTS.items()))
     check(len(table) == EXPECTED_TOTAL, 'two entries of the tables have the same key')
 
     languages = {}

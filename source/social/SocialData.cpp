@@ -130,6 +130,12 @@ std::string resolveNameText(const NameGroup& group, const char* kind, const std:
 
 }
 
+//! \brief A text of the social code in the chosen language, else the given English text.
+std::string getSocialCodeText(const std::string& key, const std::string& english)
+{
+    return resolveText(key, english);
+}
+
 //! \brief The title with the given index in the chosen language.
 std::string NameGroup::getDisplayTitle(std::size_t index) const
 {
