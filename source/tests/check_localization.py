@@ -32,7 +32,7 @@ HAS_CONTENT = content_packages.has_content(repo)
 EXPECTED_CASES = 6
 # Languages of the game at the start (plan D1) and entries of each language, counted once for this branch
 EXPECTED_LANGUAGES = {'de': 'Deutsch', 'en': 'English'}
-EXPECTED_ENTRIES = 2
+EXPECTED_ENTRIES = 254
 
 boost_shim = r'''
 #include <functional>
