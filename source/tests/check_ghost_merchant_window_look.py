@@ -18,7 +18,7 @@ import content_packages  # noqa: E402
 merchant=(ROOT/'source/modes/GameModeMerchant.cpp').read_text()
 assert 'std::max<std::size_t>(18, ((items.size() + 5) / 6) * 6)' in merchant,'eighteen empty slots, six columns'
 assert 'cell->setDisabled(true)' in merchant,'empty slots are not goods'
-assert 'cell->setTooltipText(Gui::describeItemTooltip(items[index].second, mGameMap, nullptr))' in merchant,'full item card tooltip'
+assert 'cell->setTooltipText(Gui::toCeguiText(Gui::describeItemTooltip(items[index].second, mGameMap, nullptr)))' in merchant,'full item card tooltip'
 assert 'positionSelf()' in merchant,'tooltip at the pointer'
 assert 'refreshMerchantSelection();' in merchant,'treasury enabled state refreshed'
 shared=(ROOT/'source/modes/GameModeRoomManager.cpp').read_text()

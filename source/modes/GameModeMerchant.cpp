@@ -311,10 +311,6 @@ bool GameMode::hoverMerchantItem(const CEGUI::EventArgs& args)
         Gui::setPlainTooltip(list, "");
     else
     {
-        // The card is made again from the item, so that it follows a language change since the stock was filled
-        for(const std::pair<uint32_t, ItemInstance>& entry : mMerchantItems)
-            if(entry.first == item->getID())
-                item->setTooltipText(Gui::toCeguiText(Gui::describeItemTooltip(entry.second, mGameMap, nullptr)));
         list->setTooltipText(item->getTooltipText());
         std::ostringstream area;
         area << cell.left() << " " << cell.top() << " " << cell.right() << " " << cell.bottom();

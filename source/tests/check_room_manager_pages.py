@@ -477,7 +477,7 @@ def main():
     assert 'mMerchantPendingId' in merchant and 'getGold() >= price' in merchant
     assert 'mode == "profit"' in merchant and 'setVisible(mode == "profit")' in merchant
     # The full item card of every item tooltip (plan INGAME-QS-11 K6) with the box of the hovered cell (K11)
-    assert 'setTooltipText(Gui::describeItemTooltip(items[index].second, mGameMap, nullptr))' in merchant
+    assert 'setTooltipText(Gui::toCeguiText(Gui::describeItemTooltip(items[index].second, mGameMap, nullptr)))' in merchant
     assert 'positionSelf()' in merchant and 'merchantItemAtPointer(list, event.position, &cell)' in merchant
     assert 'historyText(' not in merchant and '/HistoryText' not in merchant
     assert 'setSelected(seat->getGhostRevive())' in game and 'mUpdatingGhost = true' in game
