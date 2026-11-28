@@ -178,6 +178,7 @@
 #include "utils/MakeUnique.h"
 #include "utils/Random.h"
 #include "utils/ResourceManager.h"
+#include "utils/Translation.h"
 
 #include <CEGUI/Event.h>
 #include <CEGUI/Image.h>
@@ -743,25 +744,25 @@ void collectProfileRelations(GameMap* gameMap, CreatureRelationships& relationsh
         switch(tier)
         {
             case RelationshipTier::lovers:
-                label = "partner";
+                label = "ui.relation.partner";
                 result.mHasPartner = true;
                 result.mClose.push_back(partner.first);
                 break;
             case RelationshipTier::bestFriends:
-                label = "best friend";
+                label = "ui.relation.bestfriend";
                 result.mClose.push_back(partner.first);
                 break;
             case RelationshipTier::friends:
-                label = "friend";
+                label = "ui.relation.friend";
                 result.mClose.push_back(partner.first);
                 break;
             case RelationshipTier::hated:
-                label = "dislikes";
+                label = "ui.relation.dislikes";
                 result.mHasHated = true;
                 result.mAgainst.insert(result.mAgainst.begin(), partner.first);
                 break;
             case RelationshipTier::nemesis:
-                label = "nemesis";
+                label = "ui.relation.nemesis";
                 result.mHasNemesis = true;
                 result.mAgainst.insert(result.mAgainst.begin(), partner.first);
                 break;
@@ -769,7 +770,7 @@ void collectProfileRelations(GameMap* gameMap, CreatureRelationships& relationsh
                 break;
         }
         if(label != nullptr)
-            result.mTierText[partner.first] = partnerName + " (" + label + ")";
+            result.mTierText[partner.first] = partnerName + " (" + Translation::tr(label) + ")";
     }
 }
 
@@ -7748,11 +7749,18 @@ std::string Creature::getGender() const
 //! \brief Seconds of one minute, for the time in the effect lines of the Dungeonbook page.
 static const uint32_t PROFILE_SECONDS_PER_MINUTE = 60;
 
-//! \brief The name of a mood effect for the effect line: the capital letters inside the name start a new word.
+//! \brief The name of a mood effect for the effect line in the chosen language (the language entry
+//! "ui.moodeffect.<lower case name>"); a name without an entry gets spaces before the capital letters inside it.
 //! \param name The name of the effect without spaces (for example "MakeUnhappy").
-//! \return The name with spaces (for example "Make Unhappy").
+//! \return The name as the player sees it (for example "Make Unhappy").
 static std::string getMoodEffectDisplayName(const std::string& name)
 {
+    std::string key = "ui.moodeffect.";
+    for(std::string::size_type ii = 0; ii < name.size(); ++ii)
+        key += static_cast<char>(std::tolower(static_cast<unsigned char>(name[ii])));
+    if(Translation::hasText(key))
+        return Translation::tr(key);
+
     std::string display;
     for(std::string::size_type ii = 0; ii < name.size(); ++ii)
     {
@@ -7783,15 +7791,35 @@ static std::string getProfileEffectTime(double turns)
 //! \param turns The turns that are left.
 static std::string getProfileEffectTooltip(bool buff, const std::string& name, const std::string& what, double turns)
 {
-    return std::string(buff ? "Buff" : "Debuff") + " " + name + ": " + what + " Time left: " +
-        getProfileEffectTime(turns) + ".";
+    std::map<std::string, std::string> values;
+    values["kind"] = Translation::tr(buff ? "ui.profile.buff" : "ui.profile.debuff");
+    values["name"] = name;
+    values["what"] = what;
+    values["time"] = getProfileEffectTime(turns);
+    return Translation::tr("ui.profile.effect.tooltip", values);
 }
 
-//! \brief What a factor on the room points and the experience means, as a percentage ("works at 105.67 % ...").
-static std::string getProfileWorkFactorText(double factor)
+//! \brief The explaining sentence of a state that changes the room points and the experience by a factor, as a
+//! percentage ("... it earns 105.67 % of the usual room points ...").
+//! \param key The language key of the sentence; it has the placeholder {percent}.
+//! \param factor The factor on the room points and the experience.
+static std::string getProfileWorkFactorText(const std::string& key, double factor)
 {
-    return "it earns " + Creature::formatRoundedNumber(factor * Creature::PERCENT_FACTOR) +
-        " % of the usual room points and experience while it lasts.";
+    std::map<std::string, std::string> values;
+    values["percent"] = Creature::formatRoundedNumber(factor * Creature::PERCENT_FACTOR);
+    return Translation::tr(key, values);
+}
+
+//! \brief The line of an effect: "Buff: <name> (<time>)" or "Debuff: <name> (<time>)".
+//! \param buff True for a buff, false for a debuff.
+//! \param name The name of the effect as shown.
+//! \param turns The turns that are left.
+static std::string getProfileEffectLine(bool buff, const std::string& name, double turns)
+{
+    std::map<std::string, std::string> values;
+    values["name"] = name;
+    values["time"] = getProfileEffectTime(turns);
+    return Translation::tr(buff ? "ui.profile.effect.line.buff" : "ui.profile.effect.line.debuff", values);
 }
 
 //! \brief The lines of the active buffs and debuffs of a creature for the Dungeonbook page, buffs first: the buff
@@ -7821,9 +7849,10 @@ static std::string getProfileEffectsText(double relaxTurns, double hangoverTurns
 
     if((relaxTurns > 0.0) && !relaxedEffect)
     {
-        buffs.push_back("Buff: Relaxed (" + getProfileEffectTime(relaxTurns) + ")");
-        buffTips.push_back(getProfileEffectTooltip(true, "Relaxed", "after the lava spa " +
-            getProfileWorkFactorText(relaxWorkFactor), relaxTurns));
+        const std::string relaxedName = getMoodEffectDisplayName("Relaxed");
+        buffs.push_back(getProfileEffectLine(true, relaxedName, relaxTurns));
+        buffTips.push_back(getProfileEffectTooltip(true, relaxedName,
+            getProfileWorkFactorText("ui.profile.relaxed.what", relaxWorkFactor), relaxTurns));
     }
 
     for(const CreatureMoodEffect& effect : moodEffects)
@@ -7833,20 +7862,23 @@ static std::string getProfileEffectsText(double relaxTurns, double hangoverTurns
 
         const bool isBuff = (effect.mStrength >= 0.0);
         const std::string name = getMoodEffectDisplayName(effect.mName);
-        (isBuff ? buffs : debuffs).push_back(std::string(isBuff ? "Buff: " : "Debuff: ") +
-            name + " (" + getProfileEffectTime(effect.mTurnsLeft) + ")");
+        (isBuff ? buffs : debuffs).push_back(getProfileEffectLine(isBuff, name, effect.mTurnsLeft));
         // The mood the effect adds or takes every turn, and for the relaxation of the spa its factor on the work
-        std::string what = std::string(isBuff ? "raises" : "lowers") + " the mood of the creature by " +
-            Creature::formatRoundedNumber(std::fabs(effect.mStrength)) + " every turn";
-        what += (effect.mName == "Relaxed") ? "; " + getProfileWorkFactorText(relaxWorkFactor) : ".";
+        std::map<std::string, std::string> moodValues;
+        moodValues["points"] = Creature::formatRoundedNumber(std::fabs(effect.mStrength));
+        moodValues["percent"] = Creature::formatRoundedNumber(relaxWorkFactor * Creature::PERCENT_FACTOR);
+        const bool relaxed = (effect.mName == "Relaxed");
+        const std::string what = Translation::tr(isBuff ? (relaxed ? "ui.profile.mood.up.relaxed" : "ui.profile.mood.up") :
+            (relaxed ? "ui.profile.mood.down.relaxed" : "ui.profile.mood.down"), moodValues);
         (isBuff ? buffTips : debuffTips).push_back(getProfileEffectTooltip(isBuff, name, what, effect.mTurnsLeft));
     }
 
     if(hangoverTurns > 0.0)
     {
-        debuffs.push_back("Debuff: Hangover (" + getProfileEffectTime(hangoverTurns) + ")");
-        debuffTips.push_back(getProfileEffectTooltip(false, "Hangover", "after too much drink at the tavern " +
-            getProfileWorkFactorText(hangoverWorkFactor), hangoverTurns));
+        const std::string hangoverName = getMoodEffectDisplayName("Hangover");
+        debuffs.push_back(getProfileEffectLine(false, hangoverName, hangoverTurns));
+        debuffTips.push_back(getProfileEffectTooltip(false, hangoverName,
+            getProfileWorkFactorText("ui.profile.hangover.what", hangoverWorkFactor), hangoverTurns));
     }
 
     std::string effects;
@@ -7935,7 +7967,9 @@ void Creature::fillItemSlotWindows(Creature* creature, const std::vector<CEGUI::
         {
             const char* const levelKey = (slot == 7) ? "PotionSlotLevel2" : "PotionSlotLevel3";
             const int32_t level = static_cast<int32_t>(ConfigManager::getSingleton().getItemSetting("Potions", levelKey));
-            Gui::setPlainTooltip(image, "Potion slot locked: it opens at level " + Helper::toString(level));
+            std::map<std::string, std::string> lockValues;
+            lockValues["level"] = Helper::toString(level);
+            Gui::setPlainTooltip(image, Translation::tr("ui.profile.potionlocked", lockValues));
         }
     }
 }
@@ -8027,10 +8061,19 @@ Creature::ProfileSocialInfo Creature::getProfileSocialInfo()
     std::string moodLine = social::SocialGenerator::moodLine(cache.getData(),
         getName(), definition->getClassName(), definition->isWorker(),
         getProfileMoodState(getOverlayMoodValue(), mMoodValue));
-    std::string status = "Status";
+    std::map<std::string, std::string> statusValues;
+    statusValues["line"] = moodLine.empty() ? Translation::tr("ui.profile.status.nothing") : moodLine;
     if(mMoodValue != CreatureMoodLevel::Unknown)
-        status += " (" + getProfileMoodState(0, mMoodValue) + ")";
-    info.mStatus = status + ": " + (moodLine.empty() ? std::string("nothing to say") : moodLine);
+    {
+        std::string moodKey = "ui.mood.";
+        const std::string moodState = getProfileMoodState(0, mMoodValue);
+        for(std::string::size_type ii = 0; ii < moodState.size(); ++ii)
+            moodKey += static_cast<char>(std::tolower(static_cast<unsigned char>(moodState[ii])));
+        statusValues["mood"] = Translation::tr(moodKey);
+        info.mStatus = Translation::tr("ui.profile.status.withmood", statusValues);
+    }
+    else
+        info.mStatus = Translation::tr("ui.profile.status", statusValues);
     return info;
 }
 
@@ -8073,12 +8116,18 @@ std::string Creature::getRelationshipTooltip()
     collectProfileRelations(gameMap, *gameMap->getCreatureRelationships(), getName(), relations);
     std::string line;
     if(!relations.mClose.empty())
-        line += "Closest: " + relations.mTierText[relations.mClose[0]];
+    {
+        std::map<std::string, std::string> closeValues;
+        closeValues["name"] = relations.mTierText[relations.mClose[0]];
+        line += Translation::tr("ui.profile.closest", closeValues);
+    }
     if(!relations.mAgainst.empty())
     {
         if(!line.empty())
             line += " - ";
-        line += "Against: " + relations.mTierText[relations.mAgainst[0]];
+        std::map<std::string, std::string> againstValues;
+        againstValues["name"] = relations.mTierText[relations.mAgainst[0]];
+        line += Translation::tr("ui.profile.against", againstValues);
     }
     return line;
 }
