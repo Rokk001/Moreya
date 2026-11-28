@@ -14887,20 +14887,20 @@ static const size_t GHOST_HOSE_WIRE_SIDES=6;
 static const Ogre::Real GHOST_FERRULE_LENGTH=2.5f;
 static const Ogre::Real GHOST_FERRULE_WIDTH=1.3f;
 
-//! \brief The look of the hose and of the coloured wires wound round it (owner decision 998), read once from rooms.cfg.
+//! \brief The look of the cable bundle from the pack to the cannon (owner decision 998, since the owner decision of
+//! 2026-11-28 the flat bundle of the approved gear template), read once from rooms.cfg, and of other cables shaped by
+//! shapeGhostHose with their own look.
 struct GhostHoseLook
 {
-    //! GhostHoseColour: tint of the ribbed rubber texture
+    //! The tint of a cable tube of shapeGhostHose, set by its own look (e.g. the black rubber of the trap's cable)
     Ogre::ColourValue mHose;
-    //! GhostHoseWireColour1 to GhostHoseWireColour<GhostHoseWireCount>: one bright colour per wire
+    //! GhostHoseWireColour1 to GhostHoseWireColour<GhostHoseWireCount>: one bright colour per cable of the bundle
     std::vector<Ogre::ColourValue> mWires;
-    //! GhostHoseWireRadius: thickness of a wire as a share of the hose radius
+    //! GhostHoseWireRadius: radius of a cable of the bundle as a share of the hose radius (the size of the couplings)
     Ogre::Real mWireRadius = 0.0f;
-    //! GhostHoseWireTwist: turns every wire makes round the hose from the pack to the cannon
-    Ogre::Real mTwist = 0.0f;
     //! GhostHoseGlow: share of the colour that shines whatever the light, the rest is lit from above
     Ogre::Real mGlow = 0.0f;
-    //! GhostHoseWireEndInset: hose radii from each end, inside the steel coupling, where the wires end
+    //! GhostHoseWireEndInset: hose radii from each end, inside the steel coupling, where the cables end
     Ogre::Real mEndInset = 0.0f;
 };
 
@@ -14926,12 +14926,10 @@ static const GhostHoseLook& ghostHoseLook()
     {
         const ConfigManager& config=ConfigManager::getSingleton();
         GhostHoseLook result;
-        result.mHose=ghostHoseConfigColour("GhostHoseColour");
         const uint32_t wires=config.getRoomConfigUInt32("GhostHoseWireCount");
         for(uint32_t wire=1;wire<=wires;++wire)
             result.mWires.push_back(ghostHoseConfigColour("GhostHoseWireColour"+std::to_string(wire)));
         result.mWireRadius=static_cast<Ogre::Real>(config.getRoomConfigDouble("GhostHoseWireRadius"));
-        result.mTwist=static_cast<Ogre::Real>(config.getRoomConfigDouble("GhostHoseWireTwist"));
         result.mGlow=static_cast<Ogre::Real>(config.getRoomConfigDouble("GhostHoseGlow"));
         result.mEndInset=static_cast<Ogre::Real>(config.getRoomConfigDouble("GhostHoseWireEndInset"));
         return result;
@@ -14949,13 +14947,12 @@ static Ogre::ColourValue shadeGhostHose(const Ogre::ColourValue& colour, const O
 
 //! \brief Re-shapes the flexible hose (decision 894) as a tube along a cubic curve from the pack's port to the rear end of
 //! the cannon. Both ends leave along the given directions and the middle sags, so the hose follows every movement of the
-//! hunter and of the cannon; the textured corrugations reach the given radius in world units. Coloured wires (decision
-//! 998, second section, material GhostHoseWire) wind round the ribs along the same curve every frame, from inside the
-//! steel coupling at the pack to inside the coupling at the cannon. Both materials are looked up in the Graphics resource
-//! group where Ghost.material is loaded; Ogre's default group does not hold them and would leave the hose white.
-//! Other cables use the same shape with their own look (custom: colour and no wires) and their own material for the
-//! tube (set after it is built, same resource group), e.g. the cable of the technical trap (owner decision of
-//! 2026-11-28; its brass ferrules: shapeGhostCableFerrules).
+//! hunter and of the cannon; the textured corrugations reach the given radius in world units. The material is looked up
+//! in the Graphics resource group where Ghost.material is loaded; Ogre's default group does not hold it and would leave
+//! the hose white. Since the owner decision of 2026-11-28 the pack's cannon is joined by the flat cable bundle of
+//! shapeGhostCableBundle instead (no ribbed hose, no wound wires); this tube shapes other cables with their own look
+//! (custom: colour) and their own material for the tube (set after it is built, same resource group), e.g. the cable
+//! of the technical trap (owner decision of 2026-11-28; its brass ferrules: shapeGhostCableFerrules).
 static void shapeGhostHose(Ogre::ManualObject& hose, const Ogre::Vector3& port, const Ogre::Vector3& portOut,
     const Ogre::Vector3& rear, const Ogre::Vector3& rearOut, Ogre::Real radius, const GhostHoseLook* custom=nullptr,
     const char* material=nullptr)
@@ -15007,49 +15004,6 @@ static void shapeGhostHose(Ogre::ManualObject& hose, const Ogre::Vector3& port, 
         }
     hose.end();
     if(material!=nullptr) hose.setMaterialName(0,material,"Graphics");
-    if(look.mWires.empty()) return;
-    // The wires lie on the crests of the ribs and end GhostHoseWireEndInset hose radii inside both couplings (the curve
-    // leaves each end at the speed 3 x the distance to its control point)
-    if(hose.getNumSections()<2) hose.begin("GhostHoseWire",Ogre::RenderOperation::OT_TRIANGLE_LIST,"Graphics");
-    else hose.beginUpdate(1);
-    const Ogre::Real speedPort=3.0f*(control1-port).length(),speedRear=3.0f*(rear-control2).length();
-    const Ogre::Real first=speedPort>1.0e-6f?std::min(0.25f,look.mEndInset*radius/speedPort):0.0f;
-    const Ogre::Real last=speedRear>1.0e-6f?std::max(0.75f,1.0f-look.mEndInset*radius/speedRear):1.0f;
-    const Ogre::Real thickness=radius*look.mWireRadius;
-    const size_t wireVertices=(GHOST_HOSE_RINGS+1)*(GHOST_HOSE_WIRE_SIDES+1);
-    for(size_t wire=0;wire<look.mWires.size();++wire)
-    {
-        for(size_t ring=0;ring<=GHOST_HOSE_RINGS;++ring)
-        {
-            const Ogre::Real share=static_cast<Ogre::Real>(ring)/static_cast<Ogre::Real>(GHOST_HOSE_RINGS);
-            Ogre::Vector3 tangent,side,up;
-            const Ogre::Vector3 centre=frame(first+(last-first)*share,tangent,side,up);
-            // Evenly spread round the hose, every wire turning GhostHoseWireTwist times from the pack to the cannon
-            const Ogre::Real turn=2.0f*Ogre::Math::PI*(static_cast<Ogre::Real>(wire)/static_cast<Ogre::Real>(look.mWires.size())+
-                look.mTwist*share);
-            const Ogre::Vector3 out=side*std::cos(turn)+up*std::sin(turn);
-            const Ogre::Vector3 across=tangent.crossProduct(out);
-            const Ogre::Vector3 core=centre+out*(radius+thickness);
-            for(size_t k=0;k<=GHOST_HOSE_WIRE_SIDES;++k)
-            {
-                const Ogre::Real angle=2.0f*Ogre::Math::PI*static_cast<Ogre::Real>(k)/static_cast<Ogre::Real>(GHOST_HOSE_WIRE_SIDES);
-                const Ogre::Vector3 normal=out*std::cos(angle)+across*std::sin(angle);
-                hose.position(core+normal*thickness);
-                hose.normal(normal);
-                hose.colour(shadeGhostHose(look.mWires[wire],normal,look.mGlow));
-                hose.textureCoord(0.0f,share);
-            }
-        }
-        for(size_t ring=0;ring<GHOST_HOSE_RINGS;++ring)
-            for(size_t k=0;k<GHOST_HOSE_WIRE_SIDES;++k)
-            {
-                const Ogre::uint32 a=static_cast<Ogre::uint32>(wire*wireVertices+ring*(GHOST_HOSE_WIRE_SIDES+1)+k),b=a+1;
-                const Ogre::uint32 c=a+static_cast<Ogre::uint32>(GHOST_HOSE_WIRE_SIDES+1),d=c+1;
-                hose.triangle(a,c,b);
-                hose.triangle(b,c,d);
-            }
-    }
-    hose.end();
 }
 
 //! \brief Shapes brass ferrules (GhostBrass, the next section of the cable's object) round a cable of shapeGhostHose
@@ -15099,6 +15053,121 @@ static void shapeGhostCableFerrules(Ogre::ManualObject& cable, const Ogre::Vecto
         base+=static_cast<Ogre::uint32>(2*(GHOST_HOSE_SIDES+1));
     }
     cable.end();
+}
+
+//! The cable bundle of the pack (owner decision of 2026-11-28, the approved gear template): brass clamps round the bundle
+//! at these shares of the curve, each this many hose radii long, reaching this many cable radii beyond the cables.
+static const std::vector<Ogre::Real> GHOST_BUNDLE_CLAMPS={0.25f,0.5f,0.75f};
+static const Ogre::Real GHOST_BUNDLE_CLAMP_LENGTH=1.1f;
+static const Ogre::Real GHOST_BUNDLE_CLAMP_MARGIN=0.45f;
+//! Sides of the rounded box of a clamp round the flat bundle.
+static const size_t GHOST_BUNDLE_CLAMP_SIDES=16;
+
+//! \brief Re-shapes the cable bundle from the pack's port to the rear end of the cannon (owner decision of 2026-11-28,
+//! the approved gear template, in place of the ribbed hose with wound wires of decision 998): GhostHoseWireCount round
+//! cables in their configured colours lie flat side by side along the hose curve of shapeGhostHose (both ends leave along
+//! the given directions, the middle sags), each GhostHoseWireRadius hose radii thick, from inside the steel coupling at
+//! the pack to inside the coupling at the cannon (section 0, material GhostHoseWire, shaded by shadeGhostHose). Brass
+//! clamps hold them together at GHOST_BUNDLE_CLAMPS (section 1, material GhostBrass). Both materials come from the
+//! Graphics resource group where Ghost.material is loaded.
+static void shapeGhostCableBundle(Ogre::ManualObject& bundle, const Ogre::Vector3& port, const Ogre::Vector3& portOut,
+    const Ogre::Vector3& rear, const Ogre::Vector3& rearOut, Ogre::Real radius)
+{
+    const GhostHoseLook& look=ghostHoseLook();
+    const Ogre::Real span=(rear-port).length();
+    const Ogre::Real reach=0.4f*span+4.0f*radius;
+    const Ogre::Vector3 sag(0.0f,0.0f,-0.18f*span-2.0f*radius);
+    const Ogre::Vector3 control1=port+portOut*reach+sag,control2=rear+rearOut*reach+sag;
+    // The centre of the curve at t and the two axes across it: side lies level, so the bundle lies flat
+    std::function<Ogre::Vector3(Ogre::Real, Ogre::Vector3&, Ogre::Vector3&, Ogre::Vector3&)> frame=[&](Ogre::Real t,Ogre::Vector3& tangent,Ogre::Vector3& side,Ogre::Vector3& up)
+    {
+        const Ogre::Real u=1.0f-t;
+        tangent=(control1-port)*(3.0f*u*u)+(control2-control1)*(6.0f*u*t)+(rear-control2)*(3.0f*t*t);
+        if(tangent.squaredLength()<1.0e-8f) tangent=rear-port;
+        if(tangent.squaredLength()<1.0e-8f) tangent=Ogre::Vector3::UNIT_X;
+        tangent.normalise();
+        side=tangent.crossProduct(Ogre::Vector3::UNIT_Z);
+        if(side.squaredLength()<1.0e-6f) side=tangent.crossProduct(Ogre::Vector3::UNIT_X);
+        side.normalise();
+        up=tangent.crossProduct(side);
+        return port*(u*u*u)+control1*(3.0f*u*u*t)+control2*(3.0f*u*t*t)+rear*(t*t*t);
+    };
+    const size_t cables=look.mWires.size();
+    const Ogre::Real thickness=radius*look.mWireRadius;
+    // The cables end GhostHoseWireEndInset hose radii inside both couplings (the curve leaves each end at the speed 3 x
+    // the distance to its control point)
+    const Ogre::Real speedPort=3.0f*(control1-port).length(),speedRear=3.0f*(rear-control2).length();
+    const Ogre::Real first=speedPort>1.0e-6f?std::min(0.25f,look.mEndInset*radius/speedPort):0.0f;
+    const Ogre::Real last=speedRear>1.0e-6f?std::max(0.75f,1.0f-look.mEndInset*radius/speedRear):1.0f;
+    if(bundle.getNumSections()==0) bundle.begin("GhostHoseWire",Ogre::RenderOperation::OT_TRIANGLE_LIST,"Graphics");
+    else bundle.beginUpdate(0);
+    const size_t cableVertices=(GHOST_HOSE_RINGS+1)*(GHOST_HOSE_WIRE_SIDES+1);
+    for(size_t cable=0;cable<cables;++cable)
+    {
+        // Side by side across the bundle, touching each other, the bundle centred on the curve
+        const Ogre::Real offset=(static_cast<Ogre::Real>(cable)-0.5f*static_cast<Ogre::Real>(cables-1))*2.0f*thickness;
+        for(size_t ring=0;ring<=GHOST_HOSE_RINGS;++ring)
+        {
+            const Ogre::Real share=static_cast<Ogre::Real>(ring)/static_cast<Ogre::Real>(GHOST_HOSE_RINGS);
+            Ogre::Vector3 tangent,side,up;
+            const Ogre::Vector3 core=frame(first+(last-first)*share,tangent,side,up)+side*offset;
+            for(size_t k=0;k<=GHOST_HOSE_WIRE_SIDES;++k)
+            {
+                const Ogre::Real angle=2.0f*Ogre::Math::PI*static_cast<Ogre::Real>(k)/static_cast<Ogre::Real>(GHOST_HOSE_WIRE_SIDES);
+                const Ogre::Vector3 normal=side*std::cos(angle)+up*std::sin(angle);
+                bundle.position(core+normal*thickness);
+                bundle.normal(normal);
+                bundle.colour(shadeGhostHose(look.mWires[cable],normal,look.mGlow));
+                bundle.textureCoord(0.0f,share);
+            }
+        }
+        for(size_t ring=0;ring<GHOST_HOSE_RINGS;++ring)
+            for(size_t k=0;k<GHOST_HOSE_WIRE_SIDES;++k)
+            {
+                const Ogre::uint32 a=static_cast<Ogre::uint32>(cable*cableVertices+ring*(GHOST_HOSE_WIRE_SIDES+1)+k),b=a+1;
+                const Ogre::uint32 c=a+static_cast<Ogre::uint32>(GHOST_HOSE_WIRE_SIDES+1),d=c+1;
+                bundle.triangle(a,c,b);
+                bundle.triangle(b,c,d);
+            }
+    }
+    bundle.end();
+    // The brass clamps: a short rounded box sleeve round the flat bundle at each share
+    if(bundle.getNumSections()<2) bundle.begin("GhostBrass",Ogre::RenderOperation::OT_TRIANGLE_LIST,"Graphics");
+    else bundle.beginUpdate(1);
+    const Ogre::Real wide=static_cast<Ogre::Real>(cables)*thickness+GHOST_BUNDLE_CLAMP_MARGIN*thickness;
+    const Ogre::Real high=thickness+GHOST_BUNDLE_CLAMP_MARGIN*thickness;
+    const Ogre::Real half=span>1.0e-6f?0.5f*GHOST_BUNDLE_CLAMP_LENGTH*radius/span:0.0f;
+    Ogre::uint32 base=0;
+    for(Ogre::Real share : GHOST_BUNDLE_CLAMPS)
+    {
+        for(size_t ring=0;ring<2;++ring)
+        {
+            Ogre::Vector3 tangent,side,up;
+            const Ogre::Vector3 centre=frame(std::max(0.0f,std::min(1.0f,share+(ring==0?-half:half))),tangent,side,up);
+            for(size_t k=0;k<=GHOST_BUNDLE_CLAMP_SIDES;++k)
+            {
+                const Ogre::Real angle=2.0f*Ogre::Math::PI*static_cast<Ogre::Real>(k)/static_cast<Ogre::Real>(GHOST_BUNDLE_CLAMP_SIDES);
+                const Ogre::Real c=std::cos(angle),s=std::sin(angle);
+                // A rounded box: the corners pushed out towards the square
+                const Ogre::Real x=(c<0.0f?-1.0f:1.0f)*std::pow(std::fabs(c),0.4f);
+                const Ogre::Real y=(s<0.0f?-1.0f:1.0f)*std::pow(std::fabs(s),0.4f);
+                Ogre::Vector3 normal=side*(x/wide)+up*(y/high);
+                normal.normalise();
+                bundle.position(centre+side*(x*wide)+up*(y*high));
+                bundle.normal(normal);
+                bundle.textureCoord(static_cast<Ogre::Real>(k)/static_cast<Ogre::Real>(GHOST_BUNDLE_CLAMP_SIDES),static_cast<Ogre::Real>(ring));
+            }
+        }
+        for(size_t k=0;k<GHOST_BUNDLE_CLAMP_SIDES;++k)
+        {
+            const Ogre::uint32 a=base+static_cast<Ogre::uint32>(k),b=a+1;
+            const Ogre::uint32 c=a+static_cast<Ogre::uint32>(GHOST_BUNDLE_CLAMP_SIDES+1),d=c+1;
+            bundle.triangle(a,c,b);
+            bundle.triangle(b,c,d);
+        }
+        base+=static_cast<Ogre::uint32>(2*(GHOST_BUNDLE_CLAMP_SIDES+1));
+    }
+    bundle.end();
 }
 
 //! \brief Returns the mouth of the suction nozzle of the client cauldron nearest to a delivery device, or the device
@@ -15349,11 +15418,12 @@ void Creature::updateGhostTrapCable(Ogre::SceneManager& scene, bool shown)
 
 //! The suction stream from the trap into the nozzle (owner decision of 2026-11-28): it leaves the trap at this share of
 //! the trap's height (inside its opening) and goes this far in tiles on up into the nozzle beyond its mouth, where the
-//! nozzle hides it; its width in tiles at the trap and in the nozzle; the elements of each band, the wavering strands,
+//! nozzle hides it; its width in tiles at the trap (the soft glow fills the whole opening of the 0.18 long trap, like
+//! a broad waterfall running upwards) and in the nozzle; the elements of each band, the wavering strands,
 //! the rising motes, how fast the light runs up the stream and how fast the motes rise (shares of the way a second).
 static const Ogre::Real GHOST_STREAM_INSET=0.8f;
 static const Ogre::Real GHOST_STREAM_DEPTH=0.1f;
-static const Ogre::Real GHOST_STREAM_BASE_WIDTH=0.16f;
+static const Ogre::Real GHOST_STREAM_BASE_WIDTH=0.32f;
 static const Ogre::Real GHOST_STREAM_TOP_WIDTH=0.1f;
 static const size_t GHOST_STREAM_SEGMENTS=16;
 static const size_t GHOST_STREAM_STRANDS=4;
@@ -15422,10 +15492,11 @@ void Creature::updateGhostSuctionStream(Ogre::SceneManager& scene, double share,
             }
             else
             {
-                // Each strand wavers round the middle and carries its own streaks of light upwards
+                // Each strand runs on its own side of the stream, spread over its width, wavers there and carries its
+                // own streaks of light upwards
                 const double sway=std::sin(tau*(1.5*way-0.8*mGhostStreamClock+phase));
                 const double turn=tau*static_cast<double>(chain-2)/static_cast<double>(GHOST_STREAM_STRANDS);
-                const Ogre::Real offset=static_cast<Ogre::Real>(0.3*sway)*width;
+                const Ogre::Real offset=static_cast<Ogre::Real>(0.25+0.12*sway)*width;
                 point+=(side*static_cast<Ogre::Real>(std::cos(turn))+across*static_cast<Ogre::Real>(std::sin(turn)))*offset;
                 colour=Ogre::ColourValue(0.3f,1.0f,0.4f,static_cast<float>(0.9*pulse*pulse*ends)*density);
                 thickness=0.22f*width;
@@ -15690,8 +15761,10 @@ void Creature::updateGhostHuntVisuals(double seconds)
         mGhostCannonAim,seconds*getGameMap()->getGameSpeedFactor());
     else mGhostCannonAim=Ogre::Vector3::ZERO;
     // Decision 894: the flexible hose runs from the port on the pack to the rear end of the cannon, in its holster or in
-    // the hand, and follows both. The port is the round cable outlet at the lower corner of the pack's outer face
-    // opposite the holster (0.727 of the width, 0.103 of the depth, 0.16 of the height); the hose leaves it outward.
+    // the hand, and follows both; since the owner decision of 2026-11-28 it is the flat bundle of four coloured cables
+    // with brass clamps of the approved gear template (shapeGhostCableBundle). The port is the round cable outlet at the
+    // lower corner of the pack's outer face opposite the holster (0.727 of the width, 0.103 of the depth, 0.16 of the
+    // height); the bundle leaves it outward.
     Ogre::Entity* hoseGun=beaming?mGhostCaptureGun:mGhostPackGun;
     if(hoseGun!=nullptr && mGhostBackpackNode!=nullptr && scene->hasEntity(getName()+"_GhostBackpack"))
     {
@@ -15718,7 +15791,7 @@ void Creature::updateGhostHuntVisuals(double seconds)
         const Ogre::Vector3 rear=gunTransform*Ogre::Vector3(gunBounds.getCenter().x,gunBounds.getCenter().y,gunBounds.getMinimum().z);
         const Ogre::Vector3 barrel=gunTransform*Ogre::Vector3::UNIT_Z-gunTransform*Ogre::Vector3::ZERO;
         const Ogre::Real radius=0.025f*body->getBoundingBox().getSize().z*getEntityNode()->_getDerivedScale().z;
-        shapeGhostHose(*mGhostHose,port,portOut,rear,barrel.squaredLength()>1.0e-8f?-barrel.normalisedCopy():Ogre::Vector3::NEGATIVE_UNIT_Z,radius);
+        shapeGhostCableBundle(*mGhostHose,port,portOut,rear,barrel.squaredLength()>1.0e-8f?-barrel.normalisedCopy():Ogre::Vector3::NEGATIVE_UNIT_Z,radius);
         // The steel fittings follow the actual endpoint tangents, including the hose's downward sag (decision 936).
         const Ogre::Real span=(rear-port).length(),reach=0.4f*span+4.0f*radius;
         const Ogre::Vector3 sag(0.0f,0.0f,-0.18f*span-2.0f*radius);
