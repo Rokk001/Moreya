@@ -49,7 +49,15 @@ add_boost_test(00-SocialGenerator
         ${SRC}/social/SocialData.h
         ${SRC}/social/SocialData.cpp
         ${SRC}/social/SocialGenerator.h
-        ${SRC}/social/SocialGenerator.cpp)
+        ${SRC}/social/SocialGenerator.cpp
+        ${SRC}/utils/Translation.h
+        ${SRC}/utils/Translation.cpp
+        ${SRC}/utils/LogManager.cpp
+        LIBRARIES
+        ${OGRE_LIBRARIES}
+        ${Boost_FILESYSTEM_LIBRARY_RELEASE}
+        ${Boost_SYSTEM_LIBRARY_RELEASE}
+        Threads::Threads)
 
 add_boost_test(00-SelectionSize
         SOURCES
@@ -223,7 +231,15 @@ add_boost_test(00-DungeonbookQuirks
         test_DungeonbookQuirks.cpp
         ${SRC}/render/DungeonbookQuirks.cpp
         ${SRC}/render/PortraitCatalog.cpp
-        ${SRC}/game/CreatureAppearance.cpp)
+        ${SRC}/game/CreatureAppearance.cpp
+        ${SRC}/utils/Translation.h
+        ${SRC}/utils/Translation.cpp
+        ${SRC}/utils/LogManager.cpp
+        LIBRARIES
+        ${OGRE_LIBRARIES}
+        ${Boost_FILESYSTEM_LIBRARY_RELEASE}
+        ${Boost_SYSTEM_LIBRARY_RELEASE}
+        Threads::Threads)
 
 add_boost_test(00-DungeonbookMultiplayer
         SOURCES
@@ -232,8 +248,15 @@ add_boost_test(00-DungeonbookMultiplayer
         ${SRC}/render/PortraitCatalog.cpp
         ${SRC}/render/DungeonbookQuirks.cpp
         ${SRC}/game/CreatureAppearance.cpp
+        ${SRC}/utils/Translation.h
+        ${SRC}/utils/Translation.cpp
+        ${SRC}/utils/LogManager.cpp
         LIBRARIES
-        ${SFML_LIBRARIES})
+        ${SFML_LIBRARIES}
+        ${OGRE_LIBRARIES}
+        ${Boost_FILESYSTEM_LIBRARY_RELEASE}
+        ${Boost_SYSTEM_LIBRARY_RELEASE}
+        Threads::Threads)
 
 # The delivered sample portrait: in the public tree, else in a content package (the folder MOREYA_CONTENT_DIR of the
 # cache or of the environment, else the packages folder of a Moreya-Content checkout next to the repository, like
