@@ -17,6 +17,7 @@
 #include "network/ODClient.h"
 #include "network/ClientNotification.h"
 #include "utils/Helper.h"
+#include "utils/Translation.h"
 
 #include <CEGUI/InputEvent.h>
 #include <CEGUI/Image.h>
@@ -45,10 +46,16 @@ static const std::array<std::vector<Criterion>, 4> VIEW_CRITERIA = {{
 static const std::array<Criterion, 4> WORKER_CRITERIA = {{
     Criterion::Total, Criterion::Idle, Criterion::Working, Criterion::Fighting
 }};
-//! Tooltip names of the criteria, indexed by the CreaturePanelCriterion value
-static const std::array<const char*, 12> CRITERION_NAMES = {{
-    "Total", "Idle", "Working", "Fighting", "Manufacturing", "Training", "Other jobs",
-    "Guarding", "Other activities", "Happy", "Unhappy", "Angry"
+//! Language keys of the tooltip names of the criteria, indexed by the CreaturePanelCriterion value
+static const std::array<const char*, 12> CRITERION_KEYS = {{
+    "ui.panel.criterion.total", "ui.panel.criterion.idle", "ui.panel.criterion.working",
+    "ui.panel.criterion.fighting", "ui.panel.criterion.manufacturing", "ui.panel.criterion.training",
+    "ui.panel.criterion.otherjobs", "ui.panel.criterion.guarding", "ui.panel.criterion.otheractivities",
+    "ui.panel.criterion.happy", "ui.panel.criterion.unhappy", "ui.panel.criterion.angry"
+}};
+//! Language keys of the tooltips of the four view buttons
+static const std::array<const char*, 4> VIEW_KEYS = {{
+    "ui.panel.view.total", "ui.panel.view.jobs", "ui.panel.view.fighting", "ui.panel.view.moods"
 }};
 
 // Layout of the population panel in unscaled pixels.
@@ -143,22 +150,18 @@ CreaturePanel::CreaturePanel(GameMap& gameMap, Gui& gui, CEGUI::Window* parent) 
         CEGUI::Window* count = createWindow(mWindow, "OD/StaticText", "WorkerCount" + std::to_string(i),
             WORKER_COUNT_X, static_cast<float>(i) * WORKER_ROW_PITCH, WORKER_COUNT_WIDTH, COUNT_HEIGHT);
         prepareCount(count);
-        count->setTooltipText("Zivs");
-        count->setUserString(Gui::USER_STRING_CONTEXT_HELP, std::string("Zivs: ") + CRITERION_NAMES[static_cast<size_t>(WORKER_CRITERIA[i])]);
         count->setID(static_cast<CEGUI::uint>(i));
         mWorkerCounts[i] = count;
         mConnections.emplace_back(count->subscribeEvent(CEGUI::Window::EventMouseClick,
             CEGUI::Event::Subscriber(&CreaturePanel::onWorkerCountClicked, this)));
     }
 
-    const char* viewNames[] = {"Total", "Jobs", "Fighting", "Moods"};
     const char* viewIcons[] = {"CreaturesIcon", "HammerAnvilIcon", "FighterButton", "SeatIcon"};
     for(size_t i = 0; i < mViewButtons.size(); ++i)
     {
         CEGUI::Window* button = createWindow(mWindow, "OD/GameTabButton", "View" + std::to_string(i),
             VIEW_BUTTON_X, static_cast<float>(i) * WORKER_ROW_PITCH, VIEW_BUTTON_SIZE, VIEW_BUTTON_SIZE);
         button->setProperty("NormalImage", "OpenDungeonsIcons/" + std::string(viewIcons[i]));
-        button->setTooltipText(viewNames[i]);
         button->setID(static_cast<CEGUI::uint>(i));
         mViewButtons[i] = button;
         mConnections.emplace_back(button->subscribeEvent(CEGUI::PushButton::EventClicked,
@@ -167,11 +170,9 @@ CreaturePanel::CreaturePanel(GameMap& gameMap, Gui& gui, CEGUI::Window* parent) 
     mPrevious = createWindow(mWindow, "OD/Button", "PreviousTypes", SCROLL_BUTTON_X, PREVIOUS_BUTTON_Y,
         SCROLL_BUTTON_WIDTH, SCROLL_BUTTON_HEIGHT);
     mPrevious->setText("<");
-    mPrevious->setTooltipText("Previous creature types");
     mNext = createWindow(mWindow, "OD/Button", "NextTypes", SCROLL_BUTTON_X, NEXT_BUTTON_Y,
         SCROLL_BUTTON_WIDTH, SCROLL_BUTTON_HEIGHT);
     mNext->setText(">");
-    mNext->setTooltipText("Next creature types");
     mConnections.emplace_back(mPrevious->subscribeEvent(CEGUI::PushButton::EventClicked,
         CEGUI::Event::Subscriber(&CreaturePanel::onPreviousClicked, this)));
     mConnections.emplace_back(mNext->subscribeEvent(CEGUI::PushButton::EventClicked,
@@ -181,10 +182,33 @@ CreaturePanel::CreaturePanel(GameMap& gameMap, Gui& gui, CEGUI::Window* parent) 
         CEGUI::UDim(1, 0), CEGUI::UDim(0, ROW_HEIGHT)));
     mGui.registerWindowHierarchy(mWindow);
     mWindow->hide();
+    applyTexts();
+    const std::function<void()> languageChanged = std::bind(&CreaturePanel::applyTexts, this);
+    mLanguageListener = Translation::addListener(languageChanged);
+}
+
+//! \brief Sets the texts of the worker block, the view buttons and the scroll buttons in the chosen language and
+//! schedules a refresh of the type columns, so that a language change shows at once.
+void CreaturePanel::applyTexts()
+{
+    for(size_t i = 0; i < mWorkerCounts.size(); ++i)
+    {
+        std::map<std::string, std::string> values;
+        values["criterion"] = Translation::tr(CRITERION_KEYS[static_cast<size_t>(WORKER_CRITERIA[i])]);
+        mWorkerCounts[i]->setTooltipText(Gui::trCegui("ui.panel.zivs"));
+        mWorkerCounts[i]->setUserString(Gui::USER_STRING_CONTEXT_HELP,
+            Gui::toCeguiText(Translation::tr("ui.panel.zivs.help", values)));
+    }
+    for(size_t i = 0; i < mViewButtons.size(); ++i)
+        mViewButtons[i]->setTooltipText(Gui::trCegui(VIEW_KEYS[i]));
+    mPrevious->setTooltipText(Gui::trCegui("ui.panel.previous"));
+    mNext->setTooltipText(Gui::trCegui("ui.panel.next"));
+    mDirty = true;
 }
 
 CreaturePanel::~CreaturePanel()
 {
+    Translation::removeListener(mLanguageListener);
     for(CEGUI::Event::Connection& connection : mConnections)
         connection->disconnect();
     mConnections.clear();
@@ -347,8 +371,12 @@ void CreaturePanel::update()
         slot.type = types[mFirstType + i];
         const CreatureDefinition* definition = mGameMap.getClassDescription(slot.type);
         slot.portrait->setProperty("Image", getCreaturePanelPortraitImage(definition->getMeshName()).getName());
-        slot.portrait->setTooltipText(slot.type);
-        slot.portrait->setUserString(Gui::USER_STRING_CONTEXT_HELP, slot.type + ": right-click to locate");
+        const std::string typeName = CreatureDefinition::getDisplayNameOf(slot.type);
+        std::map<std::string, std::string> typeValues;
+        typeValues["type"] = typeName;
+        slot.portrait->setTooltipText(Gui::toCeguiText(typeName));
+        slot.portrait->setUserString(Gui::USER_STRING_CONTEXT_HELP,
+            Gui::toCeguiText(Translation::tr("ui.panel.locate", typeValues)));
         const std::vector<Criterion>& criteria = VIEW_CRITERIA[mView];
         for(size_t row = 0; row < slot.counts.size(); ++row)
         {
@@ -361,9 +389,12 @@ void CreaturePanel::update()
             const uint32_t count = mData.at(slot.type)[static_cast<size_t>(criterion)];
             countWindow->setText(Helper::toString(count));
             countWindow->setEnabled(count > 0);
-            countWindow->setTooltipText(slot.type);
-            countWindow->setUserString(Gui::USER_STRING_CONTEXT_HELP, slot.type + ": " + CRITERION_NAMES[static_cast<size_t>(criterion)] +
-                "\nLeft-click to pick up; right-click to locate");
+            countWindow->setTooltipText(Gui::toCeguiText(typeName));
+            std::map<std::string, std::string> countValues;
+            countValues["type"] = typeName;
+            countValues["criterion"] = Translation::tr(CRITERION_KEYS[static_cast<size_t>(criterion)]);
+            countWindow->setUserString(Gui::USER_STRING_CONTEXT_HELP,
+                Gui::toCeguiText(Translation::tr("ui.panel.counthelp", countValues)));
         }
     }
 }
