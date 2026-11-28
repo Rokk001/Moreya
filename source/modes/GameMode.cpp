@@ -2600,7 +2600,8 @@ void GameMode::updateCreatureIndicatorAlt(OIS::KeyCode key, bool pressed)
 }
 
 //! \brief Updates the game HUD and the availability of keeper controls each frame.
-//! \brief Refreshes frame controls and the availability of room-specific panels, and the countdown of the raid.
+//! \brief Refreshes frame controls and the availability of room-specific panels, and the countdown of the raid, and
+//! sets the item names of the merchant and laboratory tooltips again after a language change.
 void GameMode::onFrameStarted(const Ogre::FrameEvent& evt)
 {
     refreshRoomManager();
@@ -2608,6 +2609,7 @@ void GameMode::onFrameStarted(const Ogre::FrameEvent& evt)
         refreshGhostRoomWindow();
     if(mRootWindow->getChild("RoomManagerWindow/Pages/MerchantPage")->isVisible())
         refreshMerchantSelection();
+    refreshItemNameTexts();
 
     // Recover releases missed while focus was elsewhere without changing the toggle.
     if(!getKeyboard()->isKeyDown(OIS::KC_LMENU))

@@ -15,6 +15,7 @@
 #include "render/Gui.h"
 #include "rooms/RoomType.h"
 #include "utils/Helper.h"
+#include "utils/Translation.h"
 #include <CEGUI/Window.h>
 #include <CEGUI/widgets/ListboxTextItem.h>
 #include <CEGUI/widgets/MultiColumnList.h>
@@ -84,10 +85,46 @@ void GameMode::setLabModeShown(int32_t mode)
         button->getChild("Potion" + Helper::toString(index))->setVisible(potions[mode][index]);
 }
 
+//! \brief Sets the item and potion names of the merchant stock and laboratory tooltips again after the language
+//! changed. Called every frame; it does nothing while the language is the one the texts were set for.
+void GameMode::refreshItemNameTexts()
+{
+    const std::string language = Translation::getLanguage();
+    if(mItemNameLanguage.empty())
+    {
+        mItemNameLanguage = language;
+        return;
+    }
+    if(mItemNameLanguage == language)
+        return;
+    mItemNameLanguage = language;
+
+    // The merchant stock: the item card of every cell is made again from its item
+    CEGUI::MultiColumnList* stock = static_cast<CEGUI::MultiColumnList*>(
+        mRootWindow->getChild("RoomManagerWindow/Pages/MerchantPage/StockList"));
+    for(CEGUI::uint row = 0; row < stock->getRowCount(); ++row)
+        for(CEGUI::uint column = 0; column < stock->getColumnCount(); ++column)
+        {
+            CEGUI::ListboxItem* cell = stock->getItemAtGridReference(CEGUI::MCLGridRef(row, column));
+            if(cell == nullptr || cell->isDisabled())
+                continue;
+            for(const std::pair<uint32_t, ItemInstance>& entry : mMerchantItems)
+                if(entry.first == cell->getID())
+                    cell->setTooltipText(Gui::toCeguiText(Gui::describeItemTooltip(entry.second, mGameMap, nullptr)));
+        }
+
+    // The laboratory: the cauldron rows are made again from the latest snapshot
+    if(mLabWindowDataReceived)
+        setLabWindowData(mLabWindowData);
+}
+
 //! \brief Replaces cauldron rows and herb totals with one coherent owner-seat snapshot; the potion names of the
 //! tooltips are in the chosen language.
 void GameMode::setLabWindowData(const LabWindowData& data)
 {
+    // Kept so that the tooltips can be set again when the language changes
+    mLabWindowData = data;
+    mLabWindowDataReceived = true;
     CEGUI::MultiColumnList* list = static_cast<CEGUI::MultiColumnList*>(
         mRootWindow->getChild("RoomManagerWindow/Pages/AlchemyPage/CauldronList"));
     if(list->getColumnCount() == 0)
