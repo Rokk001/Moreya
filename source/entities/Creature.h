@@ -1104,6 +1104,8 @@ public:
     void updateGhostHuntVisuals(double seconds);
     //! \brief Destroys this hunter's cosmetic scene objects and looping sound.
     void clearGhostHuntVisuals();
+    //! \brief Shows or hides the trap's foot pedal at the hunter's feet and shapes the cable from the trap's plug to it.
+    void updateGhostTrapCable(Ogre::SceneManager& scene, bool shown);
     //! \brief Ends the generated pose layer of decision 936 (pick-up or put-in) and restores the skeleton blend mode.
     void stopGhostPose();
     //! \brief Pins all saved occupied cauldrons before the global equipment rebind pass.
@@ -2474,6 +2476,11 @@ private:
     double mGhostThrowTurns = 0.0;
     double mGhostThrowClientTurns = 0.0;
     Ogre::SceneNode* mGhostBoxNode = nullptr;
+    //! \brief The foot pedal of the technical trap at the hunter's feet and the cable from the trap on the floor to it
+    //! (owner decision of 2026-11-28), shown while the trap lies on the floor for the catch.
+    Ogre::SceneNode* mGhostPedalNode = nullptr;
+    Ogre::ManualObject* mGhostTrapCable = nullptr;
+    Ogre::SceneNode* mGhostTrapCableNode = nullptr;
     //! \brief The box held in the hunter's hand, attached to a hand bone (or to mGhostHandNode without hand bones).
     Ogre::Entity* mGhostHeldBox = nullptr;
     Ogre::SceneNode* mGhostHandNode = nullptr;

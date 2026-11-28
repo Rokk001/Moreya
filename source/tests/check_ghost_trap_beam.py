@@ -293,17 +293,19 @@ def box_skeleton():
 
 def box_mesh():
     bones, clips = box_skeleton()
-    assert set(bones.values()) == {"Root", "Lid"}, bones
+    # The technical trap of 2026-11-28 has two flaps instead of one lid, each on its own bone with its hinge at its end of
+    # the box; both open by 110 degrees, the other way round from each other
+    assert set(bones.values()) == {"Root", "FlapA", "FlapB"}, bones
     assert set(clips) == {"Open"}, set(clips)
     length, tracks = clips["Open"]
     assert abs(length - 1.0) < 1e-6
-    lid = next(handle for handle, name in bones.items() if name == "Lid")
-    keys = tracks[lid]
-    assert keys[0][:2] == (0.0, 0.0) and keys[-1][0] == 1.0 and abs(keys[-1][1] + 110.0) < 0.05, keys
-    assert all(rest < 1e-4 for *_, rest in keys), "the lid turns only about its hinge axis"
-    # The lid opens steadily (the game sets the clip time to the open share)
-    angles = [angle for _, angle, _ in keys]
-    assert all(b < a for a, b in zip(angles, angles[1:])), angles
+    for flap, end in (("FlapA", 110.0), ("FlapB", -110.0)):
+        keys = tracks[next(handle for handle, name in bones.items() if name == flap)]
+        assert keys[0][:2] == (0.0, 0.0) and keys[-1][0] == 1.0 and abs(keys[-1][1] - end) < 0.05, (flap, keys)
+        assert all(rest < 1e-4 for *_, rest in keys), (flap, "the flap turns only about its hinge axis")
+        # The flap opens steadily (the game sets the clip time to the open share)
+        angles = [abs(angle) for _, angle, _ in keys]
+        assert all(b > a for a, b in zip(angles, angles[1:])), (flap, angles)
     mesh = room_file("models/GhostBox.mesh").read_bytes()
     assert b"GhostBox.skeleton" in mesh, "the box mesh uses its rig"
     models = read("assets-src/rooms/ghostroom/create_models.py")

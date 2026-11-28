@@ -15242,6 +15242,42 @@ static void showGhostBoxEntity(GameMap& map, const std::string& name, bool shown
     if(box!=nullptr && box->getEntityNode()!=nullptr) box->getEntityNode()->setVisible(shown);
 }
 
+//! Where the cable leaves the trap (models/GhostBox.mesh, the plug at its -y end) and where it enters the pedal
+//! (models/GhostTrapPedal.mesh, the socket on its -x side), measured on the exports; the pedal lies at the hunter's
+//! front right foot, in the units of his node; the cable's radius in tiles
+static const Ogre::Vector3 GHOST_TRAP_PLUG(0.0077f,-0.0885f,0.0275f);
+static const Ogre::Vector3 GHOST_PEDAL_SOCKET(-0.0488f,-0.0589f,0.0087f);
+static const Ogre::Vector3 GHOST_PEDAL_PLACE(0.22f,-0.18f,0.0f);
+static const Ogre::Real GHOST_TRAP_CABLE_RADIUS=0.006f;
+
+void Creature::updateGhostTrapCable(Ogre::SceneManager& scene, bool shown)
+{
+    if(!shown)
+    {
+        if(mGhostPedalNode!=nullptr) mGhostPedalNode->setVisible(false);
+        if(mGhostTrapCableNode!=nullptr) mGhostTrapCableNode->setVisible(false);
+        return;
+    }
+    if(mGhostPedalNode==nullptr)
+    {
+        Ogre::Entity* pedal=scene.createEntity(getName()+"_GhostTrapPedal","GhostTrapPedal.mesh");
+        pedal->setQueryFlags(0);pedal->setCastShadows(true);
+        mGhostPedalNode=getEntityNode()->createChildSceneNode(getName()+"_GhostTrapPedalNode",GHOST_PEDAL_PLACE);
+        mGhostPedalNode->attachObject(pedal);
+        mGhostTrapCable=scene.createManualObject(getName()+"_GhostTrapCable");
+        mGhostTrapCable->setDynamic(true);mGhostTrapCable->setCastShadows(false);mGhostTrapCable->setQueryFlags(0);
+        mGhostTrapCableNode=scene.getRootSceneNode()->createChildSceneNode(getName()+"_GhostTrapCableNode");
+        mGhostTrapCableNode->attachObject(mGhostTrapCable);
+    }
+    mGhostPedalNode->setVisible(true);mGhostTrapCableNode->setVisible(true);
+    // The pedal keeps the trap's size: only the hunter's own scale applies through his node, as for the trap
+    const Ogre::Vector3 plug=mGhostBoxNode->_getFullTransform()*GHOST_TRAP_PLUG;
+    const Ogre::Vector3 plugOut=mGhostBoxNode->_getDerivedOrientation()*Ogre::Vector3::NEGATIVE_UNIT_Y;
+    const Ogre::Vector3 socket=mGhostPedalNode->_getFullTransform()*GHOST_PEDAL_SOCKET;
+    const Ogre::Vector3 socketOut=mGhostPedalNode->_getDerivedOrientation()*Ogre::Vector3::NEGATIVE_UNIT_X;
+    shapeGhostHose(*mGhostTrapCable,plug,plugOut,socket,socketOut,GHOST_TRAP_CABLE_RADIUS*mGhostBoxNode->_getDerivedScale().z);
+}
+
 void Creature::clearGhostHuntVisuals()
 {
     if(getIsOnServerMap()) return;
@@ -15262,6 +15298,21 @@ void Creature::clearGhostHuntVisuals()
             mGhostBoxNode->detachObject(object);scene->destroyMovableObject(object);
         }
         scene->destroySceneNode(mGhostBoxNode);mGhostBoxNode=nullptr;
+    }
+    // The trap's pedal and its cable go with the trap
+    if(mGhostPedalNode!=nullptr)
+    {
+        while(mGhostPedalNode->numAttachedObjects()>0)
+        {
+            Ogre::MovableObject* object=mGhostPedalNode->getAttachedObject(static_cast<unsigned short>(0));
+            mGhostPedalNode->detachObject(object);scene->destroyMovableObject(object);
+        }
+        scene->destroySceneNode(mGhostPedalNode);mGhostPedalNode=nullptr;
+    }
+    if(mGhostTrapCable!=nullptr)
+    {
+        mGhostTrapCable->detachFromParent();scene->destroyManualObject(mGhostTrapCable);mGhostTrapCable=nullptr;
+        scene->destroySceneNode(mGhostTrapCableNode);mGhostTrapCableNode=nullptr;
     }
     if(mGhostHeldBox!=nullptr)
     {
@@ -15544,6 +15595,8 @@ void Creature::updateGhostHuntVisuals(double seconds)
     if(mGhostBoxNode!=nullptr)
     {
         mGhostBoxNode->setVisible(lyingBox);
+        // no trap on the floor, no pedal and cable (they are shown again below while it lies there for the catch)
+        updateGhostTrapCable(*scene,false);
         GhostEntity* ghost=static_cast<GhostEntity*>(getGameMap()->getEntityFromTypeAndName(GameEntityType::ghostEntity,mGhostThrowTarget));
         // Decision 936 point 2, state 8: the hunter lifts a previously dropped lying box (GhostBoxEntity) from the floor.
         // Its own mesh is hidden while his trap shows the lift from the place where it lay; once the server has taken
@@ -15724,6 +15777,10 @@ void Creature::updateGhostHuntVisuals(double seconds)
                 ghost->setCaptureProgress(mGhostCaptureShown);mGhostShrinkTarget=mGhostThrowTarget;
                 ghost->setTransferProgress(mGhostBoxMode==5?mGhostTransferShown:0.0);
             }
+            // The trap's cable (owner decision of 2026-11-28): while the trap lies on the floor for the catch - the beam,
+            // the snap, lying shut and the pick-up - its foot pedal lies at the hunter's feet and the cable runs from the
+            // trap to it, as long as the distance is
+            updateGhostTrapCable(*scene,mGhostBoxMode==3 || mGhostBoxMode==4 || mGhostBoxMode==6 || mGhostBoxMode==7);
             // The hinged lid of the box mesh turns open on its "Open" clip: 0 shut, the clip end fully open.
             Ogre::Entity* trap=static_cast<Ogre::Entity*>(mGhostBoxNode->getAttachedObject(static_cast<unsigned short>(0)));
             if(trap->hasSkeleton() && trap->hasAnimationState("Open"))

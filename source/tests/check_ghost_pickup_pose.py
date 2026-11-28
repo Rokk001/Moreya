@@ -399,7 +399,8 @@ if ROOM_ASSETS:
     mesh = room_file('models/GhostBox.mesh').read_bytes()
     bounds = next(struct.unpack_from('<7f', mesh, i + 6) for i in range(len(mesh) - 34)
                   if struct.unpack_from('<HI', mesh, i) == (0x9000, 34))
-    assert abs(bounds[2]) < 1e-6 and bounds[5] > 0.1, ('the trap stands on its origin', bounds)
+    # (the technical trap of 2026-11-28 is flat: 0.064 high)
+    assert abs(bounds[2]) < 1e-6 and bounds[5] > 0.06, ('the trap stands on its origin', bounds)
 else:
     print('the trap mesh: not checked, the ghost room package is not present')
 print('ghost pick-up and hand placement (decision 936 points 2 and 3): ok')

@@ -470,12 +470,13 @@ def small_textured_box():
     dwarf_positions, _ = mesh("RunelordDwarf")
     hunter = max(p[2] for p in dwarf_positions) - min(p[2] for p in dwarf_positions)
     # Build 41: 0.25 x 0.25 x 0.20, larger than the mug (0.18) and more than a quarter of the dwarf hunter (0.74).
-    assert max(size) <= mug and max(size) <= 0.2 * hunter, ("box larger than a hand", [round(s, 3) for s in size], mug, hunter)
+    # The technical trap of 2026-11-28 is 0.18 long by the owner's size (0.242 of the dwarf), still within the mug
+    assert max(size) <= mug and max(size) <= 0.25 * hunter, ("box larger than a hand", [round(s, 3) for s in size], mug, hunter)
     assert min(size) >= 0.06, ("box too small to read", [round(s, 3) for s in size])
     assert abs(min(p[2] for p in positions)) < 1e-4, "the box origin stays on its floor so it lies on the ground"
     scripts = material_scripts()
     areas = {}
-    glow_front = glow_back = 0.0
+    glow_front = glow_back = glow_top = 0.0
     front, back = max(p[1] for p in positions), min(p[1] for p in positions)
     for material, indices in zip(materials, submeshes):
         assert material in scripts, ("box material without a definition", material)
@@ -491,15 +492,21 @@ def small_textured_box():
                 glow_front += area
             if glow and max(a[1], b[1], c[1]) < back + 0.2 * size[1]:
                 glow_back += area
+            top = max(p[2] for p in positions)
+            if glow and min(a[2], b[2], c[2]) > top - 0.25 * size[2]:
+                glow_top += area
     # Build 41: GhostIron covered the box; its baked texture is a nearly flat dark grey (luminance 52, deviation 3.4).
     main = max(areas, key=areas.get)
     texture = re.search(r"^\s*texture\s+(\S+\.png)", scripts[main], re.M)
     assert texture, ("main box surface without texture", main)
     mean, deviation = png_luminance(room_file("materials/textures/" + texture.group(1)))
-    assert mean >= 90 and deviation >= 10, ("main box surface is dark or flat", main, round(mean, 1), round(deviation, 1))
-    assert len(set(materials)) >= 3, ("box needs case, fittings and glow", materials)
-    # Build 41: one translucent slit on the front only, no opaque glow on the back.
-    assert glow_front > 0.0 and glow_back > 0.0, ("opaque green glowing windows front and back", glow_front, glow_back)
+    # Since 2026-11-28 the box is the technical trap (Meshy model of the approved template): worn dark metal with brass
+    # and warning stripes in one texture (luminance 70.2, deviation 27.2), its seam and lamps glowing
+    assert mean >= 65 and deviation >= 10, ("main box surface is dark or flat", main, round(mean, 1), round(deviation, 1))
+    assert len(set(materials)) >= 2, ("box needs its textured case with fittings, and glow", materials)
+    # Build 41: one translucent slit on the front only, no opaque glow on the back. The technical trap of 2026-11-28
+    # glows in the seam between its shut flaps on top (and in its lamps), which the hunter and the camera see from above.
+    assert glow_top > 0.0, ("opaque green glowing seam between the flaps on top", glow_top, glow_front, glow_back)
     creature = read("source/entities/Creature.cpp")
     update = body(creature, "void Creature::updateGhostHuntVisuals(double seconds)")
     has(update, "the held box middle sits in the palm",
