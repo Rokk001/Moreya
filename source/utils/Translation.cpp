@@ -515,6 +515,20 @@ std::string Translation::makeNameReference(const std::string& key, const std::st
     return makeReference(key, values);
 }
 
+//! \brief Lowercase letters; characters that are no key character become '_'.
+std::string Translation::toKeyPart(const std::string& id)
+{
+    std::string result;
+    for(std::string::size_type i = 0; i < id.size(); ++i)
+    {
+        char c = id[i];
+        if((c >= 'A') && (c <= 'Z'))
+            c = static_cast<char>(c - 'A' + 'a');
+        result += isKeyCharacter(c) ? c : '_';
+    }
+    return result;
+}
+
 //! \brief A leading '@', one or more key characters, then the end or a '|'.
 bool Translation::isReference(const std::string& text)
 {

@@ -190,6 +190,7 @@ BOOST_AUTO_TEST_CASE(test_ResolveReferences)
     BOOST_CHECK_EQUAL(Translation::resolve("@unknown.key"), "@unknown.key");
     BOOST_CHECK_EQUAL(Translation::resolve("@bob says hi"), "@bob says hi");
     BOOST_CHECK_EQUAL(Translation::resolve(""), "");
+    BOOST_CHECK_EQUAL(Translation::toKeyPart("Dwarf Worker2"), "dwarf_worker2");
     BOOST_CHECK(Translation::isReference("@menu.quit"));
     BOOST_CHECK(!Translation::isReference("@Menu quit"));
 

@@ -126,6 +126,10 @@ namespace Translation
     //! which resolve() shows when no language has a text for the key.
     std::string makeNameReference(const std::string& key, const std::string& fallback);
 
+    //! \brief The id of a game object as a part of a key: lowercase, every character that a key may not have becomes
+    //! '_' (for example "Arena" gives "arena", "Dwarf2" gives "dwarf2").
+    std::string toKeyPart(const std::string& id);
+
     //! \brief True when the text is a text reference: it starts with '@' followed by a key (lowercase letters,
     //! digits, '.', '_' and '-') and then ends or goes on with '|'.
     bool isReference(const std::string& text);
