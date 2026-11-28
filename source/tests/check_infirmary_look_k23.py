@@ -141,6 +141,23 @@ if shaman_textures != {'InfirmaryShamanMeshy': 'InfirmaryShamanMeshy.png'}:
     fail('InfirmaryShamanMeshy.material must give the shaman material its texture, found %s' % shaman_textures)
 texture_of.update(shaman_textures)
 texture_folder.update({material: SHAMAN / 'materials/textures' for material in shaman_textures})
+# The four furniture pieces made from Meshy models (cabinet, instrument table, wash basin, herb shelf) have one textured
+# material each in the Meshy prop script of the package; they pass the same texture limits (the cots use the wood,
+# straw and cloth materials above)
+FURNITURE_MESHY = {'MedicineCabinetMeshy', 'InstrumentTableMeshy', 'WashBasinMeshy', 'HerbShelfMeshy'}
+furniture_material = ASSETS / 'materials/scripts/RoomInfirmaryMeshyProps.material'
+furniture_textures = {}
+if furniture_material.exists():
+    # one block per material: from its head line to the next head line
+    for block in re.split(r'^(?=material\s)', furniture_material.read_text(encoding='utf-8'), flags=re.M):
+        found = re.match(r'material\s+(\S+)\s*\{.*?texture\s+(\S+\.png)', block, re.S)
+        if found:
+            furniture_textures[found.group(1)] = found.group(2)
+if set(furniture_textures) != FURNITURE_MESHY:
+    fail('RoomInfirmaryMeshyProps.material must give %s their textures, found %s'
+         % (sorted(FURNITURE_MESHY), sorted(furniture_textures)))
+texture_of.update(furniture_textures)
+texture_folder.update({material: ASSETS / 'materials/textures' for material in furniture_textures})
 size_of = {}
 for material, texture in sorted(texture_of.items()):
     img = Image.open(texture_folder[material] / texture).convert('RGB')

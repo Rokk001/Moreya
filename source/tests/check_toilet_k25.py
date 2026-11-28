@@ -9,7 +9,6 @@ Calls (from the repository root; set OGRE_XML_CONVERTER to the full path of Ogre
                                                         blend) (cl)
   python source/tests/check_toilet_k25.py --no-compile  file checks only; the probes are left to the build
 """
-import ast
 import math
 import os
 import re
@@ -128,26 +127,49 @@ if ROOM_ASSETS:
     # depth: the outline of the stone is not flat (cap slab over the base, rough blocks)
     assert len(set(np.round(P[:, 2], 3))) >= 20, 'the seat has relief, not a flat box'
 
-    # 2. The texture: every face samples one part of the atlas; stone, wood, iron and hole each have surface detail, colours
-    #    in the dark dungeon range of the style guide and no near-white texel.
-    decals = (ROOT / 'tools' / 'gen_dirt_decals.py').read_text(encoding='utf-8')
-    regions = ast.literal_eval(re.search(r'^SEAT_REGIONS = (\{.*?\})$', decals, re.M | re.S).group(1))
-    image = np.asarray(Image.open(room_file('materials/textures/ToiletSeat.png')).convert('RGB')).astype(float)
-    assert image.shape[:2] == (512, 512), 'the seat atlas is 512 x 512'
+    # 2. The texture: every face belongs to one part of the seat; stone, wood, iron and hole each have surface detail,
+    #    colours in the dark dungeon range of the style guide and no near-white texel. The seat is a Meshy model with its
+    #    own painted texture (no generated atlas of fixed rectangles any more, SEAT_REGIONS of tools/gen_dirt_decals.py),
+    #    so the parts are found by their place on the seat and measured on the texels their faces cover: the hole is the
+    #    shaft below the stone top around the place of the user, the stone top the faces at the height of the stone top,
+    #    the lid zone everything above the stone at the back (its weakly coloured faces are the iron hinges and bands,
+    #    the others the wood), the stone side the rest.
+    from PIL import ImageDraw
+    image = np.asarray(Image.open(room_file('materials/textures/ToiletSeatMeshy.png')).convert('RGB')).astype(float)
+    size = image.shape[0]
+    assert image.shape[:2] == (1024, 1024), 'the seat texture is 1024 x 1024'
     assert image.max() <= 200, 'near-white texels in the seat texture (max %d)' % image.max()
-    used = {name: 0 for name in regions}
+
+
+    def texel(tri):
+        """The texel at the middle of a face."""
+        u = sum(uvs[i][0] for i in tri) / 3.0
+        v = sum(uvs[i][1] for i in tri) / 3.0
+        return image[min(size - 1, int(v * size)), min(size - 1, int(u * size))]
+
+
+    parts = {name: [] for name in ('stone_top', 'stone_side', 'lid', 'iron', 'hole')}
     for tri in triangles:
-        px = [(uvs[i][0] * 512.0, uvs[i][1] * 512.0) for i in tri]
-        owner = [name for name, (x0, y0, x1, y1) in regions.items()
-                 if all(x0 - 0.5 <= x <= x1 + 0.5 and y0 - 0.5 <= y <= y1 + 0.5 for x, y in px)]
-        assert owner, 'a face of the seat samples across atlas parts: %s' % (px,)
-        used[owner[0]] += 1
-    assert all(used[name] > 0 for name in ('stone_top', 'stone_side', 'lid', 'iron', 'hole')), used
+        centre = P[list(tri)].mean(0)
+        if centre[1] >= 0.33 and centre[2] > seat_top + 0.005:
+            colour = texel(tri)
+            weak = (colour.max() - colour.min()) / max(colour.max(), 1.0) <= 0.25
+            parts['iron' if weak else 'lid'].append(tri)
+        elif centre[2] < seat_top - 0.02 and abs(centre[0]) < 0.12 and abs(centre[1] - hole_centre_y) < 0.14:
+            parts['hole'].append(tri)
+        elif centre[2] >= seat_top - 0.02 and centre[1] < 0.33:
+            parts['stone_top'].append(tri)
+        else:
+            parts['stone_side'].append(tri)
+    assert all(parts[name] for name in parts), {name: len(faces) for name, faces in parts.items()}
 
 
     def region_stats(name):
-        x0, y0, x1, y1 = regions[name]
-        part = image[y0:y1, x0:x1].reshape(-1, 3)
+        mask = Image.new('L', (size, size), 0)
+        draw = ImageDraw.Draw(mask)
+        for tri in parts[name]:
+            draw.polygon([(uvs[i][0] * size, uvs[i][1] * size) for i in tri], fill=255)
+        part = image[np.asarray(mask) > 0].reshape(-1, 3)
         lum = part @ np.array([0.299, 0.587, 0.114])
         sat = (part.max(1) - part.min(1)) / np.maximum(part.max(1), 1.0)
         return lum.mean(), lum.std(), sat.mean()
@@ -160,8 +182,9 @@ if ROOM_ASSETS:
         assert std >= detail, '%s: luminance spread %.1f, the surface is flat' % (name, std)
     assert region_stats('hole')[0] <= 25, 'the hole is dark'
     assert region_stats('lid')[0] < region_stats('stone_top')[0], 'dark wood against lighter stone'
-    material = read('materials/scripts/ToiletSeat.material')
-    assert re.search(r'^\s*texture ToiletSeat\.png\s*$', material, re.M) and 'tex_address_mode clamp' in material
+    material = read('materials/scripts/RoomToiletMeshyProps.material')
+    block = re.search(r'^material ToiletSeatMeshy\s*\{.*?^\}', material, re.M | re.S).group(0)
+    assert re.search(r'^\s*texture ToiletSeatMeshy\.png\s*$', block, re.M) and 'tex_address_mode clamp' in block
 
 # 3. Solid seats in the navigation and the user drawn on top of the seat
 nav = read('source/gamemap/RoomObjectNavigation.cpp')
