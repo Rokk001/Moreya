@@ -7,6 +7,7 @@ import importlib.util
 import re
 from check_items_cfg import ROOT, blocks, read, value
 import content_packages
+from lang_texts import english_texts
 
 
 def main():
@@ -31,8 +32,12 @@ def main():
     else:
         content_packages.unchecked("check_names_not_from_other_games",
                                    ["display names of config/items.cfg and config/potions.cfg"])
-    effect_table = read("source/entities/ItemEffects.cpp").split("EFFECT_NAMES[]", 1)[1].split("};", 1)[0]
-    effect_names = re.findall(r'\{"[^"]+",\s*"([^"]+)"\}', effect_table)
+    effect_table = read("source/entities/ItemEffects.cpp").split("EFFECT_IDS[]", 1)[1].split("};", 1)[0]
+    # The names of the effects are the texts of the language entries ui.itemeffect.<lower case id> (an id stands in
+    # for its name when the content with the language files is not there)
+    english = english_texts(ROOT) or {}
+    effect_names = [english.get("ui.itemeffect." + effect.lower(), effect)
+                    for effect in re.findall(r'"([^"]+)"', effect_table)]
     counts.append(len(effect_names))
     displays.extend(effect_names)
     room_names = []

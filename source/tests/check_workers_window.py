@@ -20,6 +20,7 @@ repo = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(repo / 'scripts'))
 from assets_src import assets_src_dir, resolve  # noqa: E402
 import content_packages  # noqa: E402
+from lang_texts import english_texts  # noqa: E402
 sys.dont_write_bytecode = True
 
 
@@ -238,7 +239,8 @@ plus = code[code.index('bool WorkersWindow::onFixedClicked'):code.index('bool Wo
 assert 'seat->getFreeWorkers() == 0' in plus and '++next.fixed[job]' in plus, '"+" needs a free worker'
 assert 'next.fixed[job] == 0' in plus and '--next.fixed[job]' in plus, '"-" stops at 0'
 assert 'next.goldFirst = (next.goldFirst == 0) ? 1 : 0;' in code
-assert 'seat->getWorkerJobCounts()' in code and '"Working: "' in code
+assert 'seat->getWorkerJobCounts()' in code and '"ui.workers.working"' in code
+assert english_texts(repo) is None or english_texts(repo)['ui.workers.working'] == 'Working: {count}'
 assert 'seat->getFreeWorkers()' in code
 
 # --- Automatic takes its order from WorkerDefaultPriority (D3)
@@ -256,11 +258,22 @@ assert 'settings.priority' in order_code and 'return defaults.priority;' in orde
 assert 'getDefaultWorkerJobSettings()' in code
 manager = read('source/utils/ConfigManager.cpp')
 assert 'mWorkerJobDefaults.priority' in manager and '"WorkerDefaultPriority"' in manager
-job_names = re.findall(r'"([A-Z][a-z]+(?: [a-z]+)?)"', code[code.index('JOB_NAMES'):code.index('JOB_IMAGES')])
-assert job_names == ['Dig', 'Claim ground', 'Claim wall', 'Carry', 'Clean', 'Reload'], job_names
-carry_names = re.findall(r'"([A-Z][a-z]+(?: [a-z]+)*)"', code[code.index('CARRY_NAMES'):code.index('CARRY_IMAGES')])
-assert carry_names == ['Own knocked out', 'Enemy knocked out', 'Corpses', 'Gold', 'Items', 'Gift boxes', 'Traps and doors'], carry_names
-assert re.findall(r'"([IV]+)"', code[code.index('RANK_NUMERALS'):code.index('CARRY_NAMES')]) == ['I', 'II', 'III', 'IV', 'V', 'VI']
+job_keys = re.findall(r'"(ui\.workers\.job\.\w+)"', code[code.index('JOB_KEYS'):code.index('JOB_IMAGES')])
+assert job_keys == ['ui.workers.job.dig', 'ui.workers.job.claimground', 'ui.workers.job.claimwall',
+                    'ui.workers.job.carry', 'ui.workers.job.clean', 'ui.workers.job.reload'], job_keys
+carry_keys = re.findall(r'"(ui\.workers\.carry\.\w+)"', code[code.index('CARRY_KEYS'):code.index('CARRY_IMAGES')])
+assert carry_keys == ['ui.workers.carry.ownknockedout', 'ui.workers.carry.enemyknockedout', 'ui.workers.carry.corpses',
+                      'ui.workers.carry.gold', 'ui.workers.carry.items', 'ui.workers.carry.giftboxes',
+                      'ui.workers.carry.trapsdoors'], carry_keys
+# The English names are the texts of these keys in the language file (the names the window showed before the change)
+english = english_texts(repo)
+# The names the window shows in English, for the size checks of the layout
+job_names = ['Dig', 'Claim ground', 'Claim wall', 'Carry', 'Clean', 'Reload']
+carry_names = ['Own knocked out', 'Enemy knocked out', 'Corpses', 'Gold', 'Items', 'Gift boxes', 'Traps and doors']
+if english is not None:
+    assert [english[key] for key in job_keys] == job_names
+    assert [english[key] for key in carry_keys] == carry_names
+assert re.findall(r'"([IV]+)"', code[code.index('RANK_NUMERALS'):code.index('CARRY_KEYS')]) == ['I', 'II', 'III', 'IV', 'V', 'VI']
 assert 'enum class WorkerCarryEntry : uint32_t { ownKnockedOut, enemyKnockedOut, corpse, gold, items, giftBoxes, trapsDoors, none };' in header
 
 

@@ -377,7 +377,8 @@ for look_name in ('OD/SheetComboEditbox', 'OD/SheetComboDropList'):
     states = [s for s in looks[look_name].findall('StateImagery') if s.get('name') in ('Enabled', 'ReadOnly')]
     check(states and all([sec.get('section') for sec in s.iter('Section')] == ['field'] for s in states),
           look_name + ' shows the inset in its states')
-check('"All", "Zivs", "Fighters", "Unhappy"' in social_cpp, 'the entries of the filter stay')
+check('"ui.dungeonbook.filter.all", "ui.dungeonbook.filter.zivs",' in social_cpp and
+      '"ui.dungeonbook.filter.fighters", "ui.dungeonbook.filter.unhappy"' in social_cpp, 'the entries of the filter stay')
 check('const char* const FILTER_SELECTION_BRUSH = "ODMenuTemplate/LoadRowSelected";' in social_cpp and
       'item->setSelectionBrushImage(FILTER_SELECTION_BRUSH);' in social_cpp, 'the chosen entry is the sheet\'s row')
 filtered = function_of(social_cpp, 'bool SocialWindow::onFilterClicked(')

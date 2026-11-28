@@ -140,7 +140,7 @@ window = read('source/render/SocialWindow.cpp')
 assert 'askDungeonbookRoster, true' in window and 'askDungeonbookRoster, false' in window
 # The keeper of a listed creature comes from the roster (the tooltip of its row; the profile of book-variant-2 has no
 # keeper row, plan INGAME-QS-11 K1)
-assert 'getDungeonbookRoster()' in window and '"), keeper " + entry->keeper' in window
+assert 'getDungeonbookRoster()' in window and 'rowValues["keeper"] = entry->keeper;' in window
 # Roster rendering must not require a visible map entity: every page works with the roster entry alone, a creature
 # known on this side only adds its relationships, its mood level, its items and its skill tree (the Skills page)
 assert 'getCreature(selected->name)' not in window

@@ -81,7 +81,7 @@ text = block(item, 'std::string ItemInstance::describeTooltip(')
 assert "[font='MedievalSharp-13']" in text and "[font='MedievalSharp-10']" in text, 'large name, smaller lines'
 for font in ('MedievalSharp-13', 'MedievalSharp-10') if CONTENT else ():
     assert 'name="%s"' % font in fonts, font
-assert text.index('getDisplayName(map)') < text.index('qualityName(mQuality)') < text.index('GoldCoin') < text.index('itemNumber(getPrice(map))')
+assert text.index('getDisplayName(map)') < text.index('qualityDisplayName(mQuality)') < text.index('GoldCoin') < text.index('itemNumber(getPrice(map))')
 assert "OpenDungeonsIcons/GoldCoin" in text
 assert icons is None or 'name="GoldCoin"' in icons
 assert 'image-size' in text and 'coinSize' in text
