@@ -85,6 +85,7 @@
 #include "utils/NameAliases.h"
 #include "utils/Random.h"
 #include "utils/ResourceManager.h"
+#include "utils/Translation.h"
 
 #include "ODApplication.h"
 
@@ -2242,7 +2243,7 @@ unsigned long int GameMap::doMiscUpkeep(double timeSinceLastTurn)
 
             ServerNotification *serverNotification = new ServerNotification(
                 ServerNotificationType::chatServer, player);
-            serverNotification->mPacket << "It's pay day !" << EventShortNoticeType::majorGameEvent;
+            serverNotification->mPacket << Translation::makeReference("msg.payday") << EventShortNoticeType::majorGameEvent;
             ODServer::getSingleton().queueServerNotification(serverNotification);
         }
 
@@ -2581,7 +2582,7 @@ void GameMap::updateSeatWorkerPop(Seat* seat, bool shortage, double timeSinceLas
         ServerNotification* serverNotification = new ServerNotification(
             ServerNotificationType::chatServer, seat->getPlayer());
         serverNotification->mPacket
-            << "Your Zivs vanished because the mana ran out"
+            << Translation::makeReference("msg.worker.vanished")
             << EventShortNoticeType::majorGameEvent;
         ODServer::getSingleton().queueServerNotification(serverNotification);
     }
@@ -3692,7 +3693,7 @@ void GameMap::addWinningSeat(Seat *s, bool objectivesUpdated)
     {
         ServerNotification* serverNotification = new ServerNotification(
             ServerNotificationType::chatServer, player);
-        serverNotification->mPacket << "You Won" << EventShortNoticeType::majorGameEvent;
+        serverNotification->mPacket << Translation::makeReference("msg.won") << EventShortNoticeType::majorGameEvent;
         ODServer::getSingleton().queueServerNotification(serverNotification);
 
         // The numbers of the level at the moment of the victory (the campaign menu shows them)
@@ -4186,11 +4187,11 @@ std::string GameMap::getGoalsStringForPlayer(Player* player)
     if(hasGroups)
     {
         if(playerIsAWinner && script.areMainObjectivesReached(seat->getId()))
-            tempSS << "Victory!\n";
-        tempSS << "Main goals\n";
+            tempSS << Translation::makeReference("goal.victory") << "\n";
+        tempSS << Translation::makeReference("goal.main") << "\n";
         for(const std::string& objective : mainObjectives)
             tempSS << objective << "\n";
-        tempSS << "\nOptional goals\n";
+        tempSS << "\n" << Translation::makeReference("goal.optional") << "\n";
         for(const std::string& objective : optionalObjectives)
             tempSS << objective << "\n";
         return tempSS.str();
@@ -4198,7 +4199,7 @@ std::string GameMap::getGoalsStringForPlayer(Player* player)
 
     if (playerIsAWinner)
     {
-        tempSS << "Victory!\n";
+        tempSS << Translation::makeReference("goal.victory") << "\n";
     }
     if (seat->numFailedGoals() > 0)
     {
@@ -4244,7 +4245,7 @@ std::string GameMap::getGoalsStringForPlayer(Player* player)
                 continue;
             scriptObjectiveIds.push_back(action.mObjectiveId);
             if(action.mType == LevelScriptActionType::hint)
-                scriptObjectives.push_back("Hint: " + action.mText);
+                scriptObjectives.push_back(Translation::makeReference("goal.hint", {{"text", action.mText}}));
             else if(action.mObjectiveId.empty())
                 scriptObjectives.push_back(action.mText);
             else
@@ -4985,13 +4986,13 @@ void GameMap::checkGameDuration()
             ServerNotificationType::chatServer, player);
         if(scriptLimit >= 0)
         {
-            serverNotification->mPacket << "Time is up! The time limit of this level has run out."
+            serverNotification->mPacket << Translation::makeReference("msg.time.level")
                 << EventShortNoticeType::majorGameEvent;
         }
         else
         {
-            serverNotification->mPacket << "Time is up! The game time of " + Helper::toString(mGameDurationMinutes)
-                + " minutes has run out." << EventShortNoticeType::majorGameEvent;
+            serverNotification->mPacket << Translation::makeReference("msg.time.game",
+                {{"minutes", Helper::toString(mGameDurationMinutes)}}) << EventShortNoticeType::majorGameEvent;
         }
         ODServer::getSingleton().queueServerNotification(serverNotification);
     }

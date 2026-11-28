@@ -17,6 +17,8 @@
 
 #include "game/HandLimitRules.h"
 
+#include "utils/Translation.h"
+
 #include <algorithm>
 #include <cmath>
 #include <sstream>
@@ -89,17 +91,18 @@ uint32_t displaySeconds(double cooldownLeft)
     return static_cast<uint32_t>(std::max(1.0, std::ceil(cooldownLeft)));
 }
 
-//! \brief The message of a refused pickup with the whole seconds left of a running cooldown.
+//! \brief The message of a refused pickup as a text reference (keys msg.hand.full and msg.hand.cooldown) with the
+//! whole seconds left of a running cooldown.
 std::string refusalMessage(Refusal reason, double cooldownLeft)
 {
     if(reason == Refusal::handFull)
-        return "Your hand cannot hold another fighting creature.";
+        return Translation::makeReference("msg.hand.full");
 
     if(reason == Refusal::cooldown)
     {
-        std::stringstream message;
-        message << "You can pick up the next fighting creature in " << displaySeconds(cooldownLeft) << " s.";
-        return message.str();
+        std::stringstream seconds;
+        seconds << displaySeconds(cooldownLeft);
+        return Translation::makeReference("msg.hand.cooldown", {{"seconds", seconds.str()}});
     }
 
     return std::string();

@@ -328,7 +328,15 @@ add_boost_test(00-HandLimitRules
         SOURCES
         test_HandLimitRules.cpp
         ${SRC}/game/HandLimitRules.h
-        ${SRC}/game/HandLimitRules.cpp)
+        ${SRC}/game/HandLimitRules.cpp
+        ${SRC}/utils/Translation.h
+        ${SRC}/utils/Translation.cpp
+        ${SRC}/utils/LogManager.cpp
+        LIBRARIES
+        ${OGRE_LIBRARIES}
+        ${Boost_FILESYSTEM_LIBRARY_RELEASE}
+        ${Boost_SYSTEM_LIBRARY_RELEASE}
+        Threads::Threads)
 
 add_boost_test(00-PossessionBarRules
         SOURCES

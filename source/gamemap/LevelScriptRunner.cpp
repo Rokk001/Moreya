@@ -55,6 +55,7 @@
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 #include "utils/MakeUnique.h"
+#include "utils/Translation.h"
 
 #include <algorithm>
 #include <cstdlib>
@@ -813,7 +814,8 @@ std::vector<Player*> getTargetPlayers(GameMap& gameMap, int32_t seatId)
     return players;
 }
 
-//! \brief Sends a chat message to the players an action is meant for.
+//! \brief Sends a chat message to the players an action is meant for. The text is a text reference or, for the text of a
+//! level file, "@<key>" or a plain text; every client shows it in its own language.
 void sendMessage(GameMap& gameMap, int32_t seatId, const std::string& text)
 {
     for(Player* player : getTargetPlayers(gameMap, seatId))
@@ -1342,7 +1344,7 @@ void runAction(GameMap& gameMap, LevelScript& script, const LevelScriptAction& a
             sendMessage(gameMap, action.mSeatId, action.mText);
             break;
         case LevelScriptActionType::hint:
-            sendMessage(gameMap, action.mSeatId, "Hint: " + action.mText);
+            sendMessage(gameMap, action.mSeatId, Translation::makeReference("goal.hint", {{"text", action.mText}}));
             break;
         case LevelScriptActionType::objective:
             // All objective declarations populate only the goal panels, without routine notices.
@@ -1486,7 +1488,7 @@ void runAction(GameMap& gameMap, LevelScript& script, const LevelScriptAction& a
         case LevelScriptActionType::discoverLevel:
         {
             if(Campaign::getSingleton().discoverBonusLevel(action.mText))
-                sendMessage(gameMap, -1, "You have found a hidden land. Go there when you have conquered this land.");
+                sendMessage(gameMap, -1, Translation::makeReference("msg.script.hiddenland"));
 
             break;
         }
@@ -1503,7 +1505,7 @@ void runAction(GameMap& gameMap, LevelScript& script, const LevelScriptAction& a
         case LevelScriptActionType::findShard:
         {
             if(Campaign::getSingleton().findShard())
-                sendMessage(gameMap, -1, "You have found a shard of the Heartstone.");
+                sendMessage(gameMap, -1, Translation::makeReference("msg.script.shard"));
 
             break;
         }

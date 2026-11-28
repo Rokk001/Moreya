@@ -40,6 +40,7 @@
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
+#include "utils/Translation.h"
 #include "ODApplication.h"
 
 #include <algorithm>
@@ -342,7 +343,7 @@ void RaidManager::advanceSchedule(double seconds)
         gate->setMoreyaGateOpen(mSchedule.mGateOpen, raidConfig("RaidGatePortcullisSink"));
 
     if(!mSchedule.mGateOpen)
-        tellKeepers("The Moreya gate closes again. The next raid group comes when you open the gate.");
+        tellKeepers(Translation::makeReference("msg.raid.gateclosed"));
 }
 
 //! \brief Only the attacked keeper (or the level script) may open the gate, and only while it is closed.
@@ -653,9 +654,9 @@ void RaidManager::spawnGroup(uint32_t index)
     }
 
     if(group.mLeaderSpawned.empty())
-        tellKeepers("A raid group comes through the Moreya gate!");
+        tellKeepers(Translation::makeReference("msg.raid.arrived"));
     else
-        tellKeepers("A raid group led by " + group.mLeaderSpawned + " comes through the Moreya gate!");
+        tellKeepers(Translation::makeReference("msg.raid.arrived.led", {{"leader", group.mLeaderSpawned}}));
 }
 
 //! \brief The treasuries and dungeon hearts holding gold of every keeper that is an enemy of the raid.
@@ -739,7 +740,7 @@ void RaidManager::plunder()
             mGameMap.getLevelScript().recordEvent(name, "steals");
             OD_LOG_INF("Raid member " + name + " plunders " + Helper::toString(taken) + " gold from " + room->getName());
             if(firstInRoom)
-                tellKeepers("The raid plunders your gold!");
+                tellKeepers(Translation::makeReference("msg.raid.plunder"));
         }
     }
 }
@@ -824,7 +825,7 @@ void RaidManager::updateLeaders()
         OD_LOG_INF("Raid leader " + group.mLeaderSpawned + " flees to the gate, fallen "
             + Helper::toString(fallen) + " of " + Helper::toString(others) + ", followers "
             + Helper::toString(static_cast<uint32_t>(group.mFollowers.size())));
-        tellKeepers(group.mLeaderSpawned + " flees to the Moreya gate! Catch him before he escapes.");
+        tellKeepers(Translation::makeReference("msg.raid.flees", {{"leader", group.mLeaderSpawned}}));
     }
 }
 
@@ -1038,7 +1039,7 @@ void RaidManager::escape(RaidGroupData& group, Creature& leader)
     leader.removeFromGameMap();
     leader.deleteYourself();
 
-    tellKeepers(group.mLeaderSpawned + " escaped through the Moreya gate. The level is lost.");
+    tellKeepers(Translation::makeReference("msg.raid.escaped", {{"leader", group.mLeaderSpawned}}));
     if(mLost)
         return;
 

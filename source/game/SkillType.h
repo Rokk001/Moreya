@@ -144,6 +144,10 @@ namespace Skills
     //! \brief The skill name as seen in game events.
     std::string skillTypeToPlayerVisibleString(SkillType type);
 
+    //! \brief The skill name as a text reference (key skill.<type id in lowercase>.name, the player-visible string as
+    //! fallback) for the texts that the server sends to the clients.
+    std::string skillTypeToReference(SkillType type);
+
     //! \brief True for the skills that cannot be researched. A seat only gets them as a reward
     //! (the Summon champion spell comes with the completed campaign Heartstone).
     bool isRewardSkill(SkillType type);

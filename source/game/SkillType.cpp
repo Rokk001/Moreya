@@ -20,6 +20,7 @@
 #include "network/ODPacket.h"
 #include "utils/Helper.h"
 #include "utils/NameAliases.h"
+#include "utils/Translation.h"
 
 namespace Skills
 {
@@ -194,6 +195,13 @@ std::string toString(SkillType type)
         default:
             return "Unknown enum value:" + Helper::toString(static_cast<int>(type));
     }
+}
+
+//! \brief The key skill.<type id>.name with the player-visible string as the text for a language without it.
+std::string skillTypeToReference(SkillType type)
+{
+    return Translation::makeNameReference("skill." + Translation::toKeyPart(toString(type)) + ".name",
+        skillTypeToPlayerVisibleString(type));
 }
 
 //! \brief Returns the player-visible name of a research type.

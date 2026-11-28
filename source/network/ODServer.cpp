@@ -88,6 +88,7 @@
 #include "utils/RunLevelTest.h"
 #include "utils/SafeSave.h"
 #include "utils/EdgePlaces.h"
+#include "utils/Translation.h"
 #include "ODApplication.h"
 
 #include <SFML/Network.hpp>
@@ -825,7 +826,7 @@ void ODServer::handleConsoleCommand(Player* player, GameMap* gameMap, const std:
     ServerNotification *serverNotification = new ServerNotification(
         ServerNotificationType::chatServer, nullptr);
 
-    std::string msg = "Console cmd launched: " + args[0];
+    const std::string msg = Translation::makeReference("msg.console.launched", {{"command", args[0]}});
     serverNotification->mPacket << msg << EventShortNoticeType::genericGameInfo;
     ODServer::getSingleton().queueServerNotification(serverNotification);
 }
@@ -1376,7 +1377,7 @@ bool refuseIfDefeated(Player* player)
 
     ServerNotification *serverNotification = new ServerNotification(
         ServerNotificationType::chatServer, player);
-    std::string msg = "You have been defeated and can no longer give orders";
+    const std::string msg = Translation::makeReference("msg.defeated.noorders");
     serverNotification->mPacket << msg << EventShortNoticeType::majorGameEvent;
     ODServer::getSingleton().queueServerNotification(serverNotification);
     return true;
@@ -2687,7 +2688,7 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             ServerNotification *serverNotification = new ServerNotification(
                 ServerNotificationType::chatServer, player);
 
-            std::string msg = "You need a workshop to craft the trap!";
+            const std::string msg = Translation::makeReference("msg.trap.workshop");
             serverNotification->mPacket << msg << EventShortNoticeType::genericGameInfo;
             ODServer::getSingleton().queueServerNotification(serverNotification);
             break;
@@ -3023,7 +3024,7 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
                 (player->numObjectsInHand() > 0))
             {
                 // We cannot save the map
-                std::string msg = "Map could not be saved because player hand is not empty";
+                const std::string msg = Translation::makeReference("msg.map.handfull");
                 ServerNotification notif(ServerNotificationType::chatServer, player);
                 notif.mPacket << msg << EventShortNoticeType::genericGameInfo;
                 sendAsyncMsg(notif);
@@ -3034,7 +3035,7 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             if((mServerMode == ServerMode::ModeEditor) && !(receivedFilePath.empty() && receivedFileLevel.empty())
                 && !LevelFileNameInput::namesFile(receivedFileLevel))
             {
-                std::string msg = "Map could not be saved: please enter a file name";
+                const std::string msg = Translation::makeReference("msg.map.noname");
                 ServerNotification notif(ServerNotificationType::chatServer, player);
                 notif.mPacket << msg << EventShortNoticeType::genericGameInfo;
                 sendAsyncMsg(notif);
@@ -3176,16 +3177,16 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
                     OD_LOG_ERR("Couldn't save " + levelSaveText + ": " + saveError);
             }
 
-            std::string msg = "Map saved successfully as: " + levelSaveText;
+            std::string msg = Translation::makeReference("msg.map.saved", {{"path", levelSaveText}});
             if (!saveOk)
             {
-                msg = "Couldn't not save map file as: " + levelSaveText + "\nPlease check logs.";
+                msg = Translation::makeReference("msg.map.failed", {{"path", levelSaveText}});
             }
             else if(savedAsCopy)
             {
                 // The next saves go to the copy, the shipped level stays as it is
                 gameMap->setLevelFileName(levelSaveText);
-                msg = "Shipped levels cannot be changed. Your own copy was saved as: " + levelSaveText;
+                msg = Translation::makeReference("msg.map.copy", {{"path", levelSaveText}});
             }
             // We notify all the players that the game was saved successfully
             ServerNotification notif(ServerNotificationType::chatServer, nullptr);
@@ -4738,9 +4739,9 @@ bool ODServer::notifyClientMessage(ODSocketClient *clientSocket)
 
                 ServerNotification *serverNotification = new ServerNotification(
                     ServerNotificationType::chatServer, player);
-                std::string msg = nick.empty() ?
-                                  "A client disconnected." :
-                                  nick + " disconnected.";
+                const std::string msg = nick.empty() ?
+                                  Translation::makeReference("msg.client.disconnected") :
+                                  Translation::makeReference("msg.client.disconnected.nick", {{"nick", nick}});
                 serverNotification->mPacket << msg << EventShortNoticeType::genericGameInfo;
                 queueServerNotification(serverNotification);
             }
