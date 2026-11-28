@@ -12,34 +12,34 @@
         <Window type="OD/GameTabButton" name="DestroyTrapButton" >
 <!--#@own 4-->
             <Property name="NormalImage" value="OpenDungeonsIcons/DestroyTrapButton" />
-            <Property name="TooltipText" value="Destroy a trap (returns half its price)" />
+            <Property name="TooltipText" value="@layout.window_tab_traps.traps.destroy_trap_button.tooltip" />
             <Property name="InheritsAlpha" value="False" />
         </Window>
         <Window type="OD/GameTabButton" name="CannonButton" >
 <!--#@own 5-->
             <Property name="NormalImage" value="OpenDungeonsIcons/CannonButton" />
-            <Property name="TooltipText" value="Build a cannon" />
+            <Property name="TooltipText" value="@layout.window_tab_traps.traps.cannon_button.tooltip" />
             <Property name="InheritsAlpha" value="False" />
             <Property name="Visible" value="False" />
         </Window>
         <Window type="OD/GameTabButton" name="SpikeTrapButton" >
 <!--#@own 6-->
             <Property name="NormalImage" value="OpenDungeonsIcons/SpikeTrapButton" />
-            <Property name="TooltipText" value="Build a spike trap" />
+            <Property name="TooltipText" value="@layout.window_tab_traps.traps.spike_trap_button.tooltip" />
             <Property name="InheritsAlpha" value="False" />
             <Property name="Visible" value="False" />
         </Window>
         <Window type="OD/GameTabButton" name="BoulderTrapButton" >
 <!--#@own 7-->
             <Property name="NormalImage" value="OpenDungeonsIcons/BoulderTrapButton" />
-            <Property name="TooltipText" value="Build a boulder trap" />
+            <Property name="TooltipText" value="@layout.window_tab_traps.traps.boulder_trap_button.tooltip" />
             <Property name="InheritsAlpha" value="False" />
             <Property name="Visible" value="False" />
         </Window>
         <Window type="OD/GameTabButton" name="WoodenDoorTrapButton" >
 <!--#@own 8-->
             <Property name="NormalImage" value="OpenDungeonsIcons/WoodenDoorTrapButton" />
-            <Property name="TooltipText" value="Build a wooden door" />
+            <Property name="TooltipText" value="@layout.window_tab_traps.traps.wooden_door_trap_button.tooltip" />
             <Property name="InheritsAlpha" value="False" />
             <Property name="Visible" value="False" />
         </Window>

@@ -12,7 +12,7 @@
         </Window>
         <Window type="OD/StaticText" name="LoadingText" >
             <Property name="Area" value="{{0.5,-301},{0.5,240},{0.5,299},{0.5,280}}" />
-            <Property name="Text" value="Loading..." />
+            <Property name="Text" value="@layout.menu_editor_new.background.loading_text.text" />
             <Property name="MaxSize" value="{{1,0},{1,0}}" />
             <Property name="FrameEnabled" value="False" />
             <Property name="HorzFormatting" value="CentreAligned" />
@@ -33,12 +33,12 @@
             <Property name="BackgroundEnabled" value="False" />
         </Window>
 <!--#@own 4-->
-            <Property name="Text" value="Please set your level main properties..." />
+            <Property name="Text" value="@layout.menu_editor_new.background.level_window_frame.text" />
             <Property name="SizingEnabled" value="False" />
             <Property name="AlwaysOnTop" value="True" />
             <Window type="OD/StaticText" name="LevelTypeText" >
                 <Property name="Area" value="{{0,15},{0,35},{0,250},{0,60}}" />
-                <Property name="Text" value="Level Type:" />
+                <Property name="Text" value="@layout.menu_editor_new.background.level_window_frame.level_type_text.text" />
                 <Property name="FrameEnabled" value="False" />
                 <Property name="BackgroundEnabled" value="False" />
             </Window>
@@ -48,7 +48,7 @@
             </Window>
             <Window type="OD/StaticText" name="LevelFilenameText" >
                 <Property name="Area" value="{{0,15},{0,65},{0,250},{0,90}}" />
-                <Property name="Text" value="Filename:" />
+                <Property name="Text" value="@layout.menu_editor_new.background.level_window_frame.level_filename_text.text" />
                 <Property name="FrameEnabled" value="False" />
                 <Property name="BackgroundEnabled" value="False" />
             </Window>
@@ -58,7 +58,7 @@
             </Window>
             <Window type="OD/StaticText" name="LevelTitleText" >
                 <Property name="Area" value="{{0,15},{0,95},{0,250},{0,120}}" />
-                <Property name="Text" value="Title:" />
+                <Property name="Text" value="@layout.menu_editor_new.background.level_window_frame.level_title_text.text" />
                 <Property name="FrameEnabled" value="False" />
                 <Property name="BackgroundEnabled" value="False" />
             </Window>
@@ -68,7 +68,7 @@
             </Window>
             <Window type="OD/StaticText" name="LevelSizeText" >
                 <Property name="Area" value="{{0,15},{0,125},{0,250},{0,150}}" />
-                <Property name="Text" value="Map Size (Width x Height):" />
+                <Property name="Text" value="@layout.menu_editor_new.background.level_window_frame.level_size_text.text" />
                 <Property name="FrameEnabled" value="False" />
                 <Property name="BackgroundEnabled" value="False" />
             </Window>
@@ -90,7 +90,7 @@
             </Window>
             <Window type="OD/StaticText" name="LevelDescriptionText" >
                 <Property name="Area" value="{{0,15},{0,155},{0,440},{0,185}}" />
-                <Property name="Text" value="Level Description:" />
+                <Property name="Text" value="@layout.menu_editor_new.background.level_window_frame.level_description_text.text" />
                 <Property name="FrameEnabled" value="False" />
                 <Property name="BackgroundEnabled" value="False" />
             </Window>
@@ -100,11 +100,11 @@
                 <Property name="Text" value="" />
             </Window>
 <!--#@own 5-->
-                <Property name="Text" value="Back" />
+                <Property name="Text" value="@layout.menu_editor_new.background.level_window_frame.back_button.text" />
                 <Property name="IconImage" value="OpenDungeonsIcons/AbortIcon" />
             </Window>
 <!--#@own 6-->
-                <Property name="Text" value="Create Level" />
+                <Property name="Text" value="@layout.menu_editor_new.background.level_window_frame.launch_editor_button.text" />
                 <Property name="IconImage" value="OpenDungeonsIcons/CheckIcon" />
             </Window>
         </Window>

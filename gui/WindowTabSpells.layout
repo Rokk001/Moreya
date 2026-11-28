@@ -5,7 +5,7 @@
 <!--#@own 1-->
         <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
 <!--#@own 2-->
-        <Property name="TooltipText" value="Spells" />
+        <Property name="TooltipText" value="@layout.window_tab_spells.spells.tooltip" />
         <Property name="MaxSize" value="{{1,0},{1,0}}" />
         <Property name="Visible" value="False" />
         <Property name="RiseOnClickEnabled" value="False" />
@@ -34,7 +34,7 @@
         <Window type="OD/GameTabButton" name="CallToWarButton" >
 <!--#@own 5-->
             <Property name="NormalImage" value="OpenDungeonsIcons/CallToWarButton" />
-            <Property name="TooltipText" value="Casts a spell that calls available creatures" />
+            <Property name="TooltipText" value="@layout.window_tab_spells.spells.call_to_war_button.tooltip" />
             <Property name="InheritsAlpha" value="False" />
             <Property name="Visible" value="False" />
             <Window type="OD/ProgressBar" name="CallToWarButtonProgressBar" >
@@ -52,7 +52,7 @@
         <Window type="OD/GameTabButton" name="CreatureHealButton" >
 <!--#@own 6-->
             <Property name="NormalImage" value="OpenDungeonsIcons/CreatureHealButton" />
-            <Property name="TooltipText" value="Casts a spell that heals owned creatures on allied tiles" />
+            <Property name="TooltipText" value="@layout.window_tab_spells.spells.creature_heal_button.tooltip" />
             <Property name="InheritsAlpha" value="False" />
             <Property name="Visible" value="False" />
             <Window type="OD/ProgressBar" name="CreatureHealButtonProgressBar" >
@@ -70,7 +70,7 @@
         <Window type="OD/GameTabButton" name="CreatureExplosionButton" >
 <!--#@own 7-->
             <Property name="NormalImage" value="OpenDungeonsIcons/CreatureExplosionButton" />
-            <Property name="TooltipText" value="Casts a spell that damages enemy creatures on allied tiles" />
+            <Property name="TooltipText" value="@layout.window_tab_spells.spells.creature_explosion_button.tooltip" />
             <Property name="InheritsAlpha" value="False" />
             <Property name="Visible" value="False" />
             <Window type="OD/ProgressBar" name="CreatureExplosionButtonProgressBar" >
@@ -88,7 +88,7 @@
         <Window type="OD/GameTabButton" name="CreatureHasteButton" >
 <!--#@own 8-->
             <Property name="NormalImage" value="OpenDungeonsIcons/CreatureHasteButton" />
-            <Property name="TooltipText" value="Increases, target speed. Target: friendly creatures on claimed tiles" />
+            <Property name="TooltipText" value="@layout.window_tab_spells.spells.creature_haste_button.tooltip" />
             <Property name="InheritsAlpha" value="False" />
             <Property name="Visible" value="False" />
             <Window type="OD/ProgressBar" name="CreatureHasteButtonProgressBar" >
@@ -106,7 +106,7 @@
         <Window type="OD/GameTabButton" name="CreatureDefenseButton" >
 <!--#@own 9-->
             <Property name="NormalImage" value="OpenDungeonsIcons/CreatureDefenseButton" />
-            <Property name="TooltipText" value="Increases target physical defense. Target: friendly creatures on claimed tiles" />
+            <Property name="TooltipText" value="@layout.window_tab_spells.spells.creature_defense_button.tooltip" />
             <Property name="InheritsAlpha" value="False" />
             <Property name="Visible" value="False" />
             <Window type="OD/ProgressBar" name="CreatureDefenseButtonProgressBar" >
@@ -124,7 +124,7 @@
         <Window type="OD/GameTabButton" name="CreatureSlowButton" >
 <!--#@own 10-->
             <Property name="NormalImage" value="OpenDungeonsIcons/CreatureSlowButton" />
-            <Property name="TooltipText" value="Decrease target speed. Target: enemy creatures on claimed tiles" />
+            <Property name="TooltipText" value="@layout.window_tab_spells.spells.creature_slow_button.tooltip" />
             <Property name="InheritsAlpha" value="False" />
             <Property name="Visible" value="False" />
             <Window type="OD/ProgressBar" name="CreatureSlowButtonProgressBar" >
@@ -142,7 +142,7 @@
         <Window type="OD/GameTabButton" name="CreatureStrengthButton" >
 <!--#@own 11-->
             <Property name="NormalImage" value="OpenDungeonsIcons/CreatureStrengthButton" />
-            <Property name="TooltipText" value="Increase target strength. Target: allied creatures on claimed tiles" />
+            <Property name="TooltipText" value="@layout.window_tab_spells.spells.creature_strength_button.tooltip" />
             <Property name="InheritsAlpha" value="False" />
             <Property name="Visible" value="False" />
             <Window type="OD/ProgressBar" name="CreatureStrengthButtonProgressBar" >
@@ -160,7 +160,7 @@
         <Window type="OD/GameTabButton" name="CreatureWeakButton" >
 <!--#@own 12-->
             <Property name="NormalImage" value="OpenDungeonsIcons/CreatureWeakButton" />
-            <Property name="TooltipText" value="Decrease target strength. Target: enemy creatures on claimed tiles" />
+            <Property name="TooltipText" value="@layout.window_tab_spells.spells.creature_weak_button.tooltip" />
             <Property name="InheritsAlpha" value="False" />
             <Property name="Visible" value="False" />
             <Window type="OD/ProgressBar" name="CreatureWeakButtonProgressBar" >
@@ -178,7 +178,7 @@
         <Window type="OD/GameTabButton" name="SpellEyeEvilButton" >
 <!--#@own 13-->
             <Property name="NormalImage" value="OpenDungeonsIcons/SpellEyeEvilButton" />
-            <Property name="TooltipText" value="Temporary gives vision on tiles without vision. Target: any tile" />
+            <Property name="TooltipText" value="@layout.window_tab_spells.spells.spell_eye_evil_button.tooltip" />
             <Property name="InheritsAlpha" value="False" />
             <Property name="Visible" value="False" />
             <Window type="OD/ProgressBar" name="SpellEyeEvilButtonProgressBar" >

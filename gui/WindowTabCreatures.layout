@@ -5,7 +5,7 @@
 <!--#@own 1-->
         <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
 <!--#@own 2-->
-        <Property name="TooltipText" value="Creatures" />
+        <Property name="TooltipText" value="@layout.window_tab_creatures.creatures.tooltip" />
         <Property name="MaxSize" value="{{1,0},{1,0}}" />
         <Property name="Visible" value="False" />
         <Property name="RiseOnClickEnabled" value="False" />
@@ -22,7 +22,7 @@
         <Window type="OD/GameTabButton" name="FighterButton" >
 <!--#@own 7-->
             <Property name="NormalImage" value="OpenDungeonsIcons/FighterButton" />
-            <Property name="TooltipText" value="Add a fighter in hand if available" />
+            <Property name="TooltipText" value="@layout.window_tab_creatures.creatures.fighter_button.tooltip" />
             <Property name="InheritsAlpha" value="False" />
 <!--#@own 8-->
                     <Property name="FrameEnabled" value="False" />

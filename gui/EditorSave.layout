@@ -28,22 +28,22 @@
                 <Property name="Sort" value="True" />
             </Window>
 <!--#@own 4-->
-                <Property name="Text" value="Back" />
+                <Property name="Text" value="@layout.editor_save.menu_editor_save.level_window_frame.back_button.text" />
             </Window>
             <Window type="OD/Checkbox" name="OnlyLevel" >
 <!--#@own 5-->
-                <Property name="Text" value="Show Only Level Files" />
-                <Property name="TooltipText" value="Filter by the extension *.level" />
+                <Property name="Text" value="@layout.editor_save.menu_editor_save.level_window_frame.only_level.text" />
+                <Property name="TooltipText" value="@layout.editor_save.menu_editor_save.level_window_frame.only_level.tooltip" />
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
                 <Property name="Selected" value="True" />
             </Window>
 <!--#@own 6-->
-                <Property name="Text" value="Save" />
+                <Property name="Text" value="@layout.editor_save.menu_editor_save.level_window_frame.save_button.text" />
             </Window>
             <Window type="OD/Checkbox" name="HiddenFiles" >
 <!--#@own 7-->
-                <Property name="Text" value="Show Hidden Files" />
-                <Property name="TooltipText" value="Whether to show hidden files" />
+                <Property name="Text" value="@layout.editor_save.menu_editor_save.level_window_frame.hidden_files.text" />
+                <Property name="TooltipText" value="@layout.editor_save.menu_editor_save.level_window_frame.hidden_files.tooltip" />
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
                 <Property name="Selected" value="False" />
             </Window>

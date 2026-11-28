@@ -2,7 +2,7 @@
 
 <GUILayout version="4" >
 <!--#@own 1-->
-        <Property name="Text" value="Skill Tree" />
+        <Property name="Text" value="@layout.window_skill_tree.skill_tree_window.text" />
         <Property name="SizingEnabled" value="False" />
         <Window type="OD/StaticImage" name="Skills" >
 <!--#@own 2-->
@@ -12,7 +12,7 @@
 <!--#@own 4-->
                         <Property name="Area" value="{{0.2,-25},{0,15},{0.2,25},{0,65}}" />
 <!--#@own 5-->
-                        <Property name="TooltipText" value="Room: Treasury" />
+                        <Property name="TooltipText" value="@layout.window_skill_tree.skill_tree_window.skills.skill_tabs.rooms.treasury_button.tooltip" />
                         <Window type="OD/ProgressBar" name="TreasuryButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
@@ -29,7 +29,7 @@
 <!--#@own 7-->
                         <Property name="Area" value="{{0.8,-25},{0,15},{0.8,25},{0,65}}" />
 <!--#@own 8-->
-                        <Property name="TooltipText" value="Room: Dormitory" />
+                        <Property name="TooltipText" value="@layout.window_skill_tree.skill_tree_window.skills.skill_tabs.rooms.dormitory_button.tooltip" />
                         <Window type="OD/ProgressBar" name="DormitoryButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
@@ -46,7 +46,7 @@
 <!--#@own 10-->
                         <Property name="Area" value="{{0.5,-25},{0,15},{0.5,25},{0,65}}" />
 <!--#@own 11-->
-                        <Property name="TooltipText" value="Room: Hatchery" />
+                        <Property name="TooltipText" value="@layout.window_skill_tree.skill_tree_window.skills.skill_tabs.rooms.hatchery_button.tooltip" />
                         <Window type="OD/ProgressBar" name="HatcheryButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
@@ -78,7 +78,7 @@
 <!--#@own 16-->
                         <Property name="Area" value="{{0.7,-25},{0,15},{0.7,25},{0,65}}" />
 <!--#@own 17-->
-                        <Property name="TooltipText" value="Room: Library" />
+                        <Property name="TooltipText" value="@layout.window_skill_tree.skill_tree_window.skills.skill_tabs.rooms.library_button.tooltip" />
                         <Window type="OD/ProgressBar" name="LibraryButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
@@ -110,7 +110,7 @@
 <!--#@own 22-->
                         <Property name="Area" value="{{0.3,-25},{0,15},{0.3,25},{0,65}}" />
 <!--#@own 23-->
-                        <Property name="TooltipText" value="Room: Training Hall" />
+                        <Property name="TooltipText" value="@layout.window_skill_tree.skill_tree_window.skills.skill_tabs.rooms.training_hall_button.tooltip" />
                         <Window type="OD/ProgressBar" name="TrainingHallButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
@@ -127,7 +127,7 @@
 <!--#@own 25-->
                         <Property name="Area" value="{{0.2,-25},{0,75},{0.2,25},{0,125}}" />
 <!--#@own 26-->
-                        <Property name="TooltipText" value="Room: Workshop" />
+                        <Property name="TooltipText" value="@layout.window_skill_tree.skill_tree_window.skills.skill_tabs.rooms.workshop_button.tooltip" />
                         <Window type="OD/ProgressBar" name="WorkshopButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
@@ -144,7 +144,7 @@
 <!--#@own 28-->
                         <Property name="Area" value="{{0.7,-25},{0,15},{0.7,25},{0,65}}" />
 <!--#@own 29-->
-                        <Property name="TooltipText" value="Room: Wooden bridge" />
+                        <Property name="TooltipText" value="@layout.window_skill_tree.skill_tree_window.skills.skill_tabs.rooms.wooden_bridge_button.tooltip" />
                         <Window type="OD/ProgressBar" name="WoodenBridgeButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
@@ -189,7 +189,7 @@
 <!--#@own 37-->
                         <Property name="Area" value="{{0.8,-25},{0,135},{0.8,25},{0,185}}" />
 <!--#@own 38-->
-                        <Property name="TooltipText" value="Room: Casino" />
+                        <Property name="TooltipText" value="@layout.window_skill_tree.skill_tree_window.skills.skill_tabs.rooms.casino_button.tooltip" />
                         <Window type="OD/ProgressBar" name="CasinoButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
@@ -234,7 +234,7 @@
 <!--#@own 45-->
                         <Property name="Area" value="{{0.5,-25},{0,135},{0.5,25},{0,185}}" />
 <!--#@own 46-->
-                        <Property name="TooltipText" value="Room: Arena" />
+                        <Property name="TooltipText" value="@layout.window_skill_tree.skill_tree_window.skills.skill_tabs.rooms.arena_button.tooltip" />
                         <Window type="OD/ProgressBar" name="ArenaButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
@@ -251,7 +251,7 @@
 <!--#@own 48-->
                         <Property name="Area" value="{{0.8,-25},{0,75},{0.8,25},{0,125}}" />
 <!--#@own 49-->
-                        <Property name="TooltipText" value="Room: Prison" />
+                        <Property name="TooltipText" value="@layout.window_skill_tree.skill_tree_window.skills.skill_tabs.rooms.prison_button.tooltip" />
                         <Window type="OD/ProgressBar" name="PrisonButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
@@ -268,7 +268,7 @@
 <!--#@own 51-->
                         <Property name="Area" value="{{0.2,-25},{0,75},{0.2,25},{0,125}}" />
 <!--#@own 52-->
-                        <Property name="TooltipText" value="Room: Crypt" />
+                        <Property name="TooltipText" value="@layout.window_skill_tree.skill_tree_window.skills.skill_tabs.rooms.crypt_button.tooltip" />
                         <Window type="OD/ProgressBar" name="CryptButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
@@ -300,7 +300,7 @@
 <!--#@own 57-->
                         <Property name="Area" value="{{0.2,-25},{0,135},{0.2,25},{0,185}}" />
 <!--#@own 58-->
-                        <Property name="TooltipText" value="Room: Stone bridge" />
+                        <Property name="TooltipText" value="@layout.window_skill_tree.skill_tree_window.skills.skill_tabs.rooms.stone_bridge_button.tooltip" />
                         <Window type="OD/ProgressBar" name="StoneBridgeButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
@@ -317,7 +317,7 @@
 <!--#@own 60-->
                         <Property name="Area" value="{{0.5,-25},{0,195},{0.5,25},{0,245}}" />
 <!--#@own 61-->
-                        <Property name="TooltipText" value="Room: Torture" />
+                        <Property name="TooltipText" value="@layout.window_skill_tree.skill_tree_window.skills.skill_tabs.rooms.torture_button.tooltip" />
                         <Window type="OD/ProgressBar" name="TortureButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
@@ -409,7 +409,7 @@
 <!--#@own 78-->
                         <Property name="Area" value="{{0.8,-25},{0,75},{0.8,25},{0,125}}" />
                         <Property name="ButtonImage" value="OpenDungeonsIcons/WoodenDoorTrapButton" />
-                        <Property name="TooltipText" value="Trap: Wooden door" />
+                        <Property name="TooltipText" value="@layout.window_skill_tree.skill_tree_window.skills.skill_tabs.traps.wooden_door_trap_button.tooltip" />
                         <Window type="OD/ProgressBar" name="WoodenDoorTrapButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
@@ -425,7 +425,7 @@
                     </Window>
 <!--#@own 80-->
                         <Property name="ButtonImage" value="OpenDungeonsIcons/SpikeTrapButton" />
-                        <Property name="TooltipText" value="Trap: Spike trap" />
+                        <Property name="TooltipText" value="@layout.window_skill_tree.skill_tree_window.skills.skill_tabs.traps.spike_trap_button.tooltip" />
                         <Window type="OD/ProgressBar" name="SpikeTrapButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
@@ -441,7 +441,7 @@
                     </Window>
 <!--#@own 82-->
                         <Property name="ButtonImage" value="OpenDungeonsIcons/CannonButton" />
-                        <Property name="TooltipText" value="Trap: Cannon" />
+                        <Property name="TooltipText" value="@layout.window_skill_tree.skill_tree_window.skills.skill_tabs.traps.cannon_button.tooltip" />
                         <Window type="OD/ProgressBar" name="CannonButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
@@ -508,7 +508,7 @@
                         </Window>
 <!--#@own 93-->
                         <Property name="ButtonImage" value="OpenDungeonsIcons/BoulderTrapButton" />
-                        <Property name="TooltipText" value="Trap: Boulder trap" />
+                        <Property name="TooltipText" value="@layout.window_skill_tree.skill_tree_window.skills.skill_tabs.traps.boulder_trap_button.tooltip" />
                         <Window type="OD/ProgressBar" name="BoulderTrapButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
@@ -721,7 +721,7 @@
 <!--#@own 129-->
                         <Property name="Area" value="{{0.5,-25},{0,75},{0.5,25},{0,125}}" />
                         <Property name="ButtonImage" value="OpenDungeonsIcons/CreatureHealButton" />
-                        <Property name="TooltipText" value="Spell: Creature Heal" />
+                        <Property name="TooltipText" value="@layout.window_skill_tree.skill_tree_window.skills.skill_tabs.spells.creature_heal_button.tooltip" />
                         <Window type="OD/ProgressBar" name="CreatureHealButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
@@ -738,7 +738,7 @@
 <!--#@own 131-->
                         <Property name="Area" value="{{0.2,-25},{0,135},{0.2,25},{0,185}}" />
                         <Property name="ButtonImage" value="OpenDungeonsIcons/CreatureHasteButton" />
-                        <Property name="TooltipText" value="Spell: Haste creature" />
+                        <Property name="TooltipText" value="@layout.window_skill_tree.skill_tree_window.skills.skill_tabs.spells.creature_haste_button.tooltip" />
                         <Window type="OD/ProgressBar" name="CreatureHasteButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
@@ -755,7 +755,7 @@
 <!--#@own 133-->
                         <Property name="Area" value="{{0.8,-25},{0,75},{0.8,25},{0,125}}" />
                         <Property name="ButtonImage" value="OpenDungeonsIcons/SpellEyeEvilButton" />
-                        <Property name="TooltipText" value="Spell: Temporary gives vision on tiles" />
+                        <Property name="TooltipText" value="@layout.window_skill_tree.skill_tree_window.skills.skill_tabs.spells.spell_eye_evil_button.tooltip" />
                         <Window type="OD/ProgressBar" name="SpellEyeEvilButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
@@ -772,7 +772,7 @@
 <!--#@own 135-->
                         <Property name="Area" value="{{0.5,-25},{0,135},{0.5,25},{0,185}}" />
                         <Property name="ButtonImage" value="OpenDungeonsIcons/CreatureDefenseButton" />
-                        <Property name="TooltipText" value="Spell: Increase defense creature" />
+                        <Property name="TooltipText" value="@layout.window_skill_tree.skill_tree_window.skills.skill_tabs.spells.creature_defense_button.tooltip" />
                         <Window type="OD/ProgressBar" name="CreatureDefenseButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
@@ -788,7 +788,7 @@
                     </Window>
 <!--#@own 137-->
                         <Property name="ButtonImage" value="OpenDungeonsIcons/CreatureStrengthButton" />
-                        <Property name="TooltipText" value="Spell: Increase creature strength" />
+                        <Property name="TooltipText" value="@layout.window_skill_tree.skill_tree_window.skills.skill_tabs.spells.creature_strength_button.tooltip" />
                         <Window type="OD/ProgressBar" name="CreatureStrengthButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
@@ -805,7 +805,7 @@
 <!--#@own 139-->
                         <Property name="Area" value="{{0.2,-25},{0,75},{0.2,25},{0,125}}" />
                         <Property name="ButtonImage" value="OpenDungeonsIcons/CallToWarButton" />
-                        <Property name="TooltipText" value="Spell: Call to War" />
+                        <Property name="TooltipText" value="@layout.window_skill_tree.skill_tree_window.skills.skill_tabs.spells.call_to_war_button.tooltip" />
                         <Window type="OD/ProgressBar" name="CallToWarButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
@@ -822,7 +822,7 @@
 <!--#@own 141-->
                         <Property name="Area" value="{{0.8,-25},{0,135},{0.8,25},{0,185}}" />
                         <Property name="ButtonImage" value="OpenDungeonsIcons/CreatureSlowButton" />
-                        <Property name="TooltipText" value="Spell: Decrease creature speed" />
+                        <Property name="TooltipText" value="@layout.window_skill_tree.skill_tree_window.skills.skill_tabs.spells.creature_slow_button.tooltip" />
                         <Window type="OD/ProgressBar" name="CreatureSlowButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
@@ -851,7 +851,7 @@
                     </Window>
 <!--#@own 145-->
                         <Property name="ButtonImage" value="OpenDungeonsIcons/CreatureWeakButton" />
-                        <Property name="TooltipText" value="Spell: Decrease creature strength" />
+                        <Property name="TooltipText" value="@layout.window_skill_tree.skill_tree_window.skills.skill_tabs.spells.creature_weak_button.tooltip" />
                         <Window type="OD/ProgressBar" name="CreatureWeakButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
@@ -868,7 +868,7 @@
 <!--#@own 147-->
                         <Property name="Area" value="{{0.5,-25},{0,75},{0.5,25},{0,125}}" />
                         <Property name="ButtonImage" value="OpenDungeonsIcons/CreatureExplosionButton" />
-                        <Property name="TooltipText" value="Spell: Creature Explosion" />
+                        <Property name="TooltipText" value="@layout.window_skill_tree.skill_tree_window.skills.skill_tabs.spells.creature_explosion_button.tooltip" />
                         <Window type="OD/ProgressBar" name="CreatureExplosionButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
@@ -1100,19 +1100,19 @@
 <!--#@own 188-->
         <Window type="OD/Button" name="AutoFill" >
             <Property name="Area" value="{{0,20},{1,-50},{0,120},{1,-20}}" />
-            <Property name="Text" value="Auto Fill" />
-            <Property name="TooltipText" value="Randomly fills the pending skill tree" />
+            <Property name="Text" value="@layout.window_skill_tree.skill_tree_window.auto_fill.text" />
+            <Property name="TooltipText" value="@layout.window_skill_tree.skill_tree_window.auto_fill.tooltip" />
         </Window>
         <Window type="OD/Button" name="UnselectAll" >
             <Property name="Area" value="{{0,130},{1,-50},{0,250},{1,-20}}" />
-            <Property name="Text" value="Unselect All" />
-            <Property name="TooltipText" value="Unselect all pending skills in the tree" />
+            <Property name="Text" value="@layout.window_skill_tree.skill_tree_window.unselect_all.text" />
+            <Property name="TooltipText" value="@layout.window_skill_tree.skill_tree_window.unselect_all.tooltip" />
         </Window>
 <!--#@own 189-->
-            <Property name="TooltipText" value="Do not save modifications to the skill tree" />
+            <Property name="TooltipText" value="@layout.window_skill_tree.skill_tree_window.cancel_button.tooltip" />
         </Window>
 <!--#@own 190-->
-            <Property name="TooltipText" value="Save modifications to the skill tree" />
+            <Property name="TooltipText" value="@layout.window_skill_tree.skill_tree_window.apply_button.tooltip" />
         </Window>
     </Window>
 </GUILayout>
