@@ -46,6 +46,7 @@ const char* const REQUIRED_PACKAGES[] =
     "equipment",
     "gui-skin",
     "items",
+    "lang-en",
     "room-arena",
     "room-casino",
     "room-crypt",
