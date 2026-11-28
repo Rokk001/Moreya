@@ -28,6 +28,7 @@
 #include <array>
 #include <chrono>
 #include <cstddef>
+#include <string>
 #include <cstdint>
 #include <vector>
 
@@ -132,10 +133,10 @@ public:
 
     //! \brief Roman numeral of a rank (0 is rank I).
     static const char* getRankNumeral(std::size_t rank);
-    //! \brief Name of a job in the order of WorkerJob.
-    static const char* getJobName(uint32_t job);
-    //! \brief Name of a carry entry in the order of WorkerCarryEntry.
-    static const char* getCarryName(uint32_t entry);
+    //! \brief Name of a job in the order of WorkerJob, in the chosen language (UTF-8).
+    static std::string getJobName(uint32_t job);
+    //! \brief Name of a carry entry in the order of WorkerCarryEntry, in the chosen language (UTF-8).
+    static std::string getCarryName(uint32_t entry);
 
 private:
     //! Slide of a slot from the place its entry came from; the offset shrinks to zero within SLIDE_SECONDS
@@ -172,6 +173,8 @@ private:
     void updateSlides(const char* prefix, std::vector<Slide>& slides, const std::vector<CEGUI::UVector2>& bases);
     //! \brief Reads the slot index from the window of an event, -1 if there is none.
     static int32_t getSlotId(const CEGUI::EventArgs& e);
+    //! \brief Called when the language changed: the window is drawn again at the next refresh.
+    void onLanguageChanged();
 
     GameMap& mGameMap;
     CEGUI::Window* mWindow;
@@ -196,6 +199,8 @@ private:
     std::vector<uint32_t> mShownCarryOrder;
     //! What was drawn last, empty if the window has to be drawn
     std::vector<uint32_t> mShownState;
+    //! Id of the listener that calls onLanguageChanged when the language changes (Translation::addListener)
+    unsigned int mLanguageListener = 0;
 };
 
 #endif // WORKERSWINDOW_H
