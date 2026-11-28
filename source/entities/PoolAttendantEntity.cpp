@@ -49,18 +49,18 @@ const std::string SOUND_WHISTLE = "Rooms/Spa/Whistle";
 const double CLIP_SECONDS = 2.0;
 //! \brief Height of the top of the seat plate of the chair mesh (SpaChair) above the floor, in tiles.
 const double CHAIR_SEAT_HEIGHT = 1.13;
-//! \brief Offset in y (tiles) from the middle of the chair tile to the foot of the ladder. The ladder is on the back of the
-//! chair (the -Y side of the SpaChair mesh, under the backrest); the chair faces the pool, so the ladder is on the side
-//! away from the pool (the chair is 0.6 tiles deep, decision 837).
-const double LADDER_FOOT_OFFSET = -0.4;
-//! \brief Distance in tiles from the middle of the chair tile to the point beside the back of the chair the attendant
-//! passes on his way between the ladder and the next rim tile (the chair is 0.6 tiles wide, his body about 0.5).
-const double BEHIND_CHAIR_SIDE = 0.6;
+//! \brief Offset in y (tiles) from the middle of the chair tile to the foot of the ladder. The steps are on the front of
+//! the chair (the +Y side of the SpaChair mesh, owner decision D-7-v2 variant 1); the chair faces the pool, so he climbs
+//! on the pool side (the chair is 0.6 tiles deep, decision 837).
+const double LADDER_FOOT_OFFSET = 0.4;
+//! \brief Distance in tiles from the middle of the chair tile to the point beside the front of the chair the attendant
+//! passes on his way between the steps and the next rim tile (the chair is 0.6 tiles wide, his body about 0.5).
+const double BESIDE_CHAIR_FRONT = 0.6;
 //! \brief The direction from the chair to the pool: the chair stands on the tile above (y - 1) the first pool tile.
 const Ogre::Vector3 TOWARDS_POOL(0.0f, 1.0f, 0.0f);
-//! \brief The direction the attendant faces while he climbs the ladder: to the chair. The ladder is behind the chair, so
-//! he looks over the chair towards the pool.
-const Ogre::Vector3 TOWARDS_CHAIR = TOWARDS_POOL;
+//! \brief The direction the attendant faces while he climbs the ladder: to the chair. The steps are in front of the
+//! chair, so he looks away from the pool.
+const Ogre::Vector3 TOWARDS_CHAIR(0.0f, -1.0f, 0.0f);
 //! \brief Factor of the parabola that gives the height of a jump: 4 x p x (1 - p) is 1 at the apex.
 const Ogre::Real JUMP_ARC_FACTOR = 4.0f;
 //! \brief Number of random acts the attendant can play while nobody bathes (towel and doze).
@@ -454,8 +454,8 @@ void PoolAttendantEntity::startWalkToBoard()
     }
 
     setState(PoolAttendantState::walkingToBoard);
-    // Around the pool on the rim, never over the mud (decision 837); he leaves the foot of the ladder sideways behind
-    // the chair
+    // Around the pool on the rim, never over the mud (decision 837); he leaves the foot of the steps sideways in front
+    // of the chair
     std::vector<Ogre::Vector2> path;
     const std::pair<int32_t, int32_t> chair(mChairTile->getX(), mChairTile->getY());
     // A loaded walk goes on from the tile he stands on
@@ -467,7 +467,7 @@ void PoolAttendantEntity::startWalkToBoard()
     const Ogre::Vector3 foot = getLadderFootPosition();
     if((start == chair) && (tiles.front().second == chair.second))
         path.push_back(Ogre::Vector2(static_cast<Ogre::Real>(chair.first) +
-            static_cast<Ogre::Real>(tiles.front().first - chair.first) * static_cast<Ogre::Real>(BEHIND_CHAIR_SIDE), foot.y));
+            static_cast<Ogre::Real>(tiles.front().first - chair.first) * static_cast<Ogre::Real>(BESIDE_CHAIR_FRONT), foot.y));
     for(const std::pair<int32_t, int32_t>& tile : tiles)
         path.push_back(Ogre::Vector2(static_cast<Ogre::Real>(tile.first), static_cast<Ogre::Real>(tile.second)));
     setWalkPath(EntityAnimation::walk_anim, EntityAnimation::walk_anim, true, false, path, false);
@@ -532,14 +532,14 @@ void PoolAttendantEntity::land()
 void PoolAttendantEntity::startWalkBack()
 {
     setState(PoolAttendantState::walkingBack);
-    // Out of the mud by the fewest pool tiles, then around the pool on the rim to the back of the chair (decision 837)
+    // Out of the mud by the fewest pool tiles, then around the pool on the rim to the front of the chair (decision 837)
     const Ogre::Vector3 foot = getLadderFootPosition();
     std::vector<Ogre::Vector2> path;
     const std::pair<int32_t, int32_t> chair(mChairTile->getX(), mChairTile->getY());
     const Ogre::Vector3 position = getPosition();
     const std::pair<int32_t, int32_t> start(Helper::round(position.x), Helper::round(position.y));
     // He goes to the rim tile beside the chair (the row of the chair holds no pool tile), the nearer of the two, then
-    // behind the chair to the ladder instead of through the chair
+    // in front of the chair to the steps instead of through the chair
     std::vector<std::pair<int32_t, int32_t> > tiles;
     int32_t side = 0;
     for(int32_t candidate = -1; candidate <= 1; candidate += 2)
@@ -557,7 +557,7 @@ void PoolAttendantEntity::startWalkBack()
         path.push_back(Ogre::Vector2(static_cast<Ogre::Real>(tile.first), static_cast<Ogre::Real>(tile.second)));
     if(side != 0)
         path.push_back(Ogre::Vector2(static_cast<Ogre::Real>(chair.first) +
-            static_cast<Ogre::Real>(side) * static_cast<Ogre::Real>(BEHIND_CHAIR_SIDE), foot.y));
+            static_cast<Ogre::Real>(side) * static_cast<Ogre::Real>(BESIDE_CHAIR_FRONT), foot.y));
     path.push_back(Ogre::Vector2(foot.x, foot.y));
     setWalkPath(EntityAnimation::walk_anim, PoolAttendantPose::climb, true, false, path, false);
 }
@@ -582,16 +582,16 @@ void PoolAttendantEntity::startWalkRound(bool resume)
     }
 
     setState(PoolAttendantState::walkingRound);
-    // From the foot of the ladder behind the chair to its left side, on the rim around the pool to its right side and
-    // behind the chair back to the ladder (decision 837: nobody walks over the pool or through the chair)
+    // From the foot of the steps in front of the chair to its left side, on the rim around the pool to its right side and
+    // in front of the chair back to the steps (decision 837: nobody walks over the pool or through the chair)
     const Ogre::Vector3 foot = getLadderFootPosition();
     const Ogre::Real chairX = static_cast<Ogre::Real>(mChairTile->getX());
-    const Ogre::Real behindChair = static_cast<Ogre::Real>(BEHIND_CHAIR_SIDE);
+    const Ogre::Real besideChair = static_cast<Ogre::Real>(BESIDE_CHAIR_FRONT);
     std::vector<Ogre::Vector2> path;
-    path.push_back(Ogre::Vector2(chairX - behindChair, foot.y));
+    path.push_back(Ogre::Vector2(chairX - besideChair, foot.y));
     for(const std::pair<int32_t, int32_t>& tile : round)
         path.push_back(Ogre::Vector2(static_cast<Ogre::Real>(tile.first), static_cast<Ogre::Real>(tile.second)));
-    path.push_back(Ogre::Vector2(chairX + behindChair, foot.y));
+    path.push_back(Ogre::Vector2(chairX + besideChair, foot.y));
     path.push_back(Ogre::Vector2(foot.x, foot.y));
 
     // A loaded round goes on from the point of the round nearest to where he stands

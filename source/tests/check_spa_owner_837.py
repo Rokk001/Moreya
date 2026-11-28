@@ -4,8 +4,9 @@ of D-7-v2 and the spa plan). Python only: source text, the shipped binary meshes
 1  The pool attendant crouched on the floor under the chair. Cause: GameEntity::addEntityToPositionTile writes the floor
    height of the tile over z whenever an entity enters a tile, so his seat height 1.13 was lost at the spawn (server) and at
    the first setPosition on the client. PoolAttendantEntity keeps its height. The chair also stood the wrong way (backrest
-   and ladder to the pool): both chair and springboard face the pool now, the ladder is behind the chair, and a red and
-   white lifebuoy hangs at the chair (variant 1). Towel and whistle were part of his former mesh; the approved Meshy
+   and ladder to the pool): both chair and springboard face the pool now, the steps are in front of the chair (owner
+   decision D-7-v2 variant 1, the approved Meshy chair with one material), and a red and white lifebuoy hangs at the
+   chair. Towel and whistle were part of his former mesh; the approved Meshy
    attendant of 2026-11-26 is used as approved, without them (its look is checked by check_spa_attendant_k22.py).
 2  The mud was near black: SpaMud multiplied the dark ground texture Dirt.png by 0.4 0.25 0.13. It has its own painted hot
    liquid mud texture, a wet gloss and a faint lava warmth now; it stays opaque (the mud hides the bathers, plan D6).
@@ -119,10 +120,28 @@ def read_mesh(path):
                 p = sub_end
             positions = own if own else shared
             submeshes.append((material, [positions[i] for i in sorted(set(indices))]))
+            if 'faces' in globals():
+                globals()['faces'].extend(tuple(positions[i] for i in indices[k:k + 3]) for k in range(0, len(indices), 3))
         elif cid == 0x9000:
             bounds = struct.unpack_from('<6f', d, p)
         p = end
     return submeshes, bounds
+
+
+def height_at(triangles, x, y, limit):
+    """Height of the highest face below the limit whose outline holds the point x, y."""
+    best = None
+    for (ax, ay, az), (bx, by, bz), (cx, cy, cz) in triangles:
+        d = (by - cy) * (ax - cx) + (cx - bx) * (ay - cy)
+        if abs(d) < 1e-9:
+            continue
+        a = ((by - cy) * (x - cx) + (cx - bx) * (y - cy)) / d
+        b = ((cy - ay) * (x - cx) + (ax - cx) * (y - cy)) / d
+        if min(a, b, 1.0 - a - b) >= -1e-6:
+            z = a * az + b * bz + (1.0 - a - b) * cz
+            if z < limit and (best is None or z > best):
+                best = z
+    return best
 
 
 def span(points, axis):
@@ -148,30 +167,38 @@ keep = body(attendant_cpp, 'void PoolAttendantEntity::addEntityToPositionTile(')
 assert keep.index('const float height = getPosition().z;') < keep.index('RenderedMovableEntity::addEntityToPositionTile(gameMap);') \
     < keep.index('setEntityHeight(height);'), 'the attendant must keep the height he was given when he enters a tile'
 seat_height = float(re.search(r'const double CHAIR_SEAT_HEIGHT = ([0-9.]+);', attendant_cpp).group(1))
+faces = []  # read_mesh adds the corner positions of every triangle while this list is there
 chair, chair_bounds = read_mesh(room_file('models/SpaChair.mesh'))
-wood = [q for material, points in chair if material == 'SpaChairWood' for q in points]  # K22: the chair's own textured wood
-seat_top = max(q[2] for q in wood if q[2] < 1.2)  # the seat plate is the highest part below the armrests (1.28)
+wood = [q for material, points in chair if material == 'SpaChairMeshy' for q in points]  # the chair's own texture
+seat_top = height_at(faces, 0.0, -0.1, 1.2)  # the seat plate under the sitter
+del faces
 assert abs(seat_top - seat_height) < 0.01, 'CHAIR_SEAT_HEIGHT %.3f must be the top of the seat plate %.3f' % (seat_height, seat_top)
-# The chair: backrest (and the ladder under it) on -y, the seat front on +y; it stands at y - 1 of the pool with angle 0,
-# so its seat faces the pool; the ladder is behind it, the attendant (mesh looks along -y) is turned 180 to the pool
+# The chair: backrest on -y, the seat front and the steps on +y; it stands at y - 1 of the pool with angle 0,
+# so its seat faces the pool; he climbs the steps in front, the attendant (mesh looks along -y) is turned 180 to the pool
 backrest = [q for q in wood if q[2] > 1.45]
 assert backrest and max(q[1] for q in backrest) < 0.0, 'the backrest of SpaChair is on its -y side'
 assert re.search(r'const double CHAIR_ANGLE = 0\.0;', room_cpp) and re.search(r'const double SPRINGBOARD_ANGLE = 180\.0;', room_cpp)
 assert re.search(r'const double ATTENDANT_ANGLE = 180\.0;', room_cpp) and \
     'spawnOnChair(getGameMap(), this, chair, static_cast<Ogre::Real>(ATTENDANT_ANGLE))' in room_cpp
-assert re.search(r'const double LADDER_FOOT_OFFSET = -0\.4;', attendant_cpp), 'the foot of the ladder is behind the chair'
-assert 'const Ogre::Vector3 TOWARDS_CHAIR = TOWARDS_POOL;' in attendant_cpp and 'AWAY_FROM_POOL' not in attendant_cpp
+assert re.search(r'const double LADDER_FOOT_OFFSET = 0\.4;', attendant_cpp), 'the foot of the steps is in front of the chair'
+assert 'const Ogre::Vector3 TOWARDS_CHAIR(0.0f, -1.0f, 0.0f);' in attendant_cpp and 'AWAY_FROM_POOL' not in attendant_cpp
 assert attendant_cpp.count('setAnimationState(PoolAttendantPose::climb, true, TOWARDS_CHAIR, false);') == 2
 springboard, _ = read_mesh(room_file('models/SpaSpringboard.mesh'))
-board = [q for material, points in springboard if material == 'SpaWood' for q in points]
-stone = [q for material, points in springboard if material == 'SpaStone' for q in points]
-assert span(board, 1)[1] > 0.45 and span(stone, 1)[1] < 0.0, 'the board of SpaSpringboard reaches out on +y (180: over the pool)'
+board = [q for material, points in springboard if material == 'SpaSpringboardMeshy' for q in points]
+stone = [q for q in board if abs(q[0]) > 0.22]  # the stone base is wider than the board
+assert span(board, 1)[1] > 1.3 and span(stone, 1)[1] < 0.47, 'the board of SpaSpringboard reaches out on +y (180: over the pool)'
 # The lifebuoy of variant 1 hangs on the +x side of the chair, outside the frame and below the seat
-ring = [q for material, points in chair if material.startswith('SpaLifebuoy') for q in points]
-assert {m for m, _ in chair} >= {'SpaLifebuoyRed', 'SpaLifebuoyWhite', 'SpaChairWood', 'SpaIronWorn'}
-assert span(ring, 0)[0] > 0.258 and span(ring, 2)[1] < seat_top - 0.1, 'the lifebuoy hangs beside the frame, below the seat'
-for material in ('SpaLifebuoyRed', 'SpaLifebuoyWhite'):
-    assert re.search(r'^material ' + material + r' : RTSS/PerPixel_SinglePass', spa_material, re.M), material
+ring = [q for q in wood if q[0] > 0.34]  # nothing but the lifebuoy reaches that far out
+assert {m for m, _ in chair} == {'SpaChairMeshy'}
+assert len(ring) >= 200 and span(ring, 2)[1] < seat_top - 0.1, 'the lifebuoy hangs beside the frame, below the seat'
+try:
+    from PIL import Image
+    texels = list(Image.open(room_file('materials/textures/SpaChairMeshy.png')).convert('RGB').get_flattened_data())
+    # counted once on the approved texture: 4238 red and 1068 white texels of the lifebuoy
+    assert sum(1 for r, g, b in texels if r > 90 and r > 2 * g and r > 2 * b) >= 4000, 'the lifebuoy has its red parts'
+    assert sum(1 for t in texels if min(t) > 110 and max(t) - min(t) < 60) >= 1000, 'the lifebuoy has its white parts'
+except ImportError:
+    print('Pillow missing: the lifebuoy colours are not checked')
 row = re.search(r'\{"SpaChair", ([-.0-9]+)f, ([-.0-9]+)f, ([-.0-9]+)f, ([-.0-9]+)f\}', bounds_h)
 assert row and all(abs(float(a) - b) < 0.00002 for a, b in zip(row.groups(), (chair_bounds[0], chair_bounds[1],
                                                                             chair_bounds[3], chair_bounds[4]))), \

@@ -56,10 +56,10 @@ MESHES = {
                   (-0.419514, -0.105307, 0.0),
                   (0.419514, 0.105307, 0.785947),
                   {'InnkeeperMeshy'}),
-    'TavernCounter': (53071, 43424,
-                     (-0.52, -0.338, 0.0),
-                     (0.520001, 0.0549586, 0.412484),
-                     {'TavernCounterWood', 'TavernRail', 'TavernSign'}),
+    'TavernCounter': (1953, 2356,
+                     (-0.52, -0.084986, 0.0),
+                     (0.520001, 0.0549586, 0.409331),
+                     {'TavernCounterMeshy'}),
 }
 ATLASES = {'TavernSkin': 2048, 'TavernHood': 2048, 'TavernCloth': 2048,
            'TavernCounterWood': 2048, 'TavernRail': 1024, 'TavernSign': 512}
@@ -70,8 +70,8 @@ INNKEEPER_BUDGET = (9000, 35000)
 INNKEEPER_TRIANGLES = {'InnkeeperMeshy': 9993}
 INNKEEPER_SHA256 = 'd2d8f922b1bbfacb7f2cbe9b0613d7379713d9e092f1a250fa62793f4d184f7a'
 INNKEEPER_BONES = 24              # shared Meshy humanoid rig (the former rig had 15 bones)
-# Vertices with a tangent per mesh: the counter is normal mapped, the Meshy innkeeper has no tangents
-TANGENTS = {'Innkeeper': 0, 'TavernCounter': 53071}
+# Vertices with a tangent per mesh: the Meshy counter and innkeeper are not normal mapped and have no tangents
+TANGENTS = {'Innkeeper': 0, 'TavernCounter': 0}
 # Material script and texture folder of the materials whose colour texture the render reads
 FIGURE_MATERIALS = {'InnkeeperMeshy': ('materials/scripts/Creatures/InnkeeperMeshy.material', 'materials/textures/')}
 # Render comparison against the innkeeper before the reduction (bind pose, flat atlas colour, two-sided light)

@@ -157,9 +157,11 @@ void RoomMerchant::moveCrystalsToFirstTable()
     }
 }
 
-//! \brief Fits ordinary goods to the existing cloth slots and keeps crystals at the first table centre.
+//! \brief Fits ordinary goods to the places along the table top and keeps crystals at the first table centre.
 void RoomMerchant::refreshDisplayedGoods()
 {
+    // Top of the sales table (SalesTable.mesh) above the floor, in tiles
+    const float tableTop = 0.254f;
     clearDisplayedGoods();
     if(!getIsOnServerMap()) return;
     moveCrystalsToFirstTable();
@@ -175,15 +177,21 @@ void RoomMerchant::refreshDisplayedGoods()
             if(!good.mItem.mSoulCrystal) ++ordinary;
         const size_t displayPlaces = std::max(capacity, ordinary);
         const float spacing = 0.63f / static_cast<float>(displayPlaces);
+        // The goods lie along the long axis of the table, which turns with the table (a wall-side table faces its wall)
+        const BuildingObject* table = getBuildingObjectFromTile(tile);
+        const float radians = (table != nullptr ? static_cast<float>(table->getRotationAngle()) : 0.0f) * 3.14159265f / 180.0f;
+        const float alongX = std::cos(radians);
+        const float alongY = std::sin(radians);
         const float scale = std::min(0.6f, spacing / 0.36f);
         size_t ordinaryIndex = 0;
         for(size_t index = 0; index < data->mGoods.size(); ++index)
         {
             const bool crystal = data->mGoods[index].mItem.mSoulCrystal;
-            const float y = crystal ? static_cast<float>(tile->getY()) :
-                tile->getY() - 0.315f + spacing * (static_cast<float>(ordinaryIndex++) + 0.5f);
+            const float along = crystal ? 0.0f : -0.315f + spacing * (static_cast<float>(ordinaryIndex++) + 0.5f);
+            const float x = static_cast<float>(tile->getX()) + along * alongX;
+            const float y = static_cast<float>(tile->getY()) + along * alongY;
             BuildingObject* bag = new BuildingObject(getGameMap(), *this, data->mGoods[index].mItem.mSoulCrystal ? "SoulCrystal" : "ItemBag", tile,
-                tile->getX(), y, 0.712f, 0.0f, false);
+                x, y, tableTop, 0.0f, false);
             bag->setFurnitureScale(Ogre::Vector2(scale, scale));
             if(!data->mGoods[index].mItem.mSoulCrystal)
                 bag->setItemBagAppearance(data->mGoods[index].mItem.mQuality, true);

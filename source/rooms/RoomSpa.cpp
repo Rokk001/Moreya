@@ -89,9 +89,9 @@ const double OBJECT_ANGLE_SIDE_TOP = 180.0;
 const double OBJECT_ANGLE_SIDE_LEFT = 270.0;
 const double OBJECT_ANGLE_SIDE_BOTTOM = 0.0;
 const double OBJECT_ANGLE_SIDE_RIGHT = 90.0;
-//! \brief Angle of the chair and of the springboard. Both meshes have their front on +y (the chair: backrest and ladder
-//! on -y; the springboard: the board reaches out on +y). The chair stands at y - 1 of the pool, so 0 turns its seat to
-//! the pool; the springboard stands at y + 1, so 180 lets the board reach over the pool (decision 837).
+//! \brief Angle of the chair and of the springboard. Both meshes have their front on +y (the chair: backrest on -y,
+//! steps on +y; the springboard: the board reaches out on +y). The chair stands at y - 1 of the pool, so 0 turns its
+//! seat to the pool; the springboard stands at y + 1, so 180 lets the board reach over the pool (decision 837).
 const double CHAIR_ANGLE = 0.0;
 const double SPRINGBOARD_ANGLE = 180.0;
 //! \brief Angle of the pool attendant on the chair: his mesh looks along -y, so 180 turns him to the pool (+y).

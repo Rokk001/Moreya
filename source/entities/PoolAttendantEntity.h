@@ -173,8 +173,8 @@ private:
     //! \return False when no outing can start now; he tries again in the next turn.
     bool startOuting();
 
-    //! \brief Server side. Lets the attendant walk his round: from the foot of the ladder behind the chair to one side,
-    //! on the rim around the pool (see SpaLayout::attendantRound), behind the chair on the other side back to the ladder.
+    //! \brief Server side. Lets the attendant walk his round: from the foot of the ladder in front of the chair to one side,
+    //! on the rim around the pool (see SpaLayout::attendantRound), in front of the chair on the other side back to the ladder.
     //! \param resume True for a loaded round: he goes on from the point of the round nearest to where he stands.
     void startWalkRound(bool resume);
 

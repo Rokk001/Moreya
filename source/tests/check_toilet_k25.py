@@ -73,7 +73,7 @@ if ROOM_ASSETS:
                    stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, timeout=120, check=True)
     tree = ET.parse(target).getroot()
     submeshes = list(tree.iter('submesh'))
-    assert [s.get('material') for s in submeshes] == ['ToiletSeat'], 'the seat uses the one material ToiletSeat'
+    assert [s.get('material') for s in submeshes] == ['ToiletSeatMeshy'], 'the seat uses the one material ToiletSeatMeshy'
 
 
     def corners(geometry):

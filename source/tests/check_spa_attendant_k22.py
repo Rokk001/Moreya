@@ -870,7 +870,7 @@ def shown_detail(root, material):
 
 
 chair_materials = {sub.get('material') for sub in chair.findall('submeshes/submesh')}
-assert chair_materials == {'SpaChairWood', 'SpaIronWorn', 'SpaLifebuoyRed', 'SpaLifebuoyWhite'}, chair_materials
+assert chair_materials == {'SpaChairMeshy'}, chair_materials
 for root, material in [(chair, m) for m in sorted(chair_materials)] + \
         [(mesh, m) for m in ('SpaHair', 'SpaBodyHair', 'SpaWhistle', 'SpaIronWorn', 'SpaSkin', 'SpaSuit', 'SpaLinen',
                              'SpaAttendantFace')]:

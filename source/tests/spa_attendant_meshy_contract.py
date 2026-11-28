@@ -44,7 +44,7 @@ HASHES = {
 # Elbows and knees with the bone below them (new rig names; former Forearm_R/Hand_R, Shin_R/Foot_R and left)
 JOINTS = (('RightForeArm', 'RightHand'), ('LeftForeArm', 'LeftHand'), ('RightLeg', 'RightFoot'), ('LeftLeg', 'LeftFoot'))
 CLIPS = {'Sit', 'Whistle', 'TowelWave', 'Doze', 'Walk', 'Climb', 'Jump'}
-CHAIR_MATERIALS = {'SpaChairWood', 'SpaIronWorn', 'SpaLifebuoyRed', 'SpaLifebuoyWhite'}
+CHAIR_MATERIALS = {'SpaChairMeshy'}
 RENDER_MAX_MEAN_DIFFERENCE = 4.5
 RENDER_MIN_SILHOUETTE_OVERLAP = 0.99
 RENDER_REFERENCE = {  # zlib + base64 of the uint8 render of the approved CS10a attendant (render_view of
