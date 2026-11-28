@@ -157,12 +157,13 @@ assert 'tempSS << "Level: " << CHAMPION_CROWN_MARKUP' in creature
 social = read("source/render/SocialWindow.cpp")
 # The Dungeonbook list and feed: the crown stands in the level place, the whole name is escaped on its own and word
 # wraps (decision 732: never shortened)
-assert 'row->getChild("Level")->setText(entry->champion ? CHAMPION_CROWN_MARKUP : "Lv. "' in social
+assert 'row->getChild("Level")->setText(Gui::toCeguiText(levelText(entry->champion, entry->level)))' in social
 assert 'setFullText(row->getChild("Name"), profile.getFullName())' in social
-assert "window->setText(escapeMarkup(text));" in social and "elideToWidth" not in social
-assert "entry->champion ? std::string(CHAMPION_CROWN_MARKUP)" in social
+assert "window->setText(Gui::toCeguiText(escapeMarkup(text)));" in social and "elideToWidth" not in social
+assert "if(champion)\n        return CHAMPION_CROWN_MARKUP;" in social
 # The profile of book-variant-2 has no level row (plan INGAME-QS-11 K1); the crown stays in the list and the feeds
-assert social.count('CHAMPION_CROWN_MARKUP') >= 2
+# (the one function levelText gives the crown, and the list and the feed both call it)
+assert social.count('CHAMPION_CROWN_MARKUP') >= 1 and social.count('levelText(entry->champion, entry->level)') >= 2
 
 if not WITH_CONTENT:
     content_packages.unchecked("check_world_balance_champion", ["champion spell values (own rows of config/spells.cfg)",

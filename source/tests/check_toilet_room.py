@@ -185,7 +185,7 @@ assert 'askCleanRoom' not in read('source/network/ClientNotification.h') and 'ro
 game_mode = read('source/modes/GameMode.cpp')
 assert 'RoomClean' not in game_mode and 'mCleanRoomName' not in game_mode
 pile_hover = game_mode[game_mode.index('static std::string getDirtPileHoverText'):game_mode.index('static std::string getRoomDirtHoverText')]
-assert 'social::SocialGenerator::displayClassName(' in pile_hover, 'the pile hover names the creature class readably'
+assert 'CreatureDefinition::getDisplayNameOf(' in pile_hover, 'the pile hover names the creature class readably'
 
 if not WITH_CONTENT:
     content_packages.unchecked('check_toilet_room', ['own rows of config/tilesets.cfg [toiletRoom] and the block order',
