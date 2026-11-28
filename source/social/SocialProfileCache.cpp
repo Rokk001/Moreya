@@ -20,13 +20,29 @@
 #include "social/SocialGenerator.h"
 #include "utils/ConfigManager.h"
 #include "utils/LogManager.h"
+#include "utils/Translation.h"
+
+#include <functional>
 
 namespace social
 {
 
+namespace
+{
+//! \brief Called after the language changed: the cached profiles hold the texts of the old language.
+void onLanguageChanged()
+{
+    SocialProfileCache::getSingleton().clear();
+}
+}
+
 SocialProfileCache::SocialProfileCache() :
     mDataLoaded(false)
 {
+    // The profiles (names, jobs, likes, bio) are made again in the new language the next time they are asked for.
+    // The cache lives as long as the program, so the listener is never removed.
+    std::function<void()> listener = onLanguageChanged;
+    Translation::addListener(listener);
 }
 
 SocialProfileCache& SocialProfileCache::getSingleton()

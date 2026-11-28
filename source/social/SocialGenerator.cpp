@@ -147,7 +147,9 @@ CreatureProfile SocialGenerator::makeProfile(const SocialData& data, const std::
             (!group.mTitles.empty()))
     {
         Rng titleRng = makeFieldRng(creatureName, "title" + variantSuffix);
-        profile.mTitle = pickFrom(titleRng, group.mTitles, emptyText);
+        // The same entry in every language, only its text comes from the language files
+        std::size_t titleIndex = titleRng.below(static_cast<uint32_t>(group.mTitles.size()));
+        profile.mTitle = group.getDisplayTitle(titleIndex);
     }
     if(nameVariant > MAX_NAME_VARIANT)
     {
@@ -162,7 +164,10 @@ CreatureProfile SocialGenerator::makeProfile(const SocialData& data, const std::
     profile.mAgeText = numberToString(profile.mAge);
     Rng ageJokeRng = makeFieldRng(creatureName, "agejoke");
     if((!group.mAgeJokes.empty()) && (ageJokeRng.below(100) < AGE_JOKE_PERCENT))
-        profile.mAgeText = pickFrom(ageJokeRng, group.mAgeJokes, profile.mAgeText);
+    {
+        std::size_t ageJokeIndex = ageJokeRng.below(static_cast<uint32_t>(group.mAgeJokes.size()));
+        profile.mAgeText = group.getDisplayAgeJoke(ageJokeIndex);
+    }
 
     // Texts: everything below only reads the tables
     std::vector<std::string> scopesAll;
@@ -179,7 +184,10 @@ CreatureProfile SocialGenerator::makeProfile(const SocialData& data, const std::
 
     static const std::string hometownFallback = "Somewhere";
     Rng hometownRng = makeFieldRng(creatureName, "hometown");
-    profile.mHometown = pickFrom(hometownRng, group.mHometowns, hometownFallback);
+    if(group.mHometowns.empty())
+        profile.mHometown = hometownFallback;
+    else
+        profile.mHometown = group.getDisplayHometown(hometownRng.below(static_cast<uint32_t>(group.mHometowns.size())));
 
     // The class job first, then the generic job of workers or fighters
     std::vector<std::string> classScope(1, className);
@@ -231,7 +239,13 @@ CreatureProfile SocialGenerator::makeProfile(const SocialData& data, const std::
             break;
     }
     if(bio.size() > MAX_BIO_LENGTH)
-        bio.erase(MAX_BIO_LENGTH);
+    {
+        // The cut must not split a UTF-8 character of a translated text: step back to the start of one
+        std::size_t cut = MAX_BIO_LENGTH;
+        while((cut > 0) && ((static_cast<unsigned char>(bio[cut]) & 0xC0) == 0x80))
+            --cut;
+        bio.erase(cut);
+    }
     profile.mBio = bio;
 
     return profile;
