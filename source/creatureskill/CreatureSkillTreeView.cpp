@@ -182,6 +182,7 @@ TreeView buildTreeView(const SkillTreeConfig& config, const TypeInfo& type, cons
     {
         ViewColumn column;
         column.mPath = *it;
+        column.mTitle = DisplayText::translated(DisplayText::makeKey("skill.path", *it), *it);
         column.mHighlighted = !primary.empty() && (lowerText(*it) == primary);
         // The group paths come first; a path the group does not have is the family path
         const std::string owner = config.findPathSkill(type.mGroup, *it, 1).empty() ? type.mFamily : type.mGroup;

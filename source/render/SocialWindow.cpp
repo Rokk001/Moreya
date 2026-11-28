@@ -969,7 +969,7 @@ void showSkillTreeNode(CEGUI::Window* tree, const std::string& name, const Creat
     std::string tooltip;
     for(std::size_t i = 0; i < node.mTooltip.size(); ++i)
         tooltip += (i == 0 ? "" : "\n") + node.mTooltip[i];
-    button->setTooltipText(escapeMarkup(tooltip));
+    button->setTooltipText(Gui::toCeguiText(escapeMarkup(tooltip)));
     // The rank is shown as stars, one per rank the skill can reach: learned ranks gold, the others greyed. The thin
     // progress bar under the icon is no longer shown, and the text "x/y" stays in the tooltip of the label
     bar->setVisible(false);
@@ -1003,7 +1003,7 @@ bool SocialWindow::refreshSkills()
         CEGUI::Window* title = tree->getChild(prefix + "Title");
         const bool hasColumn = column < view.mColumns.size();
         title->setVisible(hasColumn);
-        title->setText(hasColumn ? escapeMarkup(view.mColumns[column].mPath) : std::string());
+        title->setText(hasColumn ? Gui::toCeguiText(escapeMarkup(view.mColumns[column].mTitle)) : CEGUI::String());
         title->setProperty("TextColours", (hasColumn && view.mColumns[column].mHighlighted) ?
             SKILL_TREE_HIGHLIGHT_TEXT : SKILL_TREE_NORMAL_TEXT);
         for(uint32_t tier = 1; tier <= CreatureSkillTree::MAX_TIER; ++tier)

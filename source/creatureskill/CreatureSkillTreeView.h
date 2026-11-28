@@ -79,8 +79,10 @@ struct ViewColumn
     ViewColumn() :
         mHighlighted(false)
     {}
-    //! \brief Path name (column title).
+    //! \brief Path name as written in the table; it identifies the path.
     std::string mPath;
+    //! \brief Column title: the path name in the chosen language (mPath while the language files have none).
+    std::string mTitle;
     //! \brief True for the primary path of the creature's template.
     bool mHighlighted;
     //! \brief Tier 1, 2 and 3 of the path (always three entries).

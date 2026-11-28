@@ -28,8 +28,8 @@ sys.path.insert(0, str(repo / 'scripts'))
 import content_packages  # noqa: E402
 
 # Display entries per table, counted once on this branch (items 551, equipment 39, potions 29, herbs 4, skills 111 +
-# tier 4 skills 35 + templates 24 = 170)
-EXPECTED_ENTRIES = {'item': 551, 'equipment': 39, 'potion': 29, 'herb': 4, 'skill': 170}
+# tier 4 skills 35 + templates 24 + skill paths 37 = 207)
+EXPECTED_ENTRIES = {'item': 551, 'equipment': 39, 'potion': 29, 'herb': 4, 'skill': 207}
 # The text files of the areas in each language package
 FILES = {'item': 'items.txt', 'equipment': 'equipment.txt', 'potion': 'potions.txt', 'herb': 'herbs.txt',
          'skill': 'skills.txt'}
@@ -94,12 +94,14 @@ def table_entries():
     # creatureSkills.cfg: Name of the [Skill] (Id), [TierFour] (Creature) and [Template] (Group, Index) blocks
     block = {}
     section = None
+    paths = set()
     for line in read_table('config/creatureSkills.cfg'):
         stripped = line.strip()
         if stripped in ('[Skill]', '[TierFour]', '[Template]'):
             section, block = stripped, {}
         elif stripped.startswith('[/') and section:
             if section == '[Skill]':
+                paths.add(block['Path'])
                 add('skill.%s.name' % block['Id'].lower(), block['Name'])
             elif section == '[TierFour]':
                 add('skill.t4_%s.name' % block['Creature'].lower(), block['Name'])
@@ -108,8 +110,11 @@ def table_entries():
             section = None
         elif section:
             pair = tabs(line)
-            if pair and pair[0] in ('Id', 'Name', 'Creature', 'Group', 'Index'):
+            if pair and pair[0] in ('Id', 'Name', 'Creature', 'Group', 'Index', 'Path'):
                 block[pair[0]] = pair[1]
+    # The path names (column titles of the skills page): English = the Path value
+    for path in sorted(paths):
+        add('skill.path.%s.name' % path.lower(), path)
     return entries
 
 
@@ -179,11 +184,16 @@ checks = {
     'source/creatureskill/CreatureSkillTree.h': ['DisplayText::makeKey("skill", mId)',
                                                  'DisplayText::makeKey("skill", "T4_" + mCreature)',
                                                  'DisplayText::makeKey("skill.template", mGroup, std::to_string(mIndex))'],
-    'source/creatureskill/CreatureSkillTreeView.cpp': ['lines.push_back(skill.getDisplayText());'],
+    'source/creatureskill/CreatureSkillTreeView.cpp': ['lines.push_back(skill.getDisplayText());',
+                                                      'DisplayText::makeKey("skill.path", *it)'],
     'source/entities/Creature.cpp': ['skillName = skill->getDisplayText();', 'skillName = tierFour->getDisplayText();',
                                      'return templ->getDisplayText();'],
     'source/modes/EditorMode.cpp': ['definition->getDisplayText(quality) + " ("'],
-    'source/modes/GameModeAlchemy.cpp': ['recipe->getDisplayText()'],
+    'source/modes/GameModeAlchemy.cpp': ['recipe->getDisplayText()', 'void GameMode::refreshItemNameTexts()',
+                                         'setLabWindowData(mLabWindowData);'],
+    'source/creatureskill/CreatureSkillTreeView.h': ['std::string mTitle;'],
+    'source/render/SocialWindow.cpp': ['escapeMarkup(view.mColumns[column].mTitle)'],
+    'source/modes/GameMode.cpp': ['refreshItemNameTexts();'],
     'source/modes/GameModeMerchant.cpp': ['Gui::toCeguiText(entry.second.getDisplayName(mGameMap))'],
 }
 for name, needles in checks.items():
