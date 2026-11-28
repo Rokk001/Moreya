@@ -112,6 +112,34 @@ namespace Translation
     //! \brief The text of the key (as tr(key)) with its placeholders replaced (formatText).
     std::string tr(const std::string& key, const std::map<std::string, std::string>& values);
 
+    //! \brief A text reference for a text that travels from the server to the clients, which each show it in their
+    //! own language. The reference is "@<key>" followed by "|<name>=<value>" for every value; a backslash, a '|' and
+    //! a line break in a value are escaped with a backslash. A value that starts with '@' is a reference itself
+    //! (for example the result of another makeReference()) and is resolved when the text is shown.
+    std::string makeReference(const std::string& key, const std::map<std::string, std::string>& values);
+
+    //! \brief A text reference without values, "@<key>".
+    std::string makeReference(const std::string& key);
+
+    //! \brief A text reference for a name (of a room, a skill, a creature class and the like) whose key another
+    //! part of the game may not provide in every language: the reference carries the fallback text in the value "_",
+    //! which resolve() shows when no language has a text for the key.
+    std::string makeNameReference(const std::string& key, const std::string& fallback);
+
+    //! \brief True when the text is a text reference: it starts with '@' followed by a key (lowercase letters,
+    //! digits, '.', '_' and '-') and then ends or goes on with '|'.
+    bool isReference(const std::string& text);
+
+    //! \brief The text to show for a text received from the server: a reference is replaced by the text of its key in
+    //! the chosen language with the placeholders filled with the values (values that are references are resolved
+    //! too); any other text (player chat, a plain text of an older game or save) and a reference whose key has no
+    //! text in any language are returned unchanged.
+    std::string resolve(const std::string& text);
+
+    //! \brief resolve() for every line of a text that holds one text or reference per line. A leading picture tag
+    //! "[image='...'] " of a line is kept in front of the resolved text.
+    std::string resolveLines(const std::string& text);
+
     //! \brief Registers a function called after the chosen language changed.
     //! \return An id for removeListener().
     unsigned int addListener(const std::function<void()>& listener);

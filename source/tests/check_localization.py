@@ -7,7 +7,7 @@ Package.cfg has a line "Language=<code>"; their texts lie in texts/*.txt as "<ke
 German and English are there, every key has a text in both, both texts of a key have the same placeholders, every
 file is valid UTF-8 and every line follows the rules of Translation::parseTexts.
 
-Expected: 6 test cases, 0 failures; EXPECTED_ENTRIES entries in each language (counted once for this branch).
+Expected: 7 test cases, 0 failures; EXPECTED_ENTRIES entries in each language (counted once for this branch).
 
 Calls (from the repository root):
   python source/tests/check_localization.py
@@ -29,7 +29,7 @@ import content_packages  # noqa: E402
 HAS_CONTENT = content_packages.has_content(repo)
 
 # Test cases of test_Translation.cpp
-EXPECTED_CASES = 6
+EXPECTED_CASES = 7
 # Languages of the game at the start (plan D1) and entries of each language, counted once for this branch
 EXPECTED_LANGUAGES = {'de': 'Deutsch', 'en': 'English'}
 EXPECTED_ENTRIES = 2
