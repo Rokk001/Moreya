@@ -160,8 +160,6 @@ void RoomMerchant::moveCrystalsToFirstTable()
 //! \brief Fits ordinary goods to the existing cloth slots and keeps crystals at the first table centre.
 void RoomMerchant::refreshDisplayedGoods()
 {
-    // Top of the cloth in the middle of the sales table (SalesTable.mesh) above the floor, in tiles
-    const float tableTop = 0.527f;
     clearDisplayedGoods();
     if(!getIsOnServerMap()) return;
     moveCrystalsToFirstTable();
@@ -185,7 +183,7 @@ void RoomMerchant::refreshDisplayedGoods()
             const float y = crystal ? static_cast<float>(tile->getY()) :
                 tile->getY() - 0.315f + spacing * (static_cast<float>(ordinaryIndex++) + 0.5f);
             BuildingObject* bag = new BuildingObject(getGameMap(), *this, data->mGoods[index].mItem.mSoulCrystal ? "SoulCrystal" : "ItemBag", tile,
-                tile->getX(), y, tableTop, 0.0f, false);
+                tile->getX(), y, 0.712f, 0.0f, false);
             bag->setFurnitureScale(Ogre::Vector2(scale, scale));
             if(!data->mGoods[index].mItem.mSoulCrystal)
                 bag->setItemBagAppearance(data->mGoods[index].mItem.mQuality, true);

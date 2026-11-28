@@ -20,9 +20,9 @@ Two parts, no compiler:
         side down, -x of the innkeeper).
 
 Fixed expected values of this branch (counted once): POUR_JUG_HEIGHT_SHARE 0.17, POUR_JUG_GRIP (0.40, 0, 0.32),
-POUR_JUG_PALM_REACH 0.07, POUR_JUG_BASE_RING (-0.09, 0, 0.365), POUR_JUG_COUNTER_SHARE 0.4758, 12 ring points; jug 3123
+POUR_JUG_PALM_REACH 0.07, POUR_JUG_BASE_RING (-0.09, 0, 0.365), POUR_JUG_COUNTER_SHARE 0.5248, 12 ring points; jug 3123
 triangles (limit 4000), handle out to x > 0.30 at the grip height, spout out to x < -0.45 above z 0.85; Pour 5 s, 151 keys;
-lift at most 0.08 x height (0.0682 counted), tilt at least 25 degrees (50.1 counted), counter top 0.4758 x height.
+lift at most 0.08 x height (0.0682 counted), tilt at least 25 degrees (50.1 counted), counter top 0.5248 x height.
 
 Without --assets the models, materials and textures are read from the public tree or the content packages
 (scripts/content_packages.py); without the content the jug (room-tavern), the innkeeper (creatures) and the counter
@@ -54,7 +54,7 @@ JUG_SHARE = 0.17
 GRIP = (0.40, 0.0, 0.32)
 PALM_REACH = 0.07
 BASE_RING = (-0.09, 0.0, 0.365)
-COUNTER_SHARE = 0.4758
+COUNTER_SHARE = 0.5248
 RING_POINTS = 12
 JUG_TRIANGLES_LIMIT = 4000
 POUR_SECONDS = 5.0
@@ -211,7 +211,7 @@ constants = {
     'POUR_JUG_GRIP(0.40f, 0.0f, 0.32f);': 'grip point (0.40, 0, 0.32)',
     'POUR_JUG_PALM_REACH = 0.07f;': 'palm reach 0.07',
     'POUR_JUG_BASE_RING(-0.09f, 0.0f, 0.365f);': 'base ring (-0.09, 0, 0.365)',
-    'POUR_JUG_COUNTER_SHARE = 0.4758f;': 'counter share 0.4758',
+    'POUR_JUG_COUNTER_SHARE = 0.5248f;': 'counter share 0.5248',
     'POUR_JUG_RING_POINTS = 12;': '12 ring points',
     'POUR_JUG_MESH = "TavernJug.mesh";': 'jug mesh TavernJug.mesh',
     'POUR_JUG_BONE = "LeftHand";': 'jug in the left hand',

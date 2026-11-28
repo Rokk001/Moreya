@@ -57,8 +57,8 @@ MESHES = {
                   (0.419514, 0.105307, 0.785947),
                   {'InnkeeperMeshy'}),
     'TavernCounter': (2040, 2663,
-                     (-0.52, -0.312006, 0.0),
-                     (0.520001, 0.054959, 0.374),
+                     (-0.52, -0.338, 0.0),
+                     (0.520001, 0.0549586, 0.4125),
                      {'TavernCounterMeshy'}),
 }
 ATLASES = {'TavernSkin': 2048, 'TavernHood': 2048, 'TavernCloth': 2048,
